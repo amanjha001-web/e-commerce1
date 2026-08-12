@@ -1,64 +1,55 @@
 import { Router } from "express";
 
 import {
-  createBrand,
-  getAllBrands,
-  getBrandById,
-  getBrandBySlug,
-  updateBrand,
-  deleteBrand,
-} from "../controllers/brand.controller.js";
+  brandController
+} from "../controllers/index.js";
 
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import authorizeRoles from "../middlewares/role.middleware.js";
-import validate from "../middlewares/validate.middleware.js";
-import { uploadBrandImage } from "../middlewares/upload.middleware.js";
+import { authMiddleware } from "../middlewares/index.js";
+import {authorize} from "../middlewares/index.js";
+import {validate} from "../middlewares/index.js";
+import { uploadBrandImage } from "../middlewares/index.js";
 
 import {
   createBrandSchema,
   updateBrandSchema,
-} from "../validators/brand.validator.js";
+} from "../validators/index.js";
 
 const router = Router();
 
-/* -------------------------------------------------------------------------- */
 /*                               Public Routes                                */
-/* -------------------------------------------------------------------------- */
 
 // Get All Brands
-router.get("/", getAllBrands);
+router.get("/", brandController.getAllBrands);
 
 // Get Brand By Slug
-router.get("/slug/:slug", getBrandBySlug);
+router.get("/slug/:slug", brandController.getBrandBySlug);
 
 // Get Brand By ID
-router.get("/:id", getBrandById);
+router.get("/:id", brandController.getBrandById);
 
-/* -------------------------------------------------------------------------- */
 /*                           Protected Routes (Admin)                         */
-/* -------------------------------------------------------------------------- */
 
 // Create Brand
 router.post(
   "/",
-  verifyJWT,
-  authorizeRoles("admin"),
+  authMiddleware,
+  authorize("admin"),
   uploadBrandImage,
   validate(createBrandSchema),
-  createBrand,
+  brandController.createBrand,
 );
 
 // Update Brand
 router.patch(
   "/:id",
-  verifyJWT,
-  authorizeRoles("admin"),
+  authMiddleware,
+  authorize("admin"),
   uploadBrandImage,
   validate(updateBrandSchema),
-  updateBrand,
+  brandController.updateBrand,
 );
 
 // Delete Brand
-router.delete("/:id", verifyJWT, authorizeRoles("admin"), deleteBrand);
+router.delete("/:id", authMiddleware, authorize("admin"), brandController.deleteBrand);
 
 export default router;

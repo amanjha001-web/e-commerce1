@@ -1,52 +1,12 @@
-import upload from "../config/multer.js";
+import { upload } from "../config/index.js";
 
-/*
-|--------------------------------------------------------------------------
-| Single File Uploads
-|--------------------------------------------------------------------------
-*/
+/*                             Common Uploads                                 */
 
-// Product Thumbnail
 export const uploadSingle = upload.single("thumbnail");
 
-// Category Image
-export const uploadCategoryImage = upload.fields([
-  {
-    name: "image",
-    maxCount: 1,
-  },
-]);
-
-// Brand Image
-export const uploadBrandImage = upload.fields([
-  {
-    name: "image",
-    maxCount: 1,
-  },
-]);
-
-// User Avatar
-export const uploadUserAvatar = upload.fields([
-  {
-    name: "avatar",
-    maxCount: 1,
-  },
-]);
-
-/*
-|--------------------------------------------------------------------------
-| Multiple File Uploads
-|--------------------------------------------------------------------------
-*/
-
-// Product Gallery Images
 export const uploadMultiple = upload.array("images", 10);
 
-/*
-|--------------------------------------------------------------------------
-| Product Upload
-|--------------------------------------------------------------------------
-*/
+/*                             Product Upload                                 */
 
 export const uploadProductImages = upload.fields([
   {
@@ -58,3 +18,52 @@ export const uploadProductImages = upload.fields([
     maxCount: 10,
   },
 ]);
+
+/*                             Category Upload                                */
+
+export const uploadCategoryImage = upload.fields([
+  {
+    name: "image",
+    maxCount: 1,
+  },
+]);
+
+/*                               Brand Upload                                 */
+
+export const uploadBrandImage = upload.fields([
+  {
+    name: "image",
+    maxCount: 1,
+  },
+]);
+
+/*                               Vendor Upload                                */
+
+export const uploadVendorFiles = upload.fields([
+  {
+    name: "logo",
+    maxCount: 1,
+  },
+  {
+    name: "banner",
+    maxCount: 1,
+  },
+]);
+
+export const uploadVendorLogo = upload.fields([
+  {
+    name: "logo",
+    maxCount: 1,
+  },
+]);
+
+export const uploadVendorBanner = upload.fields([
+  {
+    name: "banner",
+    maxCount: 1,
+  },
+]);
+
+export const uploadAvatar = upload.single("avatar");
+export const uploadCoverImage = upload.single("coverImage");
+export const uploadVendorDocuments = upload.array("documents", 5);

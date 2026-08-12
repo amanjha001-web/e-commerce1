@@ -7,6 +7,8 @@ const brandSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
 
     slug: {
@@ -21,17 +23,20 @@ const brandSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      maxlength: 1000,
     },
 
     logo: {
       url: {
         type: String,
         default: "",
+        trim: true,
       },
 
       publicId: {
         type: String,
         default: "",
+        trim: true,
       },
     },
 
@@ -39,6 +44,7 @@ const brandSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      lowercase: true,
     },
 
     isFeatured: {
@@ -49,6 +55,7 @@ const brandSchema = new mongoose.Schema(
     sortOrder: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     isActive: {
@@ -66,6 +73,33 @@ const brandSchema = new mongoose.Schema(
   },
 );
 
-const Brand = mongoose.model("Brand", brandSchema);
+
+/*                                  Indexes                                   */
+
+
+
+
+brandSchema.index({
+  isActive: 1,
+});
+
+brandSchema.index({
+  isFeatured: 1,
+});
+
+brandSchema.index({
+  sortOrder: 1,
+});
+
+brandSchema.index({
+  name: "text",
+  description: "text",
+});
+
+
+/*                                   Model                                    */
+
+
+const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
 
 export default Brand;

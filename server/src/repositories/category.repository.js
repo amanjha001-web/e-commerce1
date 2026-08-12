@@ -1,101 +1,253 @@
 import Category from "../models/Category.model.js";
 
-/*
-|--------------------------------------------------------------------------
-| Create Category
-|--------------------------------------------------------------------------
-*/
+/*                           Create Category                                  */
 
-const createCategory = async (categoryData) => {
-  return await Category.create(categoryData);
+const createCategory = async (categoryData, session = null) => {
+  const category = await Category.create([categoryData], {
+    session,
+  });
+
+  return category[0];
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Category By ID
-|--------------------------------------------------------------------------
-*/
+/*                           Get Category By Id                               */
 
-const getCategoryById = async (id) => {
-  return await Category.findById(id).populate("parentCategory", "name slug");
+const getCategoryById = async (categoryId) => {
+  return await Category.findOne({
+    _id: categoryId,
+    deletedAt: null,
+  })
+    .populate("parentCategory", "name slug")
+    .lean();
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Category By Slug
-|--------------------------------------------------------------------------
-*/
+/*                         Get Category By Slug                               */
 
 const getCategoryBySlug = async (slug) => {
   return await Category.findOne({
     slug,
     isActive: true,
     deletedAt: null,
-  }).populate("parentCategory", "name slug");
+  })
+    .populate("parentCategory", "name slug")
+    .lean();
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Category By Name
-|--------------------------------------------------------------------------
-*/
+/*                         Get Category By Name                               */
 
 const getCategoryByName = async (name) => {
   return await Category.findOne({
-    name,
+    name: {
+      $regex: new RegExp(`^${name}$`, "i"),
+    },
     deletedAt: null,
-  });
+  }).lean();
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get All Categories
-|--------------------------------------------------------------------------
-*/
+/*                           Get All Categories                               */
 
-const getAllCategories = async () => {
+const getAllCategories = async (filter = {}, options = {}) => {
+  const {
+    page = 1,
+    limit = 20,
+    sort = {
+      sortOrder: 1,
+      createdAt: -1,
+    },
+  } = options;
+
+  const skip = (page - 1) * limit;
+
+  const query = {
+    ...filter,
+    deletedAt: null,
+  };
+
+  const [categories, totalCategories] = await Promise.all([
+    Category.find(query)
+      .populate("parentCategory", "name slug")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+
+    Category.countDocuments(query),
+  ]);
+
+  return {
+    categories,
+
+    pagination: {
+      totalCategories,
+      totalPages: Math.ceil(totalCategories / limit),
+      currentPage: page,
+      limit,
+      hasNextPage: page < Math.ceil(totalCategories / limit),
+      hasPrevPage: page > 1,
+    },
+  };
+};
+
+/*                      Get Featured Categories                               */
+
+const getFeaturedCategories = async (limit = 10) => {
   return await Category.find({
+    isFeatured: true,
     isActive: true,
     deletedAt: null,
   })
-    .populate("parentCategory", "name slug")
     .sort({
       sortOrder: 1,
-      createdAt: -1,
-    });
+    })
+    .limit(limit)
+    .lean();
 };
 
-/*
-|--------------------------------------------------------------------------
-| Update Category
-|--------------------------------------------------------------------------
-*/
+/*                        Search Categories                                   */
 
-const updateCategory = async (id, data) => {
-  return await Category.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  }).populate("parentCategory", "name slug");
+const searchCategories = async (keyword) => {
+  return await Category.find({
+    deletedAt: null,
+
+    $or: [
+      {
+        name: {
+          $regex: keyword,
+          $options: "i",
+        },
+      },
+      {
+        description: {
+          $regex: keyword,
+          $options: "i",
+        },
+      },
+    ],
+  }).lean();
+};
+/*                         Get Root Categories                                */
+
+const getRootCategories = async () => {
+  return await Category.find({
+    parentCategory: null,
+    isActive: true,
+    deletedAt: null,
+  })
+    .sort({
+      sortOrder: 1,
+    })
+    .lean();
 };
 
-/*
-|--------------------------------------------------------------------------
-| Soft Delete Category
-|--------------------------------------------------------------------------
-*/
+/*                        Get Child Categories                                */
 
-const deleteCategory = async (id) => {
+const getChildCategories = async (parentCategoryId) => {
+  return await Category.find({
+    parentCategory: parentCategoryId,
+    isActive: true,
+    deletedAt: null,
+  })
+    .sort({
+      sortOrder: 1,
+    })
+    .lean();
+};
+
+/*                           Update Category                                  */
+
+const updateCategory = async (
+  categoryId,
+  updateData,
+  session = null,
+) => {
   return await Category.findByIdAndUpdate(
-    id,
+    categoryId,
+    updateData,
+    {
+      new: true,
+      runValidators: true,
+      session,
+    },
+  ).populate("parentCategory", "name slug");
+};
+
+/*                          Toggle Featured                                   */
+
+const toggleFeatured = async (
+  categoryId,
+  isFeatured,
+  session = null,
+) => {
+  return await Category.findByIdAndUpdate(
+    categoryId,
+    {
+      isFeatured,
+    },
+    {
+      new: true,
+      session,
+    },
+  );
+};
+
+/*                           Toggle Active                                    */
+
+const toggleActive = async (
+  categoryId,
+  isActive,
+  session = null,
+) => {
+  return await Category.findByIdAndUpdate(
+    categoryId,
+    {
+      isActive,
+    },
+    {
+      new: true,
+      session,
+    },
+  );
+};
+
+/*                         Soft Delete Category                               */
+
+const deleteCategory = async (
+  categoryId,
+  session = null,
+) => {
+  return await Category.findByIdAndUpdate(
+    categoryId,
     {
       isActive: false,
       deletedAt: new Date(),
     },
     {
       new: true,
+      session,
     },
   );
 };
+
+/*                         Restore Category                                   */
+
+const restoreCategory = async (
+  categoryId,
+  session = null,
+) => {
+  return await Category.findByIdAndUpdate(
+    categoryId,
+    {
+      isActive: true,
+      deletedAt: null,
+    },
+    {
+      new: true,
+      session,
+    },
+  );
+};
+
+/*                                  Export                                    */
 
 export default {
   createCategory,
@@ -103,6 +255,13 @@ export default {
   getCategoryBySlug,
   getCategoryByName,
   getAllCategories,
+  getFeaturedCategories,
+  searchCategories,
+  getRootCategories,
+  getChildCategories,
   updateCategory,
+  toggleFeatured,
+  toggleActive,
   deleteCategory,
+  restoreCategory,
 };

@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+
+/*                               Image Schema                                 */
+
+
 const imageSchema = new mongoose.Schema(
   {
     url: {
@@ -18,28 +22,42 @@ const imageSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      maxlength: 200,
     },
   },
   {
     _id: false,
   },
 );
+
+
+/*                          Specification Schema                              */
+
+
 const specificationSchema = new mongoose.Schema(
   {
     key: {
       type: String,
+      required: true,
       trim: true,
+      maxlength: 100,
     },
 
     value: {
       type: String,
+      required: true,
       trim: true,
+      maxlength: 300,
     },
   },
   {
     _id: false,
   },
 );
+
+
+/*                              Product Schema                                */
+
 
 const productSchema = new mongoose.Schema(
   {
@@ -47,6 +65,8 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      minlength: 3,
+      maxlength: 200,
     },
 
     slug: {
@@ -67,6 +87,7 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true,
+      trim: true,
     },
 
     category: {
@@ -78,6 +99,7 @@ const productSchema = new mongoose.Schema(
     brand: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Brand",
+      default: null,
     },
 
     vendor: {
@@ -90,10 +112,13 @@ const productSchema = new mongoose.Schema(
       url: {
         type: String,
         default: "",
+        trim: true,
       },
+
       publicId: {
         type: String,
         default: "",
+        trim: true,
       },
     },
 
@@ -101,23 +126,13 @@ const productSchema = new mongoose.Schema(
       type: [imageSchema],
       default: [],
     },
+
     price: {
       type: Number,
       required: true,
       min: 0,
     },
 
-    discountPrice: {
-      type: Number,
-      default: 0,
-      min: 0,
-      validate: {
-        validator: function (value) {
-          return value <= this.price;
-        },
-        message: "Discount price cannot be greater than actual price.",
-      },
-    },
 
     stock: {
       type: Number,
@@ -194,6 +209,7 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
     status: {
       type: String,
       enum: ["draft", "published", "archived"],
@@ -202,14 +218,16 @@ const productSchema = new mongoose.Schema(
 
     seoTitle: {
       type: String,
-      trim: true,
       default: "",
+      trim: true,
+      maxlength: 200,
     },
 
     seoDescription: {
       type: String,
-      trim: true,
       default: "",
+      trim: true,
+      maxlength: 500,
     },
 
     deletedAt: {
@@ -222,60 +240,139 @@ const productSchema = new mongoose.Schema(
   },
 );
 
+/*                             Generate SKU                                   */
+
+
 productSchema.pre("save", function (next) {
   if (!this.sku) {
-    this.sku = "SKU-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
+    this.sku =
+      "SKU-" +
+      Date.now() +
+      "-" +
+      Math.floor(1000 + Math.random() * 9000);
   }
 
   next();
 });
 
-productSchema.index({ name: "text", description: "text" });
 
+/*                                 Virtuals                                   */
+
+
+// Discount Percentage
+productSchema.virtual("discountPercentage").get(function () {
+  if (
+    this.discountPrice <= 0 ||
+    this.discountPrice >= this.price
+  ) {
+    return 0;
+  }
+
+  return Math.round(
+    ((this.price - this.discountPrice) / this.price) * 100,
+  );
+});
+
+// Final Selling Price
+productSchema.virtual("finalPrice").get(function () {
+  return this.discountPrice > 0
+    ? this.discountPrice
+    : this.price;
+});
+
+// Stock Status
+productSchema.virtual("stockStatus").get(function () {
+  if (this.stock <= 0) {
+    return "OUT_OF_STOCK";
+  }
+
+  if (this.stock <= 5) {
+    return "LOW_STOCK";
+  }
+
+  return "IN_STOCK";
+});
+
+
+/*                                  Indexes                                   */
+
+
+// Text Search
+productSchema.index({
+  name: "text",
+  shortDescription: "text",
+  description: "text",
+});
+
+// Category + Brand
 productSchema.index({
   category: 1,
   brand: 1,
 });
 
+// Vendor
+productSchema.index({
+  vendor: 1,
+});
+
+// Price Filter
 productSchema.index({
   price: 1,
 });
 
+// Rating Sort
 productSchema.index({
   averageRating: -1,
 });
 
+// Latest Products
 productSchema.index({
   createdAt: -1,
 });
 
+// Product Status
+productSchema.index({
+  status: 1,
+});
+
+// Active Products
+productSchema.index({
+  isActive: 1,
+});
+
+// Featured
 productSchema.index({
   featured: 1,
 });
 
+// Flash Sale
 productSchema.index({
   flashSale: 1,
 });
 
+// Best Seller
 productSchema.index({
   bestSeller: 1,
 });
 
+// Trending
 productSchema.index({
   trending: 1,
 });
 
+// New Arrival
 productSchema.index({
   newArrival: 1,
 });
 
-productSchema.virtual("discountPercentage").get(function () {
-  if (this.discountPrice <= 0 || this.discountPrice >= this.price) {
-    return 0;
-  }
-
-  return Math.round(((this.price - this.discountPrice) / this.price) * 100);
+// Stock
+productSchema.index({
+  stock: 1,
 });
+
+
+/*                           Include Virtuals                                 */
+
 
 productSchema.set("toJSON", {
   virtuals: true,
@@ -285,6 +382,12 @@ productSchema.set("toObject", {
   virtuals: true,
 });
 
-const Product = mongoose.model("Product", productSchema);
+
+/*                                   Model                                    */
+
+
+const Product =
+  mongoose.models.Product ||
+  mongoose.model("Product", productSchema);
 
 export default Product;

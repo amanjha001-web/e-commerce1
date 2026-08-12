@@ -2,28 +2,66 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-import authRoutes from "./routes/auth.routes.js";
-import productRoutes from "./routes/product.routes.js";
-import categoryRoutes from "./routes/category.routes.js";
-import brandRoutes from "./routes/brand.routes.js";
+import { helmet as helmetConfig, cors as corsOptions } from "./config/index.js";
 
-import ApiError from "./utils/ApiError.js";
-import globalErrorHandler from "./middlewares/error.middleware.js";
+import {
+  requestLogger,
+  globalErrorHandler,
+  compressionMiddleware,
+  apiLimiter,
+  notFound,
+} from "./middlewares/index.js";
+
+/*                                  Routes                                    */
+
+import {
+  authRoutes,
+  userRoutes,
+  adminRoutes,
+  vendorRoutes,
+  vendorRequestRoutes,
+  addressRoutes,
+  brandRoutes,
+  categoryRoutes,
+  productRoutes,
+  productVariantRoutes,
+  cartRoutes,
+  wishlistRoutes,
+  orderRoutes,
+  paymentRoutes,
+  couponRoutes,
+  bannerRoutes,
+  reviewRoutes,
+  chatRoutes,
+  notificationRoutes,
+  fileRoutes,
+  searchRoutes,
+  reportRoutes,
+  supportRoutes,
+  settingRoutes,
+  shipmentRoutes,
+  taxRoutes,
+} from "./routes/index.js";
+
+
 
 const app = express();
 
-/* -------------------------------------------------------------------------- */
-/*                               Global Middlewares                           */
-/* -------------------------------------------------------------------------- */
+/*                          Global Middlewares                                */
+
+app.use(helmetConfig);
+
+app.use(cors(corsOptions));
+
+app.use(requestLogger);
+
+app.use(compressionMiddleware);
 
 app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-    credentials: true,
+  express.json({
+    limit: "20kb",
   }),
 );
-
-app.use(express.json({ limit: "20kb" }));
 
 app.use(
   express.urlencoded({
@@ -36,40 +74,94 @@ app.use(cookieParser());
 
 app.use(express.static("public"));
 
-/* -------------------------------------------------------------------------- */
-/*                                   Health                                   */
-/* -------------------------------------------------------------------------- */
+/*                              Rate Limiting                                 */
 
-app.get("/", (req, res) => {
-  res.status(200).json({
+app.use("/api", apiLimiter);
+
+/*                              Health Check                                  */
+
+app.get("/health", (req, res) => {
+  return res.status(200).json({
     success: true,
-    message: "🚀 ShopSphere API is Running...",
+    status: "OK",
+    message: "ShopSphere API is running",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
   });
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                   Routes                                   */
-/* -------------------------------------------------------------------------- */
+/*                               API Routes                                   */
 
+// Auth
 app.use("/api/v1/auth", authRoutes);
+
+// User
+app.use("/api/v1/users", userRoutes);
+
+// Admin
+app.use("/api/v1/admin", adminRoutes);
+
+// Vendor
+app.use("/api/v1/vendors", vendorRoutes);
+
+app.use("/api/v1/vendor-requests", vendorRequestRoutes);
+
+// Address
+app.use("/api/v1/address", addressRoutes);
+
+// Catalog
+app.use("/api/v1/brands", brandRoutes);
 
 app.use("/api/v1/categories", categoryRoutes);
 
 app.use("/api/v1/products", productRoutes);
 
-app.use("/api/v1/brands", brandRoutes);
+app.use("/api/v1/product-variants", productVariantRoutes);
 
-/* -------------------------------------------------------------------------- */
-/*                               404 Middleware                               */
-/* -------------------------------------------------------------------------- */
+// Customer
+app.use("/api/v1/cart", cartRoutes);
 
-app.use((req, res, next) => {
-  next(new ApiError(404, `Route Not Found - ${req.originalUrl}`));
-});
+app.use("/api/v1/wishlist", wishlistRoutes);
 
-/* -------------------------------------------------------------------------- */
-/*                            Global Error Handler                            */
-/* -------------------------------------------------------------------------- */
+// Order & Payment
+app.use("/api/v1/orders", orderRoutes);
+
+app.use("/api/v1/payments", paymentRoutes);
+
+// Marketing
+app.use("/api/v1/coupons", couponRoutes);
+
+app.use("/api/v1/banners", bannerRoutes);
+
+// Review
+app.use("/api/v1/reviews", reviewRoutes);
+
+// Communication
+app.use("/api/v1/chat", chatRoutes);
+
+app.use("/api/v1/notifications", notificationRoutes);
+
+// Files
+app.use("/api/v1/files", fileRoutes);
+
+// Search
+app.use("/api/v1/search", searchRoutes);
+
+// Reports & Support
+app.use("/api/v1/reports", reportRoutes);
+
+app.use("/api/v1/support", supportRoutes);
+
+// System
+app.use("/api/v1/settings", settingRoutes);
+
+app.use("/api/v1/shipments", shipmentRoutes);
+
+app.use("/api/v1/taxes", taxRoutes);
+
+/*                              Error Handling                                */
+
+app.use(notFound);
 
 app.use(globalErrorHandler);
 

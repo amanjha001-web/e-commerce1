@@ -1,108 +1,178 @@
 import { z } from "zod";
 
-/*
-|--------------------------------------------------------------------------
-| Create Product Schema
-|--------------------------------------------------------------------------
-*/
+import {
+  objectId,
+  money,
+  positiveNumber,
+  booleanField,
+} from "./common.validator.js";
+
+/*                              Base Schema                                   */
+
+const productBody = {
+  name: z
+    .string()
+    .trim()
+    .min(3, "Product name must be at least 3 characters")
+    .max(150, "Product name cannot exceed 150 characters"),
+
+  shortDescription: z
+    .string()
+    .trim()
+    .min(10, "Short description must be at least 10 characters")
+    .max(250, "Short description cannot exceed 250 characters"),
+
+  description: z
+    .string()
+    .trim()
+    .min(20, "Description must be at least 20 characters")
+    .max(5000, "Description cannot exceed 5000 characters"),
+
+  category: objectId,
+
+  brand: objectId,
+
+  price: positiveNumber,
+
+  discountPrice: money.optional(),
+
+  costPrice: money.optional(),
+
+  stock: z.coerce.number().int().min(0, "Stock cannot be negative"),
+
+  sku: z.string().trim().max(100).optional().or(z.literal("")),
+
+  barcode: z.string().trim().max(100).optional().or(z.literal("")),
+
+  weight: money.optional(),
+
+  tags: z.union([z.array(z.string().trim()), z.string().trim()]).optional(),
+
+  featured: booleanField.optional(),
+
+  flashSale: booleanField.optional(),
+
+  bestSeller: booleanField.optional(),
+
+  trending: booleanField.optional(),
+
+  newArrival: booleanField.optional(),
+
+  isActive: booleanField.optional(),
+
+  seoTitle: z.string().trim().max(70).optional().or(z.literal("")),
+
+  seoDescription: z.string().trim().max(160).optional().or(z.literal("")),
+};
+
+/*                           Create Product                                   */
 
 export const createProductSchema = z.object({
-  body: z.object({
-    name: z
-      .string()
-      .trim()
-      .min(3, "Product name must be at least 3 characters"),
+  body: z.object(productBody).superRefine((data, ctx) => {
+    if (data.discountPrice !== undefined && data.discountPrice > data.price) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discountPrice"],
+        message: "Discount price cannot be greater than price",
+      });
+    }
 
-    shortDescription: z
-      .string()
-      .trim()
-      .min(10, "Short description is too short")
-      .max(250),
-
-    description: z.string().trim().min(20, "Description is too short"),
-
-    category: z.string().min(1, "Category is required"),
-
-    brand: z.string().min(1, "Brand is required"),
-
-    price: z.coerce
-      .number({
-        required_error: "Price is required",
-      })
-      .positive("Price must be greater than 0"),
-
-    discountPrice: z.coerce.number().min(0).optional(),
-
-    stock: z.coerce
-      .number({
-        required_error: "Stock is required",
-      })
-      .min(0),
-
-    tags: z.array(z.string()).optional(),
-
-    featured: z.coerce.boolean().optional(),
-
-    flashSale: z.coerce.boolean().optional(),
-
-    bestSeller: z.coerce.boolean().optional(),
-
-    trending: z.coerce.boolean().optional(),
-
-    newArrival: z.coerce.boolean().optional(),
+    if (data.costPrice !== undefined && data.costPrice > data.price) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["costPrice"],
+        message: "Cost price cannot be greater than selling price",
+      });
+    }
   }),
 });
 
-/*
-|--------------------------------------------------------------------------
-| Update Product Schema
-|--------------------------------------------------------------------------
-*/
+/*                           Update Product                                   */
 
 export const updateProductSchema = z.object({
-  body: z.object({
-    name: z
-      .string()
-      .trim()
-      .min(3, "Product name must be at least 3 characters")
-      .optional(),
+  body: z
+    .object({
+      name: productBody.name.optional(),
 
-    shortDescription: z
-      .string()
-      .trim()
-      .min(10, "Short description is too short")
-      .max(250)
-      .optional(),
+      shortDescription: productBody.shortDescription.optional(),
 
-    description: z
-      .string()
-      .trim()
-      .min(20, "Description is too short")
-      .optional(),
+      description: productBody.description.optional(),
 
-    category: z.string().optional(),
+      category: objectId.optional(),
 
-    brand: z.string().optional(),
+      brand: objectId.optional(),
 
-    price: z.coerce
-      .number()
-      .positive("Price must be greater than 0")
-      .optional(),
+      price: positiveNumber.optional(),
 
-    discountPrice: z.coerce.number().min(0).optional(),
+      discountPrice: money.optional(),
 
-    stock: z.coerce.number().min(0).optional(),
+      costPrice: money.optional(),
 
-    tags: z.array(z.string()).optional(),
+      stock: z.coerce.number().int().min(0).optional(),
 
-    featured: z.coerce.boolean().optional(),
+      sku: productBody.sku,
 
-    flashSale: z.coerce.boolean().optional(),
+      barcode: productBody.barcode,
 
-    bestSeller: z.coerce.boolean().optional(),
+      weight: money.optional(),
 
-    trending: z.coerce.boolean().optional(),
+      tags: productBody.tags,
 
-    newArrival: z.coerce.boolean().optional(),
+      featured: booleanField.optional(),
+
+      flashSale: booleanField.optional(),
+
+      bestSeller: booleanField.optional(),
+
+      trending: booleanField.optional(),
+
+      newArrival: booleanField.optional(),
+
+      isActive: booleanField.optional(),
+
+      seoTitle: productBody.seoTitle,
+
+      seoDescription: productBody.seoDescription,
+    })
+    .superRefine((data, ctx) => {
+      if (
+        data.price !== undefined &&
+        data.discountPrice !== undefined &&
+        data.discountPrice > data.price
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["discountPrice"],
+          message: "Discount price cannot be greater than price",
+        });
+      }
+
+      if (
+        data.price !== undefined &&
+        data.costPrice !== undefined &&
+        data.costPrice > data.price
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["costPrice"],
+          message: "Cost price cannot be greater than selling price",
+        });
+      }
+    }),
+});
+
+/*                             Product Params                                 */
+
+export const productIdSchema = z.object({
+  params: z.object({
+    id: objectId,
+  }),
+});
+
+/*                          Product Slug Params                               */
+
+export const productSlugSchema = z.object({
+  params: z.object({
+    slug: z.string().trim().min(1),
   }),
 });

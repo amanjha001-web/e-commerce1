@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+
+/*                             Category Schema                                */
+
+
 const categorySchema = new mongoose.Schema(
   {
     name: {
@@ -7,6 +11,8 @@ const categorySchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
 
     slug: {
@@ -15,24 +21,26 @@ const categorySchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
 
     description: {
       type: String,
-      trim: true,
       default: "",
+      trim: true,
+      maxlength: 1000,
     },
 
     image: {
       url: {
         type: String,
         default: "",
+        trim: true,
       },
 
       publicId: {
         type: String,
         default: "",
+        trim: true,
       },
     },
 
@@ -45,6 +53,7 @@ const categorySchema = new mongoose.Schema(
     level: {
       type: Number,
       default: 1,
+      min: 1,
     },
 
     isFeatured: {
@@ -55,6 +64,7 @@ const categorySchema = new mongoose.Schema(
     sortOrder: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     isActive: {
@@ -72,11 +82,38 @@ const categorySchema = new mongoose.Schema(
   },
 );
 
+
+/*                                  Indexes                                   */
+
+
+
+
+categorySchema.index({
+  parentCategory: 1,
+});
+
+categorySchema.index({
+  isActive: 1,
+});
+
+categorySchema.index({
+  isFeatured: 1,
+});
+
+categorySchema.index({
+  sortOrder: 1,
+});
+
 categorySchema.index({
   name: "text",
   description: "text",
 });
 
-const Category = mongoose.model("Category", categorySchema);
+
+/*                                   Model                                    */
+
+
+const Category =
+  mongoose.models.Category || mongoose.model("Category", categorySchema);
 
 export default Category;

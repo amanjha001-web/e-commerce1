@@ -2,11 +2,9 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import categoryService from "../services/category.service.js";
 
-/*
-|--------------------------------------------------------------------------
-| Create Category
-|--------------------------------------------------------------------------
-*/
+
+// Create Category
+
 
 const createCategory = asyncHandler(async (req, res) => {
   const category = await categoryService.createCategory(req.body, req.files);
@@ -16,11 +14,9 @@ const createCategory = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, category, "Category created successfully"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Get All Categories
-|--------------------------------------------------------------------------
-*/
+
+// Get All Categories
+
 
 const getAllCategories = asyncHandler(async (req, res) => {
   const categories = await categoryService.getAllCategories();
@@ -30,11 +26,9 @@ const getAllCategories = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, categories, "Categories fetched successfully"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Get Category By ID
-|--------------------------------------------------------------------------
-*/
+
+// Get Category By ID
+
 
 const getCategoryById = asyncHandler(async (req, res) => {
   const category = await categoryService.getCategoryById(req.params.id);
@@ -44,11 +38,9 @@ const getCategoryById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, category, "Category fetched successfully"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Get Category By Slug
-|--------------------------------------------------------------------------
-*/
+
+// Get Category By Slug
+
 
 const getCategoryBySlug = asyncHandler(async (req, res) => {
   const category = await categoryService.getCategoryBySlug(req.params.slug);
@@ -58,11 +50,9 @@ const getCategoryBySlug = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, category, "Category fetched successfully"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Update Category
-|--------------------------------------------------------------------------
-*/
+
+// Update Category
+
 
 const updateCategory = asyncHandler(async (req, res) => {
   const category = await categoryService.updateCategory(
@@ -76,11 +66,9 @@ const updateCategory = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, category, "Category updated successfully"));
 });
 
-/*
-|--------------------------------------------------------------------------
-| Delete Category
-|--------------------------------------------------------------------------
-*/
+
+// Delete Category
+
 
 const deleteCategory = asyncHandler(async (req, res) => {
   const category = await categoryService.deleteCategory(req.params.id);
@@ -90,7 +78,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, category, "Category deleted successfully"));
 });
 
-export {
+export default{
   createCategory,
   getAllCategories,
   getCategoryById,

@@ -2,57 +2,9 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const addressSchema = new mongoose.Schema(
-  {
-    fullName: {
-      type: String,
-      trim: true,
-    },
 
-    phone: {
-      type: String,
-      trim: true,
-    },
+/*                               User Schema                                  */
 
-    addressLine1: {
-      type: String,
-      trim: true,
-    },
-
-    addressLine2: {
-      type: String,
-      trim: true,
-    },
-
-    city: {
-      type: String,
-      trim: true,
-    },
-
-    state: {
-      type: String,
-      trim: true,
-    },
-
-    country: {
-      type: String,
-      default: "India",
-    },
-
-    postalCode: {
-      type: String,
-      trim: true,
-    },
-
-    isDefault: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  {
-    _id: false,
-  },
-);
 
 const userSchema = new mongoose.Schema(
   {
@@ -60,6 +12,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      minlength: 3,
+      maxlength: 100,
     },
 
     username: {
@@ -68,6 +22,8 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      minlength: 3,
+      maxlength: 30,
     },
 
     email: {
@@ -82,16 +38,40 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: 6,
+      select: false,
     },
 
     phone: {
       type: String,
       default: "",
+      trim: true,
     },
 
     avatar: {
-      type: String,
-      default: "",
+      url: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      publicId: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+    },
+    coverImage: {
+      url: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      publicId: {
+        type: String,
+        default: "",
+        trim: true,
+      },
     },
 
     role: {
@@ -104,17 +84,49 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    
+
+    emailVerificationToken: {
+      type: String,
+      default: "",
+      select: false,
+    },
+
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+    },
+
+    passwordResetToken: {
+      type: String,
+      default: "",
+      select: false,
+    },
+
+    passwordResetExpires: {
+      type: Date,
+      default: null,
+    },
 
     isBlocked: {
       type: Boolean,
       default: false,
     },
 
-    addresses: [addressSchema],
-
     refreshToken: {
       type: String,
       default: "",
+      select: false,
+    },
+
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -122,7 +134,30 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// Password Hash
+
+/*                                  Indexes                                   */
+
+
+userSchema.index({
+  role: 1,
+});
+
+userSchema.index({
+  isVerified: 1,
+});
+
+userSchema.index({
+  isBlocked: 1,
+});
+
+userSchema.index({
+  createdAt: -1,
+});
+
+
+/*                             Password Hash                                  */
+
+
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
@@ -133,12 +168,18 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Compare Password
+
+/*                           Compare Password                                 */
+
+
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-// Generate Access Token
+
+/*                         Generate Access Token                              */
+
+
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
@@ -146,26 +187,37 @@ userSchema.methods.generateAccessToken = function () {
       email: this.email,
       role: this.role,
     },
+
     process.env.JWT_SECRET,
+
     {
       expiresIn: process.env.JWT_EXPIRES_IN,
     },
   );
 };
 
-// Generate Refresh Token
+
+/*                        Generate Refresh Token                              */
+
+
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
     },
+
     process.env.JWT_SECRET,
+
     {
-      expiresIn: "30d",
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
     },
   );
 };
 
-const User = mongoose.model("User", userSchema);
+
+/*                                   Model                                    */
+
+
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default User;

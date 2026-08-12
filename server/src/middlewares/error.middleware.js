@@ -1,3 +1,6 @@
+
+// global error handler
+
 const globalErrorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
 
@@ -9,4 +12,4 @@ const globalErrorHandler = (err, req, res, next) => {
   });
 };
 
-export default globalErrorHandler;
+export { globalErrorHandler };

@@ -1,46 +1,35 @@
 import { Router } from "express";
 
 import {
-  createCategory,
-  getAllCategories,
-  getCategoryById,
-  getCategoryBySlug,
-  updateCategory,
-  deleteCategory,
-} from "../controllers/category.controller.js";
+  categoryController
+} from "../controllers/index.js";
 
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import authorizeRoles from "../middlewares/role.middleware.js";
-import validate from "../middlewares/validate.middleware.js";
-import { uploadCategoryImage } from "../middlewares/upload.middleware.js";
+import {authMiddleware as verifyJWT } from "../middlewares/index.js";
+import {authorizeRoles} from "../middlewares/index.js";
+import {validate} from "../middlewares/index.js";
+import { uploadCategoryImage } from "../middlewares/index.js";
 
 import {
   createCategorySchema,
   updateCategorySchema,
-} from "../validators/category.validator.js";
+} from "../validators/index.js";
 
 const router = Router();
 
-/*
-|--------------------------------------------------------------------------
-| Public Routes
-|--------------------------------------------------------------------------
-*/
+
+// Public Routes
 
 // Get All Categories
-router.get("/", getAllCategories);
+router.get("/", categoryController.getAllCategories);
 
 // Get Category By Slug
-router.get("/slug/:slug", getCategoryBySlug);
+router.get("/slug/:slug", categoryController.getCategoryBySlug);
 
 // Get Category By ID
-router.get("/:id", getCategoryById);
+router.get("/:id", categoryController.getCategoryById);
 
-/*
-|--------------------------------------------------------------------------
-| Protected Routes (Admin Only)
-|--------------------------------------------------------------------------
-*/
+
+// Protected Routes (Admin Only)
 
 // Create Category
 router.post(
@@ -49,7 +38,7 @@ router.post(
   authorizeRoles("admin"),
   uploadCategoryImage,
   validate(createCategorySchema),
-  createCategory,
+  categoryController.createCategory,
 );
 
 // Update Category
@@ -59,10 +48,10 @@ router.patch(
   authorizeRoles("admin"),
   uploadCategoryImage,
   validate(updateCategorySchema),
-  updateCategory,
+  categoryController.updateCategory,
 );
 
 // Delete Category
-router.delete("/:id", verifyJWT, authorizeRoles("admin"), deleteCategory);
+router.delete("/:id", verifyJWT, authorizeRoles("admin"), categoryController.deleteCategory);
 
 export default router;
