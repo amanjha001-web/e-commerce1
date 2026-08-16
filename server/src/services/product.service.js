@@ -127,6 +127,16 @@ const createProduct = async (productData, files, user) => {
     throw new ApiError(404, "Brand not found");
   }
 
+  if (productData.sku) {
+    const existingSku = await productRepository.getProductBySku(
+      productData.sku,
+    );
+
+    if (existingSku) {
+      throw new ApiError(409, "Product with this SKU already exists");
+    }
+  }
+
   const slug = await generateSlug(name);
   let thumbnail = {
     url: "",
@@ -347,6 +357,16 @@ const updateProduct = async (productId, updateData, files, user) => {
     throw new ApiError(403, "You are not authorized to update this product");
   }
 
+  /*                  SKU Validation                  */
+
+  if (updateData.sku && updateData.sku !== product.sku) {
+    const existingSku = await productRepository.getProductBySku(updateData.sku);
+
+    if (existingSku && existingSku._id.toString() !== productId.toString()) {
+      throw new ApiError(409, "Product with this SKU already exists");
+    }
+  }
+
   /*                        Category Validation                        */
 
   if (updateData.category) {
@@ -420,7 +440,7 @@ const updateProduct = async (productId, updateData, files, user) => {
   );
 
   return updatedProduct;
-};
+};;
 
 /*                             Delete Product                                 */
 
@@ -471,6 +491,29 @@ const toggleProductStatus = async (productId) => {
   });
 };
 
+/*                         Approve / Publish Product                         */
+
+const approveProduct = async (productId) => {
+  const product = await productRepository.getProductById(productId);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  if (product.deletedAt) {
+    throw new ApiError(400, "Deleted product cannot be published");
+  }
+
+  if (product.status === "published" && product.isActive) {
+    throw new ApiError(400, "Product is already published");
+  }
+
+  return await productRepository.updateProduct(productId, {
+    status: "published",
+    isActive: true,
+  });
+};
+
 /*                           Update Product Stock                             */
 
 const updateProductStock = async (productId, stock) => {
@@ -509,6 +552,25 @@ const getTrendingProducts = async (limit = 10) => {
 
 const getBestSellerProducts = async (limit = 10) => {
   return await productRepository.getBestSellerProducts(Number(limit));
+
+};
+
+/*                         New Arrival Products                               */
+
+const getNewArrivalProducts = async (limit = 10) => {
+  return await productRepository.getNewArrivalProducts(Number(limit));
+};
+
+/*                           Get Product By SKU                               */
+
+const getProductBySku = async (sku) => {
+  const product = await productRepository.getProductBySku(sku);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  return product;
 };
 
 /*                                  Export                                    */
@@ -532,6 +594,8 @@ export default {
 
   toggleProductStatus,
 
+  approveProduct,
+
   updateProductStock,
 
   getFlashSaleProducts,
@@ -539,4 +603,8 @@ export default {
   getTrendingProducts,
 
   getBestSellerProducts,
+
+  getNewArrivalProducts,
+
+  getProductBySku,
 };

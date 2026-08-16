@@ -1,12 +1,10 @@
 import { Router } from "express";
 
-import {
-  orderController
-} from "../controllers/index.js";
+import { orderController } from "../controllers/index.js";
 
-import {authMiddleware as verifyJWT } from "../middlewares/index.js";
-import {authorizeRoles} from "../middlewares/index.js";
-import {validate} from "../middlewares/index.js";
+import { authMiddleware as verifyJWT } from "../middlewares/index.js";
+import { authorizeRoles } from "../middlewares/index.js";
+import { validate } from "../middlewares/index.js";
 
 import {
   createOrderSchema,
@@ -28,10 +26,38 @@ router.post(
 );
 
 // My Orders
-router.get("/my", verifyJWT, authorizeRoles("customer"), orderController.getMyOrders);
+router.get(
+  "/my",
+  verifyJWT,
+  authorizeRoles("customer"),
+  orderController.getMyOrders,
+);
+
+// Vendor Orders
+router.get(
+  "/vendor",
+  verifyJWT,
+  authorizeRoles("vendor"),
+  orderController.getVendorOrders,
+);
+
+/*                         Admin Routes                         */
+
+// Get All Orders
+router.get(
+  "/",
+  verifyJWT,
+  authorizeRoles("admin"),
+  orderController.getAllOrders,
+);
 
 // Order Details
-router.get("/:id", verifyJWT, validate(orderIdSchema), orderController.getOrderById);
+router.get(
+  "/:id",
+  verifyJWT,
+  validate(orderIdSchema),
+  orderController.getOrderById,
+);
 
 // Cancel Order
 router.patch(

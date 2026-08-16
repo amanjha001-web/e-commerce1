@@ -96,13 +96,18 @@ const createReview = async (userId, reviewData) => {
     throw new ApiError(409, "You have already reviewed this product");
   }
 
-  const orders = await orderRepository.getOrdersByUser(userId);
+const orderResult = await orderRepository.getOrdersByUser(userId);
 
-  const purchased = orders.some((order) =>
-    order.items.some(
-      (item) => item.product._id.toString() === product.toString(),
-    ),
-  );
+const orders = Array.isArray(orderResult)
+  ? orderResult
+  : orderResult.orders || [];
+
+const purchased = orders.some((order) =>
+  order.items.some(
+    (item) =>
+      (item.product?._id || item.product)?.toString() === product.toString(),
+  ),
+);
 
   if (!purchased) {
     throw new ApiError(400, "Only purchased products can be reviewed");
@@ -157,10 +162,9 @@ const getProductReviews = async (productId, query = {}) => {
     [sortBy]: order === "asc" ? 1 : -1,
   };
 
-  return await reviewRepository.getReviewsByProduct(filter, {
+  return await reviewRepository.getReviewsByProduct(productId, {
     page: Number(page),
     limit: Number(limit),
-    sort,
   });
 };
 
@@ -251,11 +255,11 @@ const updateReview = async (
       review.comment,
   });
 
-  const updatedReview =
-    await reviewRepository.updateReview(
-      reviewId,
-      updateData,
-    );
+  const updatedReview = await reviewRepository.updateReview(reviewId, {
+    ...updateData,
+    isEdited: true,
+    editedAt: new Date(),
+  });
 
   await refreshProductRating(
     review.product._id,

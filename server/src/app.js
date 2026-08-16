@@ -41,6 +41,7 @@ import {
   settingRoutes,
   shipmentRoutes,
   taxRoutes,
+  conversationRoutes,
 } from "./routes/index.js";
 
 
@@ -116,7 +117,7 @@ app.use("/api/v1/categories", categoryRoutes);
 
 app.use("/api/v1/products", productRoutes);
 
-app.use("/api/v1/product-variants", productVariantRoutes);
+app.use("/api/v1", productVariantRoutes);
 
 // Customer
 app.use("/api/v1/cart", cartRoutes);
@@ -138,7 +139,7 @@ app.use("/api/v1/reviews", reviewRoutes);
 
 // Communication
 app.use("/api/v1/chat", chatRoutes);
-
+app.use("/api/v1/conversations", conversationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 // Files

@@ -1,6 +1,6 @@
 import Banner from "../models/Banner.model.js";
 
-/*                             Create Banner                                  */
+/* ============================ Create Banner ============================ */
 
 const createBanner = async (bannerData, session = null) => {
   const [banner] = await Banner.create([bannerData], {
@@ -10,61 +10,72 @@ const createBanner = async (bannerData, session = null) => {
   return banner;
 };
 
-/*                           Find Banner By Id                                */
+/* ========================== Find Banner By Id ========================== */
 
 const findBannerById = async (bannerId) => {
   return Banner.findOne({
     _id: bannerId,
     isDeleted: false,
   })
-    .populate("createdBy", "name email")
-    .populate("updatedBy", "name email");
+    .populate("createdBy", "fullName email")
+    .populate("updatedBy", "fullName email");
 };
 
-/*                          Find Banner By Slug                               */
+/* ========================= Find Banner By Slug ========================= */
 
 const findBannerBySlug = async (slug) => {
   return Banner.findOne({
-    slug,
+    slug: slug.toLowerCase(),
     isDeleted: false,
   });
 };
 
-/*                          Find Active Banner                                */
+/* ========================== Find Active Banners ======================= */
 
 const findActiveBanners = async (filter = {}) => {
   const now = new Date();
 
   return Banner.find({
     isDeleted: false,
+
     status: "ACTIVE",
-    $or: [
+
+    $and: [
       {
-        startDate: null,
+        $or: [
+          {
+            startDate: null,
+          },
+          {
+            startDate: {
+              $lte: now,
+            },
+          },
+        ],
       },
+
       {
-        startDate: {
-          $lte: now,
-        },
+        $or: [
+          {
+            endDate: null,
+          },
+          {
+            endDate: {
+              $gte: now,
+            },
+          },
+        ],
       },
     ],
-    $or: [
-      {
-        endDate: null,
-      },
-      {
-        endDate: {
-          $gte: now,
-        },
-      },
-    ],
+
     ...filter,
   }).sort({
     position: 1,
+    createdAt: -1,
   });
 };
 
-/*                           Find All Banners                                 */
+/* ============================ Find Banners ============================= */
 
 const findBanners = async (filter = {}, options = {}) => {
   const {
@@ -76,50 +87,66 @@ const findBanners = async (filter = {}, options = {}) => {
     },
   } = options;
 
-  const skip = (page - 1) * limit;
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 20;
 
-  const banners = await Banner.find({
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const query = {
     isDeleted: false,
     ...filter,
-  })
-    .populate("createdBy", "name email")
-    .populate("updatedBy", "name email")
-    .sort(sort)
-    .skip(skip)
-    .limit(limit);
+  };
 
-  const total = await Banner.countDocuments({
-    isDeleted: false,
-    ...filter,
-  });
+  const [banners, total] = await Promise.all([
+    Banner.find(query)
+      .populate("createdBy", "fullName email")
+      .populate("updatedBy", "fullName email")
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNumber),
+
+    Banner.countDocuments(query),
+  ]);
 
   return {
     banners,
+
     pagination: {
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNumber,
+      limit: limitNumber,
+      totalPages: Math.ceil(total / limitNumber),
+      hasNextPage: pageNumber < Math.ceil(total / limitNumber),
+      hasPrevPage: pageNumber > 1,
     },
   };
 };
 
-/*                           Update Banner                                    */
+/* ============================ Update Banner ============================ */
 
 const updateBanner = async (bannerId, updateData, session = null) => {
-  return Banner.findByIdAndUpdate(bannerId, updateData, {
-    new: true,
-    runValidators: true,
-    session,
-  });
+  return Banner.findOneAndUpdate(
+    {
+      _id: bannerId,
+      isDeleted: false,
+    },
+    updateData,
+    {
+      new: true,
+      runValidators: true,
+      session,
+    },
+  )
+    .populate("createdBy", "fullName email")
+    .populate("updatedBy", "fullName email");
 };
 
-/*                         Update Banner By Slug                              */
+/* ======================== Update Banner By Slug ======================== */
 
 const updateBannerBySlug = async (slug, updateData) => {
   return Banner.findOneAndUpdate(
     {
-      slug,
+      slug: slug.toLowerCase(),
       isDeleted: false,
     },
     updateData,
@@ -130,11 +157,14 @@ const updateBannerBySlug = async (slug, updateData) => {
   );
 };
 
-/*                           Increment Click                                  */
+/* =========================== Increment Click ========================== */
 
 const incrementClick = async (bannerId) => {
-  return Banner.findByIdAndUpdate(
-    bannerId,
+  return Banner.findOneAndUpdate(
+    {
+      _id: bannerId,
+      isDeleted: false,
+    },
     {
       $inc: {
         clickCount: 1,
@@ -146,11 +176,14 @@ const incrementClick = async (bannerId) => {
   );
 };
 
-/*                       Increment Impression                                 */
+/* ======================== Increment Impression ======================= */
 
 const incrementImpression = async (bannerId) => {
-  return Banner.findByIdAndUpdate(
-    bannerId,
+  return Banner.findOneAndUpdate(
+    {
+      _id: bannerId,
+      isDeleted: false,
+    },
     {
       $inc: {
         impressionCount: 1,
@@ -162,14 +195,18 @@ const incrementImpression = async (bannerId) => {
   );
 };
 
-/*                           Soft Delete                                      */
+/* ============================ Soft Delete ============================= */
 
 const softDeleteBanner = async (bannerId) => {
-  return Banner.findByIdAndUpdate(
-    bannerId,
+  return Banner.findOneAndUpdate(
+    {
+      _id: bannerId,
+      isDeleted: false,
+    },
     {
       isDeleted: true,
       deletedAt: new Date(),
+      status: "INACTIVE",
     },
     {
       new: true,
@@ -177,7 +214,7 @@ const softDeleteBanner = async (bannerId) => {
   );
 };
 
-/*                           Count Banners                                    */
+/* ============================= Count Banners ========================== */
 
 const countBanners = async (filter = {}) => {
   return Banner.countDocuments({
@@ -185,6 +222,8 @@ const countBanners = async (filter = {}) => {
     ...filter,
   });
 };
+
+/* ================================ Export =============================== */
 
 export default {
   createBanner,

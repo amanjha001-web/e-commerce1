@@ -8,6 +8,7 @@ import bannerService from "../services/banner.service.js";
 const createBanner = asyncHandler(async (req, res) => {
   const banner = await bannerService.createBanner({
     ...req.body,
+    files: req.files,
     createdBy: req.user._id,
   });
 
@@ -69,6 +70,7 @@ const updateBanner = asyncHandler(async (req, res) => {
 
   const banner = await bannerService.updateBanner(bannerId, {
     ...req.body,
+    files: req.files,
     updatedBy: req.user._id,
   });
 

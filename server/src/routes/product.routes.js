@@ -28,9 +28,18 @@ router.get("/flash-sale", productController.getFlashSaleProducts);
 // Get product by slug
 router.get("/slug/:slug", productController.getProductBySlug);
 
+// get product by sku
+router.get("/sku/:sku", productController.getProductBySku);
+
+//get trending products
 router.get("/trending", productController.getTrendingProducts);
 
+//get best sellers
 router.get("/best-sellers", productController.getBestSellerProducts);
+
+
+//get new arrivals products
+router.get("/new-arrivals", productController.getNewArrivalProducts);
 
 // Get product by id
 router.get("/:id", productController.getProductById);
@@ -47,6 +56,15 @@ router.post(
   uploadProductImages,
   validate(createProductSchema),
   productController.createProduct,
+);
+
+// Approve / Publish Product
+router.patch(
+  "/:id/approve",
+  verifyJWT,
+  authorizeRoles("admin"),
+  validate(productIdSchema),
+  productController.approveProduct,
 );
 
 // Update Product

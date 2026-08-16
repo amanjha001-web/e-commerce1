@@ -16,7 +16,7 @@ const getOrderById = async (orderId) => {
   return await Order.findById(orderId)
     .populate("user", "fullName email phone")
     .populate("items.product", "name slug thumbnail")
-    .populate("items.vendor", "shopName shopSlug")
+    .populate("items.vendor", "fullName email")
     .lean();
 };
 
@@ -28,7 +28,7 @@ const getOrderByNumber = async (orderNumber) => {
   })
     .populate("user", "fullName email phone")
     .populate("items.product", "name slug thumbnail")
-    .populate("items.vendor", "shopName shopSlug")
+    .populate("items.vendor", "fullName email")
     .lean();
 };
 
@@ -46,7 +46,7 @@ const getOrdersByUser = async (userId, options = {}) => {
   const [orders, totalOrders] = await Promise.all([
     Order.find(query)
       .populate("items.product", "name slug thumbnail")
-      .populate("items.vendor", "shopName")
+      .populate("items.vendor", "fullName email")
       .sort({
         createdAt: -1,
       })
@@ -86,28 +86,18 @@ const getAllOrders = async (
 
   const skip = (page - 1) * limit;
 
-  const [orders, totalOrders] =
-    await Promise.all([
-      Order.find(filter)
-        .populate(
-          "user",
-          "fullName email phone",
-        )
-        .populate(
-          "items.product",
-          "name slug thumbnail",
-        )
-        .populate(
-          "items.vendor",
-          "shopName shopSlug",
-        )
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+  const [orders, totalOrders] = await Promise.all([
+    Order.find(filter)
+      .populate("user", "fullName email phone")
+      .populate("items.product", "name slug thumbnail")
+      .populate("items.vendor", "fullName email")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
 
-      Order.countDocuments(filter),
-    ]);
+    Order.countDocuments(filter),
+  ]);
 
   return {
     orders,
@@ -141,26 +131,20 @@ const getVendorOrders = async (
     "items.vendor": vendorId,
   };
 
-  const [orders, totalOrders] =
-    await Promise.all([
-      Order.find(query)
-        .populate(
-          "user",
-          "fullName email phone",
-        )
-        .populate(
-          "items.product",
-          "name slug thumbnail",
-        )
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+  const [orders, totalOrders] = await Promise.all([
+    Order.find(query)
+      .populate("user", "fullName email phone")
+      .populate("items.product", "name slug thumbnail")
+      .populate("items.vendor", "fullName email")
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
 
-      Order.countDocuments(query),
-    ]);
+    Order.countDocuments(query),
+  ]);
 
   return {
     orders,
@@ -236,27 +220,14 @@ const updateOrder = async (
   updateData,
   session = null,
 ) => {
-  return await Order.findByIdAndUpdate(
-    orderId,
-    updateData,
-    {
-      new: true,
-      runValidators: true,
-      session,
-    },
-  )
-    .populate(
-      "user",
-      "fullName email phone",
-    )
-    .populate(
-      "items.product",
-      "name slug thumbnail",
-    )
-    .populate(
-      "items.vendor",
-      "shopName shopSlug",
-    );
+  return await Order.findByIdAndUpdate(orderId, updateData, {
+    new: true,
+    runValidators: true,
+    session,
+  })
+    .populate("user", "fullName email phone")
+    .populate("items.product", "name slug thumbnail")
+    .populate("items.vendor", "fullName email");
 };
 
 /*                        Update Order Status                                 */
@@ -351,7 +322,7 @@ const cancelOrder = async (
       session,
     },
   );
-}
+};
 /*                           Delete Order (Admin Only)                        */
 
 const deleteOrder = async (

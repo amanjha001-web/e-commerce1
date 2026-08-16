@@ -9,7 +9,10 @@ const createAddress = async (addressData) => {
 /*                         Get Address By Id                                  */
 
 const getAddressById = async (addressId) => {
-  return await Address.findById(addressId);
+  return await Address.findOne({
+    _id: addressId,
+    isDeleted: false,
+  });
 };
 
 /*                         Get User Addresses                                 */

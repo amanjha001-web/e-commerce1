@@ -30,7 +30,7 @@ const getPaymentByOrderId = async (orderId) => {
     .lean();
 };
 
-/*                           Get Payment By User                              */
+/*                          Get Payments By User                              */
 
 const getPaymentsByUser = async (userId, options = {}) => {
   const { page = 1, limit = 10 } = options;
@@ -43,7 +43,7 @@ const getPaymentsByUser = async (userId, options = {}) => {
 
   const [payments, totalPayments] = await Promise.all([
     Payment.find(query)
-      .populate("order", "orderNumber totalAmount orderStatus")
+      .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
       .sort({
         createdAt: -1,
       })
@@ -54,15 +54,17 @@ const getPaymentsByUser = async (userId, options = {}) => {
     Payment.countDocuments(query),
   ]);
 
+  const totalPages = Math.ceil(totalPayments / limit);
+
   return {
     payments,
 
     pagination: {
       totalPayments,
-      totalPages: Math.ceil(totalPayments / limit),
+      totalPages,
       currentPage: page,
       limit,
-      hasNextPage: page < Math.ceil(totalPayments / limit),
+      hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     },
   };
@@ -74,7 +76,7 @@ const getPaymentByRazorpayOrderId = async (razorpayOrderId) => {
   return await Payment.findOne({
     razorpayOrderId,
   })
-    .populate("order", "orderNumber totalAmount")
+    .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
     .populate("user", "fullName email phone")
     .lean();
 };
@@ -85,34 +87,28 @@ const getPaymentByPaymentId = async (razorpayPaymentId) => {
   return await Payment.findOne({
     razorpayPaymentId,
   })
-    .populate("order", "orderNumber totalAmount")
+    .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
     .populate("user", "fullName email phone")
     .lean();
 };
+
 /*                            Get All Payments                                */
 
-const getAllPayments = async (
-  filter = {},
-  options = {},
-) => {
+const getAllPayments = async (filter = {}, options = {}) => {
   const {
     page = 1,
     limit = 10,
-    sort = { createdAt: -1 },
+    sort = {
+      createdAt: -1,
+    },
   } = options;
 
   const skip = (page - 1) * limit;
 
   const [payments, totalPayments] = await Promise.all([
     Payment.find(filter)
-      .populate(
-        "order",
-        "orderNumber totalAmount orderStatus paymentStatus",
-      )
-      .populate(
-        "user",
-        "fullName email phone",
-      )
+      .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
+      .populate("user", "fullName email phone")
       .sort(sort)
       .skip(skip)
       .limit(limit)
@@ -121,54 +117,37 @@ const getAllPayments = async (
     Payment.countDocuments(filter),
   ]);
 
+  const totalPages = Math.ceil(totalPayments / limit);
+
   return {
     payments,
 
     pagination: {
       totalPayments,
-      totalPages: Math.ceil(totalPayments / limit),
+      totalPages,
       currentPage: page,
       limit,
-      hasNextPage:
-        page < Math.ceil(totalPayments / limit),
+      hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     },
   };
 };
 
-/*                            Update Payment                                  */
+/*                             Update Payment                                 */
 
-const updatePayment = async (
-  paymentId,
-  updateData,
-  session = null,
-) => {
-  return await Payment.findByIdAndUpdate(
-    paymentId,
-    updateData,
-    {
-      new: true,
-      runValidators: true,
-      session,
-    },
-  )
-    .populate(
-      "order",
-      "orderNumber totalAmount",
-    )
-    .populate(
-      "user",
-      "fullName email phone",
-    );
+const updatePayment = async (paymentId, updateData, session = null) => {
+  return await Payment.findByIdAndUpdate(paymentId, updateData, {
+    new: true,
+    runValidators: true,
+    session,
+  })
+    .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
+    .populate("user", "fullName email phone");
 };
 
-/*                        Update Payment Status                               */
+/*                         Update Payment Status                               */
 
-const updatePaymentStatus = async (
-  paymentId,
-  status,
-  session = null,
-) => {
+const updatePaymentStatus = async (paymentId, status, session = null) => {
   const updateData = {
     status,
   };
@@ -181,56 +160,48 @@ const updatePaymentStatus = async (
     updateData.refundedAt = new Date();
   }
 
-  return await Payment.findByIdAndUpdate(
-    paymentId,
-    updateData,
-    {
-      new: true,
-      runValidators: true,
-      session,
-    },
-  );
+  return await Payment.findByIdAndUpdate(paymentId, updateData, {
+    new: true,
+    runValidators: true,
+    session,
+  });
 };
 
-/*                          Search Payments                                   */
+/*                            Search Payments                                 */
 
-const searchPayments = async (
-  keyword,
-) => {
+const searchPayments = async (keyword) => {
+  if (!keyword?.trim()) {
+    return [];
+  }
+
   return await Payment.find({
     $or: [
       {
         razorpayOrderId: {
-          $regex: keyword,
+          $regex: keyword.trim(),
           $options: "i",
         },
       },
       {
         razorpayPaymentId: {
-          $regex: keyword,
+          $regex: keyword.trim(),
           $options: "i",
         },
       },
       {
         transactionId: {
-          $regex: keyword,
+          $regex: keyword.trim(),
           $options: "i",
         },
       },
     ],
   })
-    .populate(
-      "user",
-      "fullName email",
-    )
-    .populate(
-      "order",
-      "orderNumber",
-    )
+    .populate("user", "fullName email phone")
+    .populate("order", "orderNumber totalAmount orderStatus paymentStatus")
     .lean();
 };
 
-/*                           Get Total Revenue                                */
+/*                            Get Total Revenue                               */
 
 const getTotalRevenue = async () => {
   const result = await Payment.aggregate([
@@ -262,18 +233,12 @@ const getTotalRevenue = async () => {
   );
 };
 
-/*                           Delete Payment                                   */
+/*                             Delete Payment                                 */
 
-const deletePayment = async (
-  paymentId,
-  session = null,
-) => {
-  return await Payment.findByIdAndDelete(
-    paymentId,
-    {
-      session,
-    },
-  );
+const deletePayment = async (paymentId, session = null) => {
+  return await Payment.findByIdAndDelete(paymentId, {
+    session,
+  });
 };
 
 /*                                  Export                                    */

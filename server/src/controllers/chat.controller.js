@@ -18,7 +18,7 @@ const createChat = asyncHandler(async (req, res) => {
 const getChatById = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
 
-  const chat = await chatService.getChatById(chatId);
+  const chat = await chatService.getChatById(chatId, req.user._id);
 
   return res.json(new ApiResponse(200, chat, "Chat fetched successfully."));
 });

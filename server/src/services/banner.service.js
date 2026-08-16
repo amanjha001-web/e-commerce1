@@ -5,12 +5,20 @@ import bannerRepository from "../repositories/banner.repository.js";
 
 import ApiError from "../utils/ApiError.js";
 
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
+import fs from "fs";
+
 
 /*                            Create Banner                                   */
 
 
 const createBanner = async (bannerData) => {
-  const slug = slugify(bannerData.title, {
+  const { files, ...data } = bannerData;
+
+  const slug = slugify(data.title, {
     lower: true,
     strict: true,
     trim: true,
@@ -22,10 +30,57 @@ const createBanner = async (bannerData) => {
     throw new ApiError(409, "Banner already exists.");
   }
 
-  return bannerRepository.createBanner({
-    ...bannerData,
+  const desktopFile = files?.desktopImage?.[0];
+
+  if (!desktopFile) {
+    throw new ApiError(400, "Desktop banner image is required.");
+  }
+
+  const desktopUpload = await uploadOnCloudinary(
+    desktopFile.path,
+    "shopsphere/banners",
+  );
+
+  const bannerDataToSave = {
+    ...data,
+
     slug,
-  });
+
+    desktopImage: {
+      url: desktopUpload.secure_url,
+      publicId: desktopUpload.public_id,
+    },
+  };
+
+  const mobileFile = files?.mobileImage?.[0];
+
+  if (mobileFile) {
+    const mobileUpload = await uploadOnCloudinary(
+      mobileFile.path,
+      "shopsphere/banners",
+    );
+
+    bannerDataToSave.mobileImage = {
+      url: mobileUpload.secure_url,
+      publicId: mobileUpload.public_id,
+    };
+  }
+
+  const tabletFile = files?.tabletImage?.[0];
+
+  if (tabletFile) {
+    const tabletUpload = await uploadOnCloudinary(
+      tabletFile.path,
+      "shopsphere/banners",
+    );
+
+    bannerDataToSave.tabletImage = {
+      url: tabletUpload.secure_url,
+      publicId: tabletUpload.public_id,
+    };
+  }
+
+  return bannerRepository.createBanner(bannerDataToSave);
 };
 
 

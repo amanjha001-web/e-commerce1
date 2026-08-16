@@ -108,6 +108,20 @@ const toggleProductStatus = asyncHandler(async (req, res) => {
   });
 });
 
+
+/*                         Approve Product                                   */
+
+const approveProduct = asyncHandler(async (req, res) => {
+  const product = await productService.approveProduct(req.params.id);
+
+  return res.status(200).json({
+    statusCode: 200,
+    data: product,
+    message: "Product approved and published successfully",
+    success: true,
+  });
+});
+
 //updateProductStock
 
 const updateProductStock = asyncHandler(async (req, res) => {
@@ -182,6 +196,35 @@ const getBestSellerProducts = asyncHandler(async (req, res) => {
     );
 });
 
+
+//get new arrival products
+const getNewArrivalProducts = asyncHandler(async (req, res) => {
+  const limit = Number(req.query.limit) || 10;
+
+  const products = await productService.getNewArrivalProducts(limit);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        products,
+        "New arrival products fetched successfully",
+      ),
+    );
+});
+
+//get product by sku
+const getProductBySku = asyncHandler(async (req, res) => {
+  const { sku } = req.params;
+
+  const product = await productService.getProductBySku(sku);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, product, "Product fetched successfully by SKU"));
+});
+
 export default {
   createProduct,
   getAllProducts,
@@ -191,8 +234,11 @@ export default {
   deleteProduct,
   restoreProduct,
   toggleProductStatus,
+  approveProduct,
   updateProductStock,
   getFlashSaleProducts,
   getTrendingProducts,
   getBestSellerProducts,
+  getNewArrivalProducts,
+  getProductBySku,
 };

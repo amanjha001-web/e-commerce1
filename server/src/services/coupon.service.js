@@ -254,7 +254,7 @@ const updateCoupon = async (
 
   await validateCouponData(
     {
-      ...coupon.toObject(),
+      ...coupon,
       ...updateData,
     },
     couponId,

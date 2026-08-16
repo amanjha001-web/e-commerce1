@@ -62,6 +62,25 @@ router.get(
   productVariantController.getProductVariants,
 );
 
+/*                         SKU Check                                          */
+
+/**
+ * Check SKU Availability
+ *
+ * GET
+ * /variants/check-sku/:sku
+ */
+
+router.get(
+  "/variants/check-sku/:sku",
+
+  authMiddleware,
+
+  roleMiddleware(ROLES.VENDOR, ROLES.ADMIN, ROLES.SUPER_ADMIN),
+
+  productVariantController.checkSkuAvailability,
+);
+
 /**
  * Get Single Variant
  *
@@ -210,23 +229,6 @@ router.patch(
   productVariantController.releaseStock,
 );
 
-/*                         SKU Check                                          */
 
-/**
- * Check SKU Availability
- *
- * GET
- * /variants/check-sku/:sku
- */
-
-router.get(
-  "/variants/check-sku/:sku",
-
-  authMiddleware,
-
-  roleMiddleware(ROLES.VENDOR, ROLES.ADMIN, ROLES.SUPER_ADMIN),
-
-  productVariantController.checkSkuAvailability,
-);
 
 export default router;

@@ -38,7 +38,7 @@ const getAllReviews = asyncHandler(async (req, res) => {
 const updateReview = asyncHandler(async (req, res) => {
   const review = await reviewService.updateReview(
     req.params.id,
-    req.user._id,
+    req.user,
     req.body,
   );
 
@@ -50,7 +50,7 @@ const updateReview = asyncHandler(async (req, res) => {
 /*                            Delete Review                                   */
 
 const deleteReview = asyncHandler(async (req, res) => {
-  await reviewService.deleteReview(req.params.id, req.user._id, req.user.role);
+  await reviewService.deleteReview(req.params.id, req.user);
 
   return res
     .status(200)

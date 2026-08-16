@@ -60,3 +60,13 @@ export const paymentStatusSchema = z.object({
     id: objectId,
   }),
 });
+
+export const paymentFailureSchema = z.object({
+  body: z.object({
+    razorpayOrderId: z.string().trim().min(1, "Razorpay Order ID is required"),
+
+    failureReason: z.string().trim().max(500).optional().or(z.literal("")),
+
+    gatewayResponse: z.record(z.string(), z.any()).optional(),
+  }),
+});

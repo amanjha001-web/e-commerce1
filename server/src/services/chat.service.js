@@ -27,15 +27,31 @@ const createChat = async (chatData) => {
 /*                              Get Chat By Id                                */
 
 
-const getChatById = async (chatId) => {
+const getChatById = async (chatId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(chatId)) {
     throw new ApiError(400, "Invalid chat id.");
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user id.");
   }
 
   const chat = await chatRepository.findChatById(chatId);
 
   if (!chat) {
     throw new ApiError(404, "Chat not found.");
+  }
+
+  const isOwner =
+    chat.user?._id?.toString() === userId.toString() ||
+    chat.user?.toString() === userId.toString();
+
+  const isParticipant = chat.conversation?.participants?.some(
+    (participant) => participant.toString() === userId.toString(),
+  );
+
+  if (!isOwner && !isParticipant) {
+    throw new ApiError(403, "You are not authorized to access this chat.");
   }
 
   return chat;

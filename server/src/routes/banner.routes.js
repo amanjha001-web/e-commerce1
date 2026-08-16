@@ -1,20 +1,24 @@
 import { Router } from "express";
 
-import {
-  bannerController
-} from "../controllers/index.js";
+import { bannerController } from "../controllers/index.js";
 
-import {authMiddleware} from "../middlewares/index.js";
-import { authorize } from "../middlewares/index.js";
+import {
+  authMiddleware,
+  authorize,
+  validate,
+  uploadBannerImages,
+} from "../middlewares/index.js";
+
+import bannerValidator from "../validators/banner.validator.js";
 
 const router = Router();
 
-/*                              Public Routes                                 */
+/* ============================ Public Routes ============================ */
 
-// Active banners
+// Get active banners
 router.get("/active", bannerController.getActiveBanners);
 
-// Banner by slug
+// Get banner by slug
 router.get("/slug/:slug", bannerController.getBannerBySlug);
 
 // Record banner impression
@@ -23,13 +27,15 @@ router.patch("/:bannerId/impression", bannerController.incrementImpression);
 // Record banner click
 router.patch("/:bannerId/click", bannerController.incrementClick);
 
-/*                              Admin Routes                                  */
+/* ============================= Admin Routes ============================ */
 
 // Create banner
 router.post(
   "/",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  uploadBannerImages,
+  validate(bannerValidator.createBanner),
   bannerController.createBanner,
 );
 
@@ -37,15 +43,17 @@ router.post(
 router.get(
   "/",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(bannerValidator.getBanners),
   bannerController.getAllBanners,
 );
 
-// Get banner by id
+// Get banner by ID
 router.get(
   "/:bannerId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(bannerValidator.bannerIdParam),
   bannerController.getBannerById,
 );
 
@@ -53,15 +61,17 @@ router.get(
 router.patch(
   "/:bannerId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(bannerValidator.updateBanner),
   bannerController.updateBanner,
 );
 
-// Delete banner (Soft Delete)
+// Delete banner
 router.delete(
   "/:bannerId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(bannerValidator.bannerIdParam),
   bannerController.deleteBanner,
 );
 

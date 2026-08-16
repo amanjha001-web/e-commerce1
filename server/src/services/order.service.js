@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 import ApiError from "../utils/ApiError.js";
@@ -7,6 +8,9 @@ import cartRepository from "../repositories/cart.repository.js";
 import productRepository from "../repositories/product.repository.js";
 import couponRepository from "../repositories/coupon.repository.js";
 import userRepository from "../repositories/user.repository.js";
+import addressRepository from "../repositories/address.repository.js";
+
+const PLATFORM_COMMISSION_RATE = 10;
 
 /*                             Helper Functions                               */
 
@@ -16,27 +20,7 @@ const getProductPrice = (product) => {
     : product.price;
 };
 
-const getDefaultAddress = (user) => {
-  const address = user.addresses.find(
-    (item) => item.isDefault,
-  );
-
-  if (!address) {
-    throw new ApiError(
-      400,
-      "Default shipping address not found",
-    );
-  }
-
-  return address.toObject
-    ? address.toObject()
-    : address;
-};
-
-const validateCoupon = async (
-  couponCode,
-  subtotal,
-) => {
+const validateCoupon = async (couponCode, subtotal) => {
   if (!couponCode) {
     return {
       coupon: null,
@@ -44,55 +28,33 @@ const validateCoupon = async (
     };
   }
 
-  const coupon =
-    await couponRepository.getCouponByCode(
-      couponCode.toUpperCase(),
-    );
+  const coupon = await couponRepository.getCouponByCode(
+    couponCode.toUpperCase(),
+  );
 
   if (!coupon) {
-    throw new ApiError(
-      404,
-      "Invalid coupon",
-    );
+    throw new ApiError(404, "Invalid coupon");
   }
 
   if (!coupon.isActive) {
-    throw new ApiError(
-      400,
-      "Coupon is inactive",
-    );
+    throw new ApiError(400, "Coupon is inactive");
   }
 
   const now = new Date();
 
   if (now < coupon.startDate) {
-    throw new ApiError(
-      400,
-      "Coupon is not active yet",
-    );
+    throw new ApiError(400, "Coupon is not active yet");
   }
 
   if (now > coupon.expiryDate) {
-    throw new ApiError(
-      400,
-      "Coupon has expired",
-    );
+    throw new ApiError(400, "Coupon has expired");
   }
 
-  if (
-    coupon.usedCount >=
-    coupon.usageLimit
-  ) {
-    throw new ApiError(
-      400,
-      "Coupon usage limit exceeded",
-    );
+  if (coupon.usedCount >= coupon.usageLimit) {
+    throw new ApiError(400, "Coupon usage limit exceeded");
   }
 
-  if (
-    subtotal <
-    coupon.minimumOrderAmount
-  ) {
+  if (subtotal < coupon.minimumOrderAmount) {
     throw new ApiError(
       400,
       `Minimum order amount is ₹${coupon.minimumOrderAmount}`,
@@ -101,34 +63,23 @@ const validateCoupon = async (
 
   let discount = 0;
 
-  if (
-    coupon.discountType ===
-    "percentage"
-  ) {
+  if (coupon.discountType === "percentage") {
     discount =
-      (subtotal *
-        coupon.discountValue) /
-      100;
+      (subtotal * coupon.discountValue) / 100;
 
     if (
       coupon.maximumDiscount > 0 &&
-      discount >
-        coupon.maximumDiscount
+      discount > coupon.maximumDiscount
     ) {
-      discount =
-        coupon.maximumDiscount;
+      discount = coupon.maximumDiscount;
     }
   } else {
-    discount =
-      coupon.discountValue;
+    discount = coupon.discountValue;
   }
 
   return {
     coupon,
-    discount: Math.min(
-      discount,
-      subtotal,
-    ),
+    discount: Math.min(discount, subtotal),
   };
 };
 
@@ -136,43 +87,126 @@ const validateCoupon = async (
 
 const createOrder = async (
   userId,
-  { paymentMethod = "COD", couponCode = null } = {},
+  {
+    addressId,
+    paymentMethod = "COD",
+    couponCode = null,
+    notes = "",
+  } = {},
 ) => {
   const session = await mongoose.startSession();
 
-  session.startTransaction();
-
   try {
-    const cart = await cartRepository.getCartByUserId(userId);
+    session.startTransaction();
+
+    /*                              Get Cart                                  */
+
+    const cart =
+      await cartRepository.getCartByUserId(userId);
 
     if (!cart || cart.items.length === 0) {
-      throw new ApiError(400, "Your cart is empty");
+      throw new ApiError(
+        400,
+        "Your cart is empty",
+      );
     }
 
-    const user = await userRepository.getUserById(userId);
+    /*                              Get User                                  */
+
+    const user =
+      await userRepository.getUserById(userId);
 
     if (!user) {
-      throw new ApiError(404, "User not found");
+      throw new ApiError(
+        404,
+        "User not found",
+      );
     }
 
-    const shippingAddress = getDefaultAddress(user);
+    /*                        Get Shipping Address                            */
+
+    let shippingAddress;
+
+    if (addressId) {
+      shippingAddress =
+        await addressRepository.getAddressById(
+          addressId,
+        );
+
+      if (
+        !shippingAddress ||
+        shippingAddress.user.toString() !==
+          userId.toString()
+      ) {
+        throw new ApiError(
+          400,
+          "Invalid shipping address",
+        );
+      }
+    } else {
+      shippingAddress =
+        await addressRepository.getDefaultShippingAddress(
+          userId,
+        );
+    }
+
+    if (!shippingAddress) {
+      throw new ApiError(
+        400,
+        "Shipping address not found",
+      );
+    }
+
+    const orderShippingAddress = {
+      fullName: shippingAddress.fullName,
+      phone: shippingAddress.phone,
+      addressLine1:
+        shippingAddress.addressLine1,
+      addressLine2:
+        shippingAddress.addressLine2 || "",
+      landmark:
+        shippingAddress.landmark || "",
+      city: shippingAddress.city,
+      state: shippingAddress.state,
+      country: shippingAddress.country,
+      postalCode: shippingAddress.pincode,
+    };
+
+    /*                    Validate Products & Build Items                    */
 
     const orderItems = [];
 
     let subtotal = 0;
-    /*                     Validate Products & Build Items                    */
 
     for (const cartItem of cart.items) {
-      const product = await productRepository.getProductById(
-        cartItem.product._id || cartItem.product,
-      );
+      const product =
+        await productRepository.getProductById(
+          cartItem.product._id ||
+            cartItem.product,
+        );
 
       if (!product) {
-        throw new ApiError(404, "Product not found");
+        throw new ApiError(
+          404,
+          "Product not found",
+        );
       }
 
       if (!product.isActive) {
-        throw new ApiError(400, `${product.name} is currently unavailable`);
+        throw new ApiError(
+          400,
+          `${product.name} is currently unavailable`,
+        );
+      }
+
+      if (
+        product.status &&
+        product.status !== "published"
+      ) {
+        throw new ApiError(
+          400,
+          `${product.name} is not available for purchase`,
+        );
       }
 
       if (product.stock < cartItem.quantity) {
@@ -184,14 +218,32 @@ const createOrder = async (
 
       const price = getProductPrice(product);
 
-      const totalPrice = price * cartItem.quantity;
+      const totalPrice =
+        price * cartItem.quantity;
+
+      const platformCommission = Number(
+        (
+          (totalPrice *
+            PLATFORM_COMMISSION_RATE) /
+          100
+        ).toFixed(2),
+      );
+
+      const vendorAmount = Number(
+        (
+          totalPrice -
+          platformCommission
+        ).toFixed(2),
+      );
 
       subtotal += totalPrice;
 
       orderItems.push({
         product: product._id,
 
-        vendor: product.vendor._id || product.vendor,
+        vendor:
+          product.vendor?._id ||
+          product.vendor,
 
         sku: product.sku,
 
@@ -199,19 +251,30 @@ const createOrder = async (
 
         slug: product.slug,
 
-        image: product.thumbnail?.url || "",
+        image:
+          product.thumbnail?.url || "",
 
         quantity: cartItem.quantity,
 
         priceAtPurchase: price,
 
         totalPrice,
+
+        vendorAmount,
+
+        platformCommission,
       });
     }
 
     /*                           Apply Coupon                                 */
 
-    const { coupon, discount } = await validateCoupon(couponCode, subtotal);
+    const {
+      coupon,
+      discount,
+    } = await validateCoupon(
+      couponCode,
+      subtotal,
+    );
 
     /*                       Shipping & Tax                                   */
 
@@ -221,47 +284,67 @@ const createOrder = async (
       shippingCharge = 80;
     }
 
-    const tax = Number(((subtotal - discount) * 0.18).toFixed(2));
+    const taxableAmount =
+      Math.max(subtotal - discount, 0);
+
+    const tax = Number(
+      (taxableAmount * 0.18).toFixed(2),
+    );
 
     const totalAmount = Number(
-      (subtotal + shippingCharge + tax - discount).toFixed(2),
+      (
+        subtotal +
+        shippingCharge +
+        tax -
+        discount
+      ).toFixed(2),
     );
+
     /*                           Create Order                                 */
 
-    const order = await orderRepository.createOrder(
-      {
-        user: userId,
+    const order =
+      await orderRepository.createOrder(
+        {
+          user: userId,
 
-        items: orderItems,
+          items: orderItems,
 
-        shippingAddress,
+          shippingAddress:
+            orderShippingAddress,
 
-        subtotal,
+          subtotal,
 
-        discount,
+          discount,
 
-        shippingCharge,
+          shippingCharge,
 
-        tax,
+          tax,
 
-        totalAmount,
+          totalAmount,
 
-        paymentMethod,
+          paymentMethod,
 
-        coupon: coupon ? coupon._id : null,
-      },
-      session,
-    );
+          coupon: coupon
+            ? coupon._id
+            : null,
+
+          paymentStatus: "Pending",
+
+          orderStatus: "Pending",
+
+          notes,
+
+          
+        },
+        session,
+      );
 
     /*                        Update Product Stock                            */
 
     for (const item of orderItems) {
-      const product = await productRepository.getProductById(item.product);
-
       await productRepository.updateProductStock(
-        product._id,
-        product.stock - item.quantity,
-        product.sold + item.quantity,
+        item.product,
+        item.quantity,
         session,
       );
     }
@@ -295,16 +378,19 @@ const createOrder = async (
     /*                         Commit Transaction                             */
 
     await session.commitTransaction();
-    session.endSession();
 
     return order;
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
 
     throw error;
+  } finally {
+    await session.endSession();
   }
 };
+
 /*                             Get My Orders                                  */
 
 const getMyOrders = async (
@@ -325,13 +411,11 @@ const getMyOrders = async (
   };
 
   if (orderStatus) {
-    filter.orderStatus =
-      orderStatus;
+    filter.orderStatus = orderStatus;
   }
 
   if (paymentStatus) {
-    filter.paymentStatus =
-      paymentStatus;
+    filter.paymentStatus = paymentStatus;
   }
 
   const sort = {
@@ -339,7 +423,7 @@ const getMyOrders = async (
       order === "asc" ? 1 : -1,
   };
 
-  return await orderRepository.getOrdersByUser(
+  return await orderRepository.getAllOrders(
     filter,
     {
       page: Number(page),
@@ -347,6 +431,11 @@ const getMyOrders = async (
       sort,
     },
   );
+};
+
+//get vendor orders
+const getVendorOrders = async (vendorId, options = {}) => {
+  return await orderRepository.getVendorOrders(vendorId, options);
 };
 
 /*                           Get Order By Id                                  */
@@ -381,7 +470,7 @@ const getOrderById = async (
   return order;
 };
 
-/*                           Get All Orders                                   */
+/*                           Get All Orders                                  */
 
 const getAllOrders = async (
   query = {},
@@ -435,7 +524,8 @@ const getAllOrders = async (
     },
   );
 };
-/*                             Cancel Order                                   */
+
+/*                             Cancel Order                                  */
 
 const cancelOrder = async (
   orderId,
@@ -444,9 +534,9 @@ const cancelOrder = async (
   const session =
     await mongoose.startSession();
 
-  session.startTransaction();
-
   try {
+    session.startTransaction();
+
     const order =
       await orderRepository.getOrderById(
         orderId,
@@ -471,10 +561,9 @@ const cancelOrder = async (
     }
 
     if (
-      [
-        "Delivered",
-        "Cancelled",
-      ].includes(order.orderStatus)
+      ["Delivered", "Cancelled"].includes(
+        order.orderStatus,
+      )
     ) {
       throw new ApiError(
         400,
@@ -482,170 +571,179 @@ const cancelOrder = async (
       );
     }
 
+    /*                    Restore Product Stock                            */
+
     for (const item of order.items) {
-      const product =
-        await productRepository.getProductById(
-          item.product,
-        );
-
-      if (product) {
-        await productRepository.updateProductStock(
-          product._id,
-          product.stock +
-            item.quantity,
-          Math.max(
-            0,
-            product.sold -
-              item.quantity,
-          ),
-          session,
-        );
+      if (!item.product) {
+        continue;
       }
-    }
 
-    const updatedOrder =
-      await orderRepository.updateOrder(
-        orderId,
-        {
-          orderStatus:
-            "Cancelled",
-          cancelledAt:
-            new Date(),
-        },
+      await productRepository.updateProductStock(
+        item.product._id ||
+          item.product,
+        -item.quantity,
         session,
       );
+    }
+
+    /*                         Update Order                                 */
+
+    const updatedOrder = await orderRepository.updateOrder(
+      orderId,
+      {
+        orderStatus: "Cancelled",
+        cancelledAt: new Date(),
+        $push: {
+          statusHistory: {
+            status: "Cancelled",
+            note: "Order cancelled",
+            updatedAt: new Date(),
+          },
+        },
+      },
+      session,
+    );
 
     await session.commitTransaction();
-    session.endSession();
 
     return updatedOrder;
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
 
     throw error;
+  } finally {
+    await session.endSession();
   }
 };
 
 /*                         Update Order Status                                */
 
-const updateOrderStatus =
-  async (
-    orderId,
-    status,
-  ) => {
-    const order =
-      await orderRepository.getOrderById(
-        orderId,
-      );
-
-    if (!order) {
-      throw new ApiError(
-        404,
-        "Order not found",
-      );
-    }
-
-    const updateData = {
-      orderStatus: status,
-    };
-
-    if (
-      status === "Delivered"
-    ) {
-      updateData.deliveredAt =
-        new Date();
-
-      if (
-        order.paymentMethod ===
-        "COD"
-      ) {
-        updateData.paymentStatus =
-          "Paid";
-      }
-    }
-
-    if (
-      status === "Cancelled"
-    ) {
-      updateData.cancelledAt =
-        new Date();
-    }
-
-    return await orderRepository.updateOrder(
+const updateOrderStatus = async (
+  orderId,
+  status,
+) => {
+  const order =
+    await orderRepository.getOrderById(
       orderId,
-      updateData,
     );
+
+  if (!order) {
+    throw new ApiError(
+      404,
+      "Order not found",
+    );
+  }
+
+  const updateData = {
+    orderStatus: status,
+    $push: {
+      statusHistory: {
+        status,
+        note: `Order status updated to ${status}`,
+        updatedAt: new Date(),
+      },
+    },
   };
+
+  if (status === "Delivered") {
+    updateData.deliveredAt =
+      new Date();
+
+    if (
+      order.paymentMethod === "COD"
+    ) {
+      updateData.paymentStatus =
+        "Paid";
+
+      updateData.paidAt =
+        new Date();
+    }
+  }
+
+  if (status === "Cancelled") {
+    updateData.cancelledAt =
+      new Date();
+  }
+
+  return await orderRepository.updateOrder(
+    orderId,
+    updateData,
+  );
+};
 
 /*                        Update Payment Status                               */
 
-const updatePaymentStatus =
-  async (
-    orderId,
-    paymentStatus,
-  ) => {
-    const order =
-      await orderRepository.getOrderById(
-        orderId,
-      );
-
-    if (!order) {
-      throw new ApiError(
-        404,
-        "Order not found",
-      );
-    }
-
-    return await orderRepository.updateOrder(
+const updatePaymentStatus = async (
+  orderId,
+  paymentStatus,
+) => {
+  const order =
+    await orderRepository.getOrderById(
       orderId,
-      {
-        paymentStatus,
-      },
     );
+
+  if (!order) {
+    throw new ApiError(
+      404,
+      "Order not found",
+    );
+  }
+
+  const updateData = {
+    paymentStatus,
   };
+
+  if (paymentStatus === "Paid") {
+    updateData.paidAt =
+      new Date();
+  }
+
+  return await orderRepository.updateOrder(
+    orderId,
+    updateData,
+  );
+};
 
 /*                             Return Order                                   */
 
-const returnOrder =
-  async (
-    orderId,
-    reason,
-  ) => {
-    const order =
-      await orderRepository.getOrderById(
-        orderId,
-      );
-
-    if (!order) {
-      throw new ApiError(
-        404,
-        "Order not found",
-      );
-    }
-
-    if (
-      order.orderStatus !==
-      "Delivered"
-    ) {
-      throw new ApiError(
-        400,
-        "Only delivered orders can be returned",
-      );
-    }
-
-    return await orderRepository.updateOrder(
+const returnOrder = async (
+  orderId,
+  reason,
+) => {
+  const order =
+    await orderRepository.getOrderById(
       orderId,
-      {
-        returnStatus:
-          "Requested",
-        returnReason:
-          reason,
-        returnRequestedAt:
-          new Date(),
-      },
     );
-  };
+
+  if (!order) {
+    throw new ApiError(
+      404,
+      "Order not found",
+    );
+  }
+
+  if (
+    order.orderStatus !==
+    "Delivered"
+  ) {
+    throw new ApiError(
+      400,
+      "Only delivered orders can be returned",
+    );
+  }
+
+  return await orderRepository.updateOrder(
+    orderId,
+    {
+      returnStatus: "Requested",
+      returnReason: reason,
+      returnRequestedAt:
+        new Date(),
+    },
+  );
+};
 
 /*                                  Export                                    */
 
@@ -653,6 +751,8 @@ export default {
   createOrder,
 
   getMyOrders,
+
+  getVendorOrders,
 
   getOrderById,
 
@@ -666,3 +766,4 @@ export default {
 
   returnOrder,
 };
+

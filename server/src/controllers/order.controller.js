@@ -6,9 +6,19 @@ import orderService from "../services/order.service.js";
 /*                              Create Order                                  */
 
 const createOrder = asyncHandler(async (req, res) => {
-  const paymentMethod = req.body.paymentMethod || "COD";
+  const {
+    addressId,
+    paymentMethod = "COD",
+    couponCode = "",
+    notes = "",
+  } = req.body;
 
-  const order = await orderService.createOrder(req.user._id, paymentMethod);
+  const order = await orderService.createOrder(req.user._id, {
+    addressId,
+    paymentMethod,
+    couponCode,
+    notes,
+  });
 
   return res
     .status(201)
@@ -23,6 +33,45 @@ const getMyOrders = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, orders, "Orders fetched successfully"));
+});
+
+/*                         Get All Orders - Admin                         */
+
+const getAllOrders = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+  } = req.query;
+
+  const orders = await orderService.getAllOrders(
+    {},
+    {
+      page: Number(page),
+      limit: Number(limit),
+    },
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        orders,
+        "All orders fetched successfully",
+      ),
+    );
+});
+
+// get vendor order
+const getVendorOrders = asyncHandler(async (req, res) => {
+  const orders = await orderService.getVendorOrders(req.user._id, {
+    page: Number(req.query.page) || 1,
+    limit: Number(req.query.limit) || 10,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, orders, "Vendor orders fetched successfully"));
 });
 
 /*                              Get Order By Id                               */
@@ -64,6 +113,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 export default{
   createOrder,
   getMyOrders,
+  getAllOrders,
+  getVendorOrders,
   getOrderById,
   cancelOrder,
   updateOrderStatus,
