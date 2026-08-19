@@ -2,9 +2,7 @@ import mongoose from "mongoose";
 
 const supportTicketSchema = new mongoose.Schema(
   {
-    
     /*                                  User                                      */
-    
 
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,9 +27,7 @@ const supportTicketSchema = new mongoose.Schema(
       index: true,
     },
 
-    
     /*                               Ticket Info                                  */
-    
 
     subject: {
       type: String,
@@ -85,9 +81,7 @@ const supportTicketSchema = new mongoose.Schema(
       index: true,
     },
 
-    
     /*                             Assignment                                     */
-    
 
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
@@ -95,9 +89,7 @@ const supportTicketSchema = new mongoose.Schema(
       default: null,
     },
 
-    
     /*                             Resolution                                     */
-    
 
     resolution: {
       type: String,
@@ -121,9 +113,7 @@ const supportTicketSchema = new mongoose.Schema(
       default: null,
     },
 
-    
     /*                              Attachments                                   */
-    
 
     attachments: [
       {
@@ -132,9 +122,32 @@ const supportTicketSchema = new mongoose.Schema(
       },
     ],
 
-    
+    /*                              Replies                                      */
+
+    replies: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        message: {
+          type: String,
+          required: true,
+          trim: true,
+          minlength: 1,
+          maxlength: 5000,
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
     /*                              Internal Notes                               */
-    
 
     adminNote: {
       type: String,
@@ -142,9 +155,7 @@ const supportTicketSchema = new mongoose.Schema(
       maxlength: 3000,
     },
 
-    
     /*                              Soft Delete                                  */
-    
 
     isDeleted: {
       type: Boolean,

@@ -1,21 +1,24 @@
 import fs from "fs";
 import cloudinary from "../config/cloudinary.js";
 
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadOnCloudinary = async (
+  localFilePath,
+  folder = "shopsphere/others",
+) => {
   try {
     if (!localFilePath) return null;
 
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "image",
-      folder: "shopsphere/products",
+      folder,
     });
 
-    // Local file delete after successful upload
-    fs.unlinkSync(localFilePath);
+    if (fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
 
     return response;
   } catch (error) {
-    // Delete local file if upload fails
     if (localFilePath && fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }

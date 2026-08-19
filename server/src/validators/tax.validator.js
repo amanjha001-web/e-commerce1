@@ -4,13 +4,22 @@ import { z } from "zod";
 
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId");
 
-const taxType = z.enum(["GST", "VAT", "OTHER"]);
+const taxType = z.enum(["GST", "VAT", "CGST", "SGST", "IGST", "CESS", "OTHER"]);
 
 /*                               Create Tax                                   */
 
 const createTax = z.object({
   body: z.object({
     name: z.string().trim().min(2).max(100),
+
+    code: z
+      .string()
+      .trim()
+      .min(2)
+      .max(50)
+      .transform((value) => value.toUpperCase()),
+
+    description: z.string().trim().max(500).optional(),
 
     category: objectId.optional(),
 
@@ -22,7 +31,13 @@ const createTax = z.object({
 
     state: z.string().trim().min(2).max(100).optional(),
 
+    effectiveFrom: z.coerce.date().optional(),
+
+    effectiveTo: z.coerce.date().optional(),
+
     isActive: z.boolean().optional(),
+
+    priority: z.coerce.number().min(1).optional(),
   }),
 });
 
@@ -36,6 +51,16 @@ const updateTax = z.object({
   body: z.object({
     name: z.string().trim().min(2).max(100).optional(),
 
+    code: z
+      .string()
+      .trim()
+      .min(2)
+      .max(50)
+      .transform((value) => value.toUpperCase())
+      .optional(),
+
+    description: z.string().trim().max(500).optional(),
+
     category: objectId.optional(),
 
     rate: z.coerce.number().min(0).max(100).optional(),
@@ -46,7 +71,13 @@ const updateTax = z.object({
 
     state: z.string().trim().min(2).max(100).optional(),
 
+    effectiveFrom: z.coerce.date().optional(),
+
+    effectiveTo: z.coerce.date().optional(),
+
     isActive: z.boolean().optional(),
+
+    priority: z.coerce.number().min(1).optional(),
   }),
 });
 
@@ -67,6 +98,12 @@ const updateTaxStatus = z.object({
 const taxIdParam = z.object({
   params: z.object({
     taxId: objectId,
+  }),
+});
+
+const taxCodeParam = z.object({
+  params: z.object({
+    code: z.string().trim().min(2).max(50),
   }),
 });
 
@@ -98,11 +135,36 @@ const getTaxes = z.object({
   }),
 });
 
+const getTaxesByLocation = z.object({
+  query: z.object({
+    country: z.string().trim().min(2).max(100).optional(),
+
+    state: z.string().trim().min(2).max(100).optional(),
+  }),
+});
+
+/*                             Calculate Tax                                 */
+
+const calculateTax = z.object({
+  body: z.object({
+    amount: z.coerce.number().min(0),
+
+    categoryId: objectId.optional(),
+
+    country: z.string().trim().min(2).max(100).optional(),
+
+    state: z.string().trim().min(2).max(100).optional(),
+  }),
+});
+
 export default {
   createTax,
   updateTax,
   updateTaxStatus,
   taxIdParam,
+  taxCodeParam,
   categoryIdParam,
   getTaxes,
+  getTaxesByLocation,
+  calculateTax,
 };

@@ -1,33 +1,34 @@
 import { Router } from "express";
 
-import {shipmentController} from "../controllers/index.js";
+import { shipmentController } from "../controllers/index.js";
+import { authMiddleware, authorize, validate } from "../middlewares/index.js";
 
-import {authMiddleware} from "../middlewares/index.js";
-import { authorize } from "../middlewares/index.js";
+import shipmentValidator from "../validators/shipment.validator.js";
 
 const router = Router();
 
-/*                              Public Routes                                 */
+/*                         Public Routes                         */
 
 // Track shipment
 router.get("/track/:trackingId", shipmentController.getShipmentByTrackingId);
 
-/*                              Vendor Routes                                 */
+/*                         Vendor Routes                         */
 
 router.get(
   "/vendor/my-shipments",
   authMiddleware,
-  authorize("VENDOR"),
+  authorize("vendor"),
   shipmentController.getVendorShipments,
 );
 
-/*                              Admin Routes                                  */
+/*                          Admin Routes                         */
 
 // Create shipment
 router.post(
   "/",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.createShipment),
   shipmentController.createShipment,
 );
 
@@ -35,7 +36,8 @@ router.post(
 router.get(
   "/",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.getShipments),
   shipmentController.getAllShipments,
 );
 
@@ -43,7 +45,8 @@ router.get(
 router.get(
   "/:shipmentId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.shipmentIdParam),
   shipmentController.getShipmentById,
 );
 
@@ -51,7 +54,8 @@ router.get(
 router.get(
   "/order/:orderId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.orderIdParam),
   shipmentController.getShipmentByOrder,
 );
 
@@ -59,7 +63,8 @@ router.get(
 router.patch(
   "/:shipmentId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.updateShipment),
   shipmentController.updateShipment,
 );
 
@@ -67,7 +72,8 @@ router.patch(
 router.patch(
   "/:shipmentId/status",
   authMiddleware,
-  authorize("ADMIN", "VENDOR"),
+  authorize("admin", "vendor"),
+  validate(shipmentValidator.updateShipmentStatus),
   shipmentController.updateShipmentStatus,
 );
 
@@ -75,7 +81,8 @@ router.patch(
 router.delete(
   "/:shipmentId",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
+  validate(shipmentValidator.shipmentIdParam),
   shipmentController.deleteShipment,
 );
 

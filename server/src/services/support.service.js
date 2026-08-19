@@ -79,6 +79,29 @@ const updateTicket = async (ticketId, updateData) => {
   return ticket;
 };
 
+/*                           Add Reply                                    */
+
+const addReply = async (ticketId, userId, message) => {
+  if (!mongoose.Types.ObjectId.isValid(ticketId)) {
+    throw new ApiError(400, "Invalid ticket id.");
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user id.");
+  }
+
+  const ticket = await supportRepository.addReply(ticketId, {
+    user: userId,
+    message,
+  });
+
+  if (!ticket) {
+    throw new ApiError(404, "Support ticket not found.");
+  }
+
+  return ticket;
+};
+
 /*                          Assign Ticket                                     */
 
 const assignTicket = async (ticketId, assignedTo) => {
@@ -161,6 +184,7 @@ export default {
   getUserTickets,
   getTickets,
   updateTicket,
+  addReply,
   assignTicket,
   resolveTicket,
   closeTicket,

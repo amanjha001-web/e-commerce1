@@ -24,7 +24,7 @@ router.get("/:reportId", authMiddleware, reportController.getReportById);
 router.get(
   "/admin/all",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
   reportController.getAllReports,
 );
 
@@ -37,7 +37,7 @@ router.patch("/:reportId", authMiddleware, reportController.updateReport);
 router.patch(
   "/:reportId/resolve",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
   reportController.resolveReport,
 );
 

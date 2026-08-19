@@ -83,6 +83,65 @@ const getTaxes = async (filter = {}, query = {}) => {
   return taxRepository.findTaxes(filter, query);
 };
 
+/*                           Calculate Tax                                  */
+
+const calculateTax = async ({
+  amount,
+  categoryId = null,
+  country = "India",
+  state = "ALL",
+}) => {
+  if (amount === undefined || amount === null || amount < 0) {
+    throw new ApiError(400, "Invalid amount.");
+  }
+
+  let taxes = [];
+
+  // Category based tax
+  if (categoryId) {
+    taxes = await taxRepository.findTaxesByCategory(categoryId);
+  }
+
+  // Location based tax
+  if (!taxes.length) {
+    taxes = await taxRepository.findTaxesByLocation(country, state);
+  }
+
+  if (!taxes.length) {
+    return {
+      amount,
+      taxAmount: 0,
+      totalAmount: amount,
+      taxes: [],
+    };
+  }
+
+  const taxDetails = taxes.map((tax) => {
+    const taxAmount = (amount * tax.rate) / 100;
+
+    return {
+      taxId: tax._id,
+      name: tax.name,
+      code: tax.code,
+      type: tax.type,
+      rate: tax.rate,
+      taxAmount,
+    };
+  });
+
+  const taxAmount = taxDetails.reduce(
+    (total, tax) => total + tax.taxAmount,
+    0,
+  );
+
+  return {
+    amount,
+    taxAmount,
+    totalAmount: amount + taxAmount,
+    taxes: taxDetails,
+  };
+};
+
 /*                              Update Tax                                    */
 
 const updateTax = async (taxId, updateData) => {
@@ -119,6 +178,25 @@ const updateTax = async (taxId, updateData) => {
   return taxRepository.updateTax(taxId, updateData);
 };
 
+/*                         Update Tax Status                               */
+
+const updateTaxStatus = async (taxId, isActive, updatedBy) => {
+  if (!mongoose.Types.ObjectId.isValid(taxId)) {
+    throw new ApiError(400, "Invalid tax id.");
+  }
+
+  const tax = await taxRepository.findTaxById(taxId);
+
+  if (!tax) {
+    throw new ApiError(404, "Tax not found.");
+  }
+
+  return taxRepository.updateTax(taxId, {
+    isActive,
+    updatedBy,
+  });
+};
+
 /*                            Delete Tax                                      */
 
 const deleteTax = async (taxId) => {
@@ -143,6 +221,8 @@ export default {
   getTaxesByCategory,
   getTaxesByLocation,
   getTaxes,
+  calculateTax,
   updateTax,
+  updateTaxStatus,
   deleteTax,
 };

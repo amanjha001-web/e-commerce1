@@ -66,7 +66,7 @@ const getAllShipments = asyncHandler(async (req, res) => {
 const getVendorShipments = asyncHandler(async (req, res) => {
   const { page, limit, sort } = req.query;
 
-  const shipments = await shipmentService.getVendorShipments(req.user.vendor, {
+  const shipments = await shipmentService.getVendorShipments(req.user._id, {
     page,
     limit,
     sort,

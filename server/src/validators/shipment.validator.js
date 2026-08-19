@@ -6,15 +6,17 @@ const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId");
 
 const shipmentStatus = z.enum([
   "PENDING",
+  "READY_TO_SHIP",
   "PACKED",
+  "PICKED_UP",
   "SHIPPED",
   "IN_TRANSIT",
   "OUT_FOR_DELIVERY",
   "DELIVERED",
   "FAILED",
+  "RETURNED",
   "CANCELLED",
 ]);
-
 const courierSchema = z.object({
   name: z.string().trim().min(2).max(100),
   trackingId: z.string().trim().min(2).max(100),
@@ -36,7 +38,7 @@ const createShipment = z.object({
   body: z.object({
     order: objectId,
 
-    vendor: objectId.optional(),
+    vendor: objectId,
 
     courier: courierSchema.optional(),
 

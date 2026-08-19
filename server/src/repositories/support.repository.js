@@ -16,8 +16,7 @@ const findTicketById = async (ticketId) => {
   return SupportTicket.findById(ticketId)
     .populate("user", "name email avatar")
     .populate("assignedTo", "name email")
-    .populate("resolvedBy", "name email")
-    .populate("attachments");
+    .populate("resolvedBy", "name email");
 };
 
 /*                       Find Ticket By Number                                */
@@ -107,6 +106,23 @@ const findTickets = async (filter = {}, options = {}) => {
   };
 };
 
+/*                         Add Ticket Reply                               */
+
+const addReply = async (ticketId, replyData) => {
+  return SupportTicket.findByIdAndUpdate(
+    ticketId,
+    {
+      $push: {
+        replies: replyData,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+};
+
 /*                           Update Ticket                                    */
 
 const updateTicket = async (ticketId, updateData, session = null) => {
@@ -189,12 +205,15 @@ const countTickets = async (filter = {}) => {
   });
 };
 
+
+
 export default {
   createSupportTicket,
   findTicketById,
   findTicketByNumber,
   findUserTickets,
   findTickets,
+  addReply,
   updateTicket,
   assignTicket,
   resolveTicket,

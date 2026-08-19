@@ -60,6 +60,27 @@ const updateTicket = asyncHandler(async (req, res) => {
   );
 });
 
+/*                           Add Reply                                    */
+
+const addReply = asyncHandler(async (req, res) => {
+  const { ticketId } = req.params;
+  const { message } = req.body;
+
+  const ticket = await supportService.addReply(
+    ticketId,
+    req.user._id,
+    message,
+  );
+
+  return res.json(
+    new ApiResponse(
+      200,
+      ticket,
+      "Reply added successfully.",
+    ),
+  );
+});
+
 /*                        Assign Ticket                                       */
 
 const assignTicket = asyncHandler(async (req, res) => {
@@ -123,6 +144,7 @@ export default {
   getMyTickets,
   getAllTickets,
   updateTicket,
+  addReply,
   assignTicket,
   resolveTicket,
   closeTicket,

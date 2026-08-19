@@ -41,7 +41,9 @@ export { default as timeoutMiddleware } from "./timeout.middleware.js";
 
 /*                              Validation                                    */
 
-export { validate} from "./validate.middleware.js";
+export { validate } from "./validate.middleware.js";
+
+
 
 export { default as idValidationMiddleware } from "./idValidation.middleware.js";
 

@@ -3,7 +3,31 @@ import ApiResponse from "../utils/ApiResponse.js";
 
 import searchService from "../services/search.service.js";
 
-/*                        Save Search History                                 */
+/* ============================================================================
+   Product Search
+============================================================================ */
+
+/*
+  Basic Search
+  Empty Search Validation
+  Product Search
+  Category Filter
+  Brand Filter
+  Pagination
+  Sorting
+*/
+
+const searchProducts = asyncHandler(async (req, res) => {
+  const result = await searchService.searchProducts(req.query);
+
+  return res.json(
+    new ApiResponse(200, result, "Products fetched successfully."),
+  );
+});
+
+/* ============================================================================
+   Save Search History
+============================================================================ */
 
 const saveSearchHistory = asyncHandler(async (req, res) => {
   const history = await searchService.saveSearchHistory({
@@ -16,7 +40,9 @@ const saveSearchHistory = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, history, "Search history saved successfully."));
 });
 
-/*                     Get My Search History                                 */
+/* ============================================================================
+   My Search History
+============================================================================ */
 
 const getMySearchHistory = asyncHandler(async (req, res) => {
   const history = await searchService.getUserSearchHistory(
@@ -29,7 +55,9 @@ const getMySearchHistory = asyncHandler(async (req, res) => {
   );
 });
 
-/*                         Popular Searches                                  */
+/* ============================================================================
+   Popular Searches
+============================================================================ */
 
 const getPopularSearches = asyncHandler(async (req, res) => {
   const searches = await searchService.getPopularSearches(req.query.limit);
@@ -39,7 +67,9 @@ const getPopularSearches = asyncHandler(async (req, res) => {
   );
 });
 
-/*                        Delete Search History                              */
+/* ============================================================================
+   Delete Single Search History
+============================================================================ */
 
 const deleteSearchHistory = asyncHandler(async (req, res) => {
   const { historyId } = req.params;
@@ -51,7 +81,9 @@ const deleteSearchHistory = asyncHandler(async (req, res) => {
   );
 });
 
-/*                       Clear All History                                   */
+/* ============================================================================
+   Clear All Search History
+============================================================================ */
 
 const clearSearchHistory = asyncHandler(async (req, res) => {
   await searchService.clearHistory(req.user._id);
@@ -61,7 +93,12 @@ const clearSearchHistory = asyncHandler(async (req, res) => {
   );
 });
 
-export default{
+/* ============================================================================
+   Export
+============================================================================ */
+
+export default {
+  searchProducts,
   saveSearchHistory,
   getMySearchHistory,
   getPopularSearches,

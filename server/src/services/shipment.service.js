@@ -4,6 +4,8 @@ import shipmentRepository from "../repositories/shipment.repository.js";
 
 import ApiError from "../utils/ApiError.js";
 
+import Vendor from "../models/Vendor.model.js";
+
 /*                           Allowed Status Flow                              */
 
 const STATUS_FLOW = {
@@ -104,8 +106,17 @@ const getShipments = async (filter = {}, query = {}) => {
 
 /*                        Get Vendor Shipments                               */
 
-const getVendorShipments = async (vendorId, query = {}) => {
-  return shipmentRepository.findVendorShipments(vendorId, query);
+const getVendorShipments = async (userId, query = {}) => {
+  const vendor = await Vendor.findOne({
+    user: userId,
+    deletedAt: null,
+  });
+
+  if (!vendor) {
+    throw new ApiError(404, "Vendor profile not found.");
+  }
+
+  return shipmentRepository.findVendorShipments(vendor._id, query);
 };
 
 /*                          Update Shipment                                  */

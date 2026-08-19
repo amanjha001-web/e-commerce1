@@ -37,12 +37,13 @@ export { default as reviewController } from "./review.controller.js";
 /*                              Communication                                 */
 
 export { default as chatController } from "./chat.controller.js";
-export{default as conversationController} from "./conversation.controller.js"
+export { default as conversationController } from "./conversation.controller.js"
+export { default as messageController } from "./message.controller.js"
 export { default as notificationController } from "./notification.controller.js";
 
 /*                              Files                                         */
 
-export { default as fileController } from "./file.controller.js";
+
 
 /*                              Support                                       */
 

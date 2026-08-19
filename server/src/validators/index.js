@@ -61,7 +61,7 @@ export * from "./report.validator.js";
 
 /*                              Files                                         */
 
-export * from "./file.validator.js";
+
 
 /*                              Search & Setting                              */
 

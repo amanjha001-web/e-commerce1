@@ -122,3 +122,15 @@ export const supportQuerySchema = z.object({
     category: categoryEnum.optional(),
   }),
 });
+
+/*                         Reply Ticket                                    */
+
+export const replySupportTicketSchema = z.object({
+  body: z.object({
+    message: z.string().trim().min(1).max(5000),
+  }),
+
+  params: z.object({
+    ticketId: objectId,
+  }),
+});

@@ -34,7 +34,7 @@ import {
   reviewRoutes,
   chatRoutes,
   notificationRoutes,
-  fileRoutes,
+  
   searchRoutes,
   reportRoutes,
   supportRoutes,
@@ -42,6 +42,7 @@ import {
   shipmentRoutes,
   taxRoutes,
   conversationRoutes,
+  messageRoutes,
 } from "./routes/index.js";
 
 
@@ -140,10 +141,11 @@ app.use("/api/v1/reviews", reviewRoutes);
 // Communication
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/conversations", conversationRoutes);
+app.use("/api/v1/messages", messageRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 // Files
-app.use("/api/v1/files", fileRoutes);
+
 
 // Search
 app.use("/api/v1/search", searchRoutes);

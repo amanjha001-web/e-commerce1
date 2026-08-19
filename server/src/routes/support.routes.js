@@ -14,6 +14,7 @@ import {
   closeTicketSchema,
   ticketIdSchema,
   supportQuerySchema,
+  replySupportTicketSchema,
 } from "../validators/support.validator.js";
 
 const router = Router();
@@ -39,6 +40,13 @@ router.get(
   authMiddleware,
   validate(ticketIdSchema),
   supportController.getTicketById,
+);
+
+router.post(
+  "/:ticketId/reply",
+  authMiddleware,
+  validate(replySupportTicketSchema),
+  supportController.addReply,
 );
 
 router.patch(
@@ -67,7 +75,7 @@ router.patch(
 router.get(
   "/admin/all",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
   validate(supportQuerySchema),
   supportController.getAllTickets,
 );
@@ -75,7 +83,7 @@ router.get(
 router.patch(
   "/:ticketId/assign",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
   validate(assignTicketSchema),
   supportController.assignTicket,
 );
@@ -83,7 +91,7 @@ router.patch(
 router.patch(
   "/:ticketId/resolve",
   authMiddleware,
-  authorize("ADMIN"),
+  authorize("admin"),
   validate(resolveTicketSchema),
   supportController.resolveTicket,
 );

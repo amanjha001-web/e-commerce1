@@ -64,6 +64,7 @@ export { default as reviewRoutes } from "./review.routes.js";
 
 export { default as chatRoutes } from "./chat.routes.js";
 export { default as conversationRoutes } from "./conversation.routes.js";
+export { default as messageRoutes } from "./message.routes.js";
 export { default as notificationRoutes } from "./notification.routes.js";
 
 
@@ -78,7 +79,7 @@ export { default as reportRoutes } from "./report.routes.js";
 /*                              Files                                         */
 
 
-export { default as fileRoutes } from "./file.routes.js";
+
 
 
 /*                              Address                                       */

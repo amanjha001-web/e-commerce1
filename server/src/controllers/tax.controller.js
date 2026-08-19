@@ -78,6 +78,38 @@ const getAllTaxes = asyncHandler(async (req, res) => {
   return res.json(new ApiResponse(200, taxes, "Taxes fetched successfully."));
 });
 
+/*                         Update Tax Status                               */
+
+const updateTaxStatus = asyncHandler(async (req, res) => {
+  const tax = await taxService.updateTaxStatus(
+    req.params.taxId,
+    req.body.isActive,
+    req.user._id,
+  );
+
+  return res.json(
+    new ApiResponse(
+      200,
+      tax,
+      "Tax status updated successfully.",
+    ),
+  );
+});
+
+/*                           Calculate Tax                                  */
+
+const calculateTax = asyncHandler(async (req, res) => {
+  const tax = await taxService.calculateTax(req.body);
+
+  return res.json(
+    new ApiResponse(
+      200,
+      tax,
+      "Tax calculated successfully.",
+    ),
+  );
+});
+
 /*                              Update Tax                                    */
 
 const updateTax = asyncHandler(async (req, res) => {
@@ -105,6 +137,8 @@ export default{
   getTaxesByCategory,
   getTaxesByLocation,
   getAllTaxes,
+  updateTaxStatus,
+  calculateTax,
   updateTax,
   deleteTax,
 };
