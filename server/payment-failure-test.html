@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Razorpay Payment Failure Test</title>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f6f8;
+      font-family: Arial, sans-serif;
+    }
+
+    .card {
+      width: 420px;
+      max-width: 92%;
+      background: #fff;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .details {
+      background: #f7f7f7;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      color: #666;
+    }
+
+    .value {
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      padding: 14px;
+      border-radius: 8px;
+      background: #3399cc;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2785b5;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+    }
+
+    .success {
+      background: #e8f7ed;
+      color: #146c2e;
+    }
+
+    .failure {
+      background: #fdecec;
+      color: #a61b1b;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+
+    <h1>Payment Failure Test</h1>
+
+    <p class="subtitle">
+      Razorpay Test Mode — failure scenario testing
+    </p>
+
+    <div class="details">
+
+      <div class="row">
+        <span class="label">Order ID</span>
+        <span class="value">6a80d3d3d0ea87e3483b0cda</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Razorpay Order</span>
+        <span class="value">order_TQBf5lb1bQzCRq</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Amount</span>
+        <span class="value">₹552</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Mode</span>
+        <span class="value">TEST</span>
+      </div>
+
+    </div>
+
+    <button id="payButton">
+      Test Payment Failure
+    </button>
+
+    <div id="result"></div>
+
+  </div>
+
+
+  <script>
+    const payButton = document.getElementById("payButton");
+    const resultBox = document.getElementById("result");
+
+    const RAZORPAY_KEY_ID = "rzp_test_TK1WlLy0FCfImZ";
+
+    const RAZORPAY_ORDER_ID = "order_TQBf5lb1bQzCRq";
+
+    const ORDER_ID = "6a80d3d3d0ea87e3483b0cda";
+
+    const AMOUNT = 55200;
+
+
+    function showResult(message, type) {
+      resultBox.style.display = "block";
+      resultBox.className = type;
+      resultBox.textContent = message;
+    }
+
+
+    payButton.addEventListener("click", function () {
+
+      payButton.disabled = true;
+
+      const options = {
+
+        key: RAZORPAY_KEY_ID,
+
+        amount: AMOUNT,
+
+        currency: "INR",
+
+        name: "ShopSphere",
+
+        description: "Payment Failure Test",
+
+        order_id: RAZORPAY_ORDER_ID,
+
+        prefill: {
+          name: "Aman Test",
+          email: "aman.test05@example.com",
+          contact: "9876543210"
+        },
+
+        notes: {
+          orderId: ORDER_ID,
+          testType: "PAYMENT_FAILURE"
+        },
+
+        theme: {
+          color: "#3399cc"
+        },
+
+
+        handler: function (response) {
+
+          console.log(
+            "Unexpected successful payment:",
+            response
+          );
+
+          showResult(
+            "Payment succeeded unexpectedly.\n\n" +
+            JSON.stringify(response, null, 2),
+            "success"
+          );
+
+          payButton.disabled = false;
+        },
+
+
+        modal: {
+
+          ondismiss: function () {
+
+            console.log(
+              "Razorpay checkout closed"
+            );
+
+            payButton.disabled = false;
+          }
+
+        },
+
+
+        callback_url: undefined
+      };
+
+
+      options.handler = function (response) {
+
+        console.log(
+          "Payment Success:",
+          response
+        );
+
+        showResult(
+          "Payment SUCCESS.\n\n" +
+          JSON.stringify(response, null, 2),
+          "success"
+        );
+
+        payButton.disabled = false;
+      };
+
+
+      const razorpay = new Razorpay(options);
+
+
+      razorpay.on("payment.failed", function (response) {
+
+        console.error(
+          "PAYMENT FAILED:",
+          response
+        );
+
+        const error = response.error || {};
+
+        showResult(
+          "PAYMENT FAILED\n\n" +
+
+          "Code: " +
+          (error.code || "N/A") +
+
+          "\nDescription: " +
+          (error.description || "N/A") +
+
+          "\nReason: " +
+          (error.reason || "N/A") +
+
+          "\nSource: " +
+          (error.source || "N/A") +
+
+          "\nStep: " +
+          (error.step || "N/A") +
+
+          "\n\nFull Response:\n" +
+
+          JSON.stringify(response, null, 2),
+
+          "failure"
+        );
+
+        payButton.disabled = false;
+
+      });
+
+
+      razorpay.open();
+
+    });
+
+  </script>
+
+</body>
+</html>
