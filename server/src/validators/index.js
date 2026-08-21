@@ -61,7 +61,13 @@ export * from "./report.validator.js";
 
 /*                              Files                                         */
 
-
+export {
+  uploadFileSchema,
+  getFilesSchema,
+  updateFileSchema,
+  deleteFileSchema,
+  restoreFileSchema,
+} from "./file.validator.js";
 
 /*                              Search & Setting                              */
 

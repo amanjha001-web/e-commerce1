@@ -2,9 +2,7 @@ import mongoose from "mongoose";
 
 const shipmentSchema = new mongoose.Schema(
   {
-    
     /*                              References                                    */
-    
 
     order: {
       type: mongoose.Schema.Types.ObjectId,
@@ -21,9 +19,7 @@ const shipmentSchema = new mongoose.Schema(
       index: true,
     },
 
-    
     /*                             Courier Details                                */
-    
 
     courier: {
       name: {
@@ -35,7 +31,6 @@ const shipmentSchema = new mongoose.Schema(
       trackingId: {
         type: String,
         trim: true,
-        index: true,
       },
 
       trackingUrl: {
@@ -51,9 +46,7 @@ const shipmentSchema = new mongoose.Schema(
       },
     },
 
-    
     /*                                 Status                                     */
-    
 
     status: {
       type: String,
@@ -74,9 +67,7 @@ const shipmentSchema = new mongoose.Schema(
       index: true,
     },
 
-    
     /*                                  Dates                                     */
-    
 
     pickupDate: Date,
 
@@ -90,9 +81,7 @@ const shipmentSchema = new mongoose.Schema(
 
     returnedAt: Date,
 
-    
     /*                             Shipping Address                               */
-    
 
     shippingAddress: {
       name: String,
@@ -119,9 +108,7 @@ const shipmentSchema = new mongoose.Schema(
       pincode: String,
     },
 
-    
     /*                           Shipment History                                 */
-    
 
     history: [
       {
@@ -152,9 +139,7 @@ const shipmentSchema = new mongoose.Schema(
       },
     ],
 
-    
     /*                                Metadata                                    */
-    
 
     remarks: {
       type: String,
@@ -179,9 +164,7 @@ const shipmentSchema = new mongoose.Schema(
   },
 );
 
-
 /*                                  Indexes                                   */
-
 
 shipmentSchema.index({
   vendor: 1,

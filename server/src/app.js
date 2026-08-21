@@ -43,6 +43,8 @@ import {
   taxRoutes,
   conversationRoutes,
   messageRoutes,
+
+  fileRoutes,
 } from "./routes/index.js";
 
 
@@ -144,7 +146,10 @@ app.use("/api/v1/conversations", conversationRoutes);
 app.use("/api/v1/messages", messageRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
+
 // Files
+
+app.use("/api/v1/files", fileRoutes);
 
 
 // Search

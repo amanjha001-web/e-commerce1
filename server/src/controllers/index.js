@@ -43,7 +43,7 @@ export { default as notificationController } from "./notification.controller.js"
 
 /*                              Files                                         */
 
-
+export { default as fileController } from "./file.controller.js";
 
 /*                              Support                                       */
 

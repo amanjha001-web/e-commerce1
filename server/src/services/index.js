@@ -37,7 +37,7 @@ export * as supportService from "./support.service.js";
 export * as reportService from "./report.service.js";
 
 /*                                  Files                                     */
-export * as fileService from "./file.service.js";
+export { default as fileService } from "./file.service.js";
 
 /*                            Search & Settings                               */
 export * as searchService from "./search.service.js";

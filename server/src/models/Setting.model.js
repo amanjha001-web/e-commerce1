@@ -2,9 +2,7 @@ import mongoose from "mongoose";
 
 const settingSchema = new mongoose.Schema(
   {
-    
     /*                               Setting Key                                  */
-    
 
     key: {
       type: String,
@@ -16,9 +14,7 @@ const settingSchema = new mongoose.Schema(
       index: true,
     },
 
-    
     /*                              Setting Value                                 */
-    
 
     value: {
       type: mongoose.Schema.Types.Mixed,
@@ -31,9 +27,7 @@ const settingSchema = new mongoose.Schema(
       default: "STRING",
     },
 
-    
     /*                                Metadata                                    */
-    
 
     category: {
       type: String,
@@ -63,7 +57,6 @@ const settingSchema = new mongoose.Schema(
     isPublic: {
       type: Boolean,
       default: false,
-      index: true,
     },
 
     isEditable: {
@@ -71,9 +64,7 @@ const settingSchema = new mongoose.Schema(
       default: true,
     },
 
-    
     /*                                Audit                                       */
-    
 
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -81,9 +72,7 @@ const settingSchema = new mongoose.Schema(
       default: null,
     },
 
-    
     /*                              Soft Delete                                   */
-    
 
     isDeleted: {
       type: Boolean,
@@ -102,9 +91,7 @@ const settingSchema = new mongoose.Schema(
   },
 );
 
-
 /*                                   Indexes                                  */
-
 
 settingSchema.index({
   category: 1,

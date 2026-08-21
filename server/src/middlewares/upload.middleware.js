@@ -84,3 +84,5 @@ export const uploadBannerImages = upload.fields([
     maxCount: 1,
   },
 ]);
+
+export const uploadFile = upload.single("file");

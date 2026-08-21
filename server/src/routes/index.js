@@ -76,10 +76,9 @@ export { default as supportRoutes } from "./support.routes.js";
 export { default as reportRoutes } from "./report.routes.js";
 
 
-/*                              Files                                         */
+/*                              Files                                  */
 
-
-
+export { default as fileRoutes } from "./file.routes.js";
 
 
 /*                              Address                                       */

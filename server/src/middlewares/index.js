@@ -64,6 +64,7 @@ export {
   uploadCoverImage,
   uploadVendorDocuments,
   uploadBannerImages,
+  uploadFile,
 } from "./upload.middleware.js";
 
 export { default as fileCleanupMiddleware } from "./fileCleanup.middleware.js";
