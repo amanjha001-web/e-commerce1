@@ -1,15 +1,15 @@
 
-/*                               Core Utilities                               */
+//                              Core Utilities                               
 
 export { default as ApiError } from "./ApiError.js";
 export { default as ApiResponse } from "./ApiResponse.js";
 export { default as asyncHandler } from "./asyncHandler.js";
 
-/*                               Cloudinary                                   */
+//                              Cloudinary                                   
 
 export { uploadOnCloudinary, deleteFromCloudinary } from "./cloudinary.js";
 
-/*                                Helpers                                     */
+//                               Helpers                                     
 
 export { default as generateSlug } from "./generateSlug.js";
 export { default as pick } from "./pick.js";
@@ -21,6 +21,6 @@ export { validateObjectId, validateObjectIds } from "./validateObjectId.js";
 
 export { getPagination, getPaginationMeta } from "./pagination.js";
 
-/*                                 Logger                                     */
+//                                Logger                                     
 
 export { default as logger } from "./logger.js";

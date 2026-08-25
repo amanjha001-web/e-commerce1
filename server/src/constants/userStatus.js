@@ -1,25 +1,25 @@
 /**
- * User Status Constants
- *
- * Used for:
- *  User account lifecycle
- *  Authentication checks
- *  Account restrictions
- *  Security management
+   User Status Constants
+  
+   Used for:
+    User account lifecycle
+    Authentication checks
+    Account restrictions
+    Security management
  */
 
 export const USER_STATUS = Object.freeze({
-  /* Account Creation                                                         */
+  //Account Creation                                                         
 
   PENDING: "pending",
 
   PENDING_VERIFICATION: "pending_verification",
 
-  /* Active States                                                            */
+  //Active States                                                            
 
   ACTIVE: "active",
 
-  /* Restriction States                                                       */
+  //Restriction States                                                       
 
   INACTIVE: "inactive",
 
@@ -27,11 +27,11 @@ export const USER_STATUS = Object.freeze({
 
   BLOCKED: "blocked",
 
-  /* Security States                                                          */
+  //Security States                                                          
 
   LOCKED: "locked",
 
-  /* Account Removal                                                          */
+  //Account Removal                                                          
 
   DEACTIVATED: "deactivated",
 

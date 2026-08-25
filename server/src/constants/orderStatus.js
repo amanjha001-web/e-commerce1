@@ -1,23 +1,23 @@
 /**
- * Order Status Constants
- *
- * Complete order lifecycle:
- *
- * Pending
- *  
- * Confirmed
- *  
- * Processing
- *  
- * Shipped
- *  
- * Delivered
- *
- * Exception flows:
- * Cancelled
- * Failed
- * Returned
- * Refunded
+       Order Status Constants
+      
+       Complete order lifecycle:
+      
+       Pending
+        
+       Confirmed
+        
+       Processing
+        
+       Shipped
+        
+       Delivered
+      
+       Exception flows:
+       Cancelled
+       Failed
+       Returned
+       Refunded
  */
 
 export const ORDER_STATUS = Object.freeze({

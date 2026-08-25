@@ -1,24 +1,24 @@
 /**
- * Application Permissions
- *
- * Format:
- * RESOURCE_ACTION
- *
- * Used for:
- *  Role Based Access Control (RBAC)
- *  Middleware authorization
- *  Admin/Vendor access management
+   Application Permissions
+  
+   Format:
+   RESOURCE_ACTION
+  
+   Used for:
+    Role Based Access Control (RBAC)
+    Middleware authorization
+    Admin/Vendor access management
  */
 
 export const PERMISSIONS = Object.freeze({
-  /* User Permissions                                                         */
+  // User Permissions
 
   USER_CREATE: "user:create",
   USER_READ: "user:read",
   USER_UPDATE: "user:update",
   USER_DELETE: "user:delete",
 
-  /* Vendor Permissions                                                       */
+  // Vendor Permissions
 
   VENDOR_CREATE: "vendor:create",
   VENDOR_READ: "vendor:read",
@@ -28,7 +28,7 @@ export const PERMISSIONS = Object.freeze({
   VENDOR_REJECT: "vendor:reject",
   VENDOR_SUSPEND: "vendor:suspend",
 
-  /* Product Permissions                                                      */
+  // Product Permissions
 
   PRODUCT_CREATE: "product:create",
   PRODUCT_READ: "product:read",
@@ -37,21 +37,21 @@ export const PERMISSIONS = Object.freeze({
   PRODUCT_APPROVE: "product:approve",
   PRODUCT_REJECT: "product:reject",
 
-  /* Category Permissions                                                     */
+  // Category Permissions
 
   CATEGORY_CREATE: "category:create",
   CATEGORY_READ: "category:read",
   CATEGORY_UPDATE: "category:update",
   CATEGORY_DELETE: "category:delete",
 
-  /* Brand Permissions                                                        */
+  // Brand Permissions
 
   BRAND_CREATE: "brand:create",
   BRAND_READ: "brand:read",
   BRAND_UPDATE: "brand:update",
   BRAND_DELETE: "brand:delete",
 
-  /* Order Permissions                                                        */
+  // Order Permissions
 
   ORDER_CREATE: "order:create",
   ORDER_READ: "order:read",
@@ -60,13 +60,13 @@ export const PERMISSIONS = Object.freeze({
   ORDER_RETURN: "order:return",
   ORDER_REFUND: "order:refund",
 
-  /* Payment Permissions                                                      */
+  // Payment Permissions
 
   PAYMENT_READ: "payment:read",
   PAYMENT_PROCESS: "payment:process",
   PAYMENT_REFUND: "payment:refund",
 
-  /* Review Permissions                                                       */
+  // Review Permissions
 
   REVIEW_CREATE: "review:create",
   REVIEW_READ: "review:read",
@@ -74,19 +74,19 @@ export const PERMISSIONS = Object.freeze({
   REVIEW_DELETE: "review:delete",
   REVIEW_MODERATE: "review:moderate",
 
-  /* Coupon Permissions                                                       */
+  // Coupon Permissions
 
   COUPON_CREATE: "coupon:create",
   COUPON_READ: "coupon:read",
   COUPON_UPDATE: "coupon:update",
   COUPON_DELETE: "coupon:delete",
 
-  /* Dashboard Permissions                                                    */
+  // Dashboard Permissions
 
   DASHBOARD_VIEW: "dashboard:view",
   ANALYTICS_VIEW: "analytics:view",
 
-  /* System Permissions                                                       */
+  // System Permissions
 
   SETTINGS_MANAGE: "settings:manage",
   LOGS_VIEW: "logs:view",

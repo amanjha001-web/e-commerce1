@@ -1,5 +1,5 @@
 
-/*                            Generate Slug                                   */
+//                           Generate Slug                                   
 
 const generateSlug = (text) => {
   if (!text || typeof text !== "string") {
@@ -18,6 +18,6 @@ const generateSlug = (text) => {
     .replace(/^-|-$/g, "");
 };
 
-/*                                  Export                                    */
+//                                 Export                                    
 
 export default generateSlug;

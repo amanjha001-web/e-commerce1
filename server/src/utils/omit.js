@@ -1,5 +1,4 @@
-
-/*                              Omit Fields                                   */
+//                              Omit Fields                                   
 
 const omit = (object = {}, omittedFields = []) => {
   return Object.keys(object).reduce((result, key) => {
@@ -11,6 +10,6 @@ const omit = (object = {}, omittedFields = []) => {
   }, {});
 };
 
-/*                                  Export                                    */
+//                                  Export                                    
 
 export default omit;

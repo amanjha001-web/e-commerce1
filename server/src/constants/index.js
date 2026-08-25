@@ -1,24 +1,24 @@
 
-/*           Messages                                     */
+//          Messages                                     
 export { MESSAGES } from "./messages.js";
 
-/*            Roles                                      */
+//           Roles                                      
 export { ROLES } from "./roles.js";
 
-/*          Permissions                                   */
+//         Permissions                                   
 export { PERMISSIONS } from "./permissions.js";
 
-/*             User Status                                    */
+//            User Status                                    
 export { USER_STATUS } from "./userStatus.js";
 
-/*             Vendor Status                                   */
+//            Vendor Status                                   
 export { VENDOR_STATUS } from "./vendorStatus.js";
 
-/*           Product Status                                   */
+//          Product Status                                   
 export { PRODUCT_STATUS } from "./productStatus.js";
 
-/*          Order Status                                    */
+//         Order Status                                    
 export { ORDER_STATUS } from "./orderStatus.js";
 
-/*         Payment Status                                   */
+//        Payment Status                                   
 export { PAYMENT_STATUS } from "./paymentStatus.js";

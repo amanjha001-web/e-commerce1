@@ -1,27 +1,27 @@
 /**
- * Payment Status Constants
- *
- * Used for:
- * Razorpay / Stripe / Payment Gateway integration
- * Payment tracking
- * Refund management
- * Transaction history
+   Payment Status Constants
+  
+   Used for:
+   Razorpay / Stripe / Payment Gateway integration
+   Payment tracking
+   Refund management
+   Transaction history
  */
 
 export const PAYMENT_STATUS = Object.freeze({
-  /* Initial Payment States                                                   */
+  // Initial Payment States                                                  
 
   PENDING: "pending",
 
   PROCESSING: "processing",
 
-  /* Successful Payments                                                      */
+  // Successful Payments                                                     
 
   PAID: "paid",
 
   VERIFIED: "verified",
 
-  /* Failed Payments                                                          */
+  // Failed Payments                                                         
 
   FAILED: "failed",
 
@@ -29,7 +29,7 @@ export const PAYMENT_STATUS = Object.freeze({
 
   EXPIRED: "expired",
 
-  /* Refund States                                                            */
+  // Refund States                                                           
 
   REFUND_REQUESTED: "refund_requested",
 
@@ -39,7 +39,7 @@ export const PAYMENT_STATUS = Object.freeze({
 
   REFUND_FAILED: "refund_failed",
 
-  /* Partial Payment Support                                                  */
+  // Partial Payment Support                                                 
 
   PARTIALLY_PAID: "partially_paid",
 });

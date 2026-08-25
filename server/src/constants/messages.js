@@ -1,4 +1,4 @@
-/**
+/*
    Application Messages
  
    Used for:
@@ -6,10 +6,10 @@
    Error handling
    Success messages
    Centralized message management
- */
+*/
 
 export const MESSAGES = Object.freeze({
-  /* Common Messages                                                          */
+  // Common Messages                                                         
 
   COMMON: Object.freeze({
     SUCCESS: "Operation completed successfully",
@@ -25,7 +25,7 @@ export const MESSAGES = Object.freeze({
     NOT_FOUND: "Resource not found",
   }),
 
-  /* Authentication Messages                                                  */
+  // Authentication Messages                                                 
 
   AUTH: Object.freeze({
     REGISTER_SUCCESS: "User registered successfully",
@@ -53,7 +53,7 @@ export const MESSAGES = Object.freeze({
     PASSWORD_RESET_SUCCESS: "Password reset successfully",
   }),
 
-  /* User Messages                                                            */
+  // User Messages                                                           
 
   USER: Object.freeze({
     PROFILE_UPDATED: "Profile updated successfully",
@@ -65,7 +65,7 @@ export const MESSAGES = Object.freeze({
     ACCOUNT_DELETED: "Account deleted successfully",
   }),
 
-  /* Vendor Messages                                                          */
+  // Vendor Messages                                                         
 
   VENDOR: Object.freeze({
     CREATED: "Vendor application submitted successfully",
@@ -77,7 +77,7 @@ export const MESSAGES = Object.freeze({
     SUSPENDED: "Vendor suspended successfully",
   }),
 
-  /* Product Messages                                                         */
+  // Product Messages                                                        
 
   PRODUCT: Object.freeze({
     CREATED: "Product created successfully",
@@ -91,7 +91,7 @@ export const MESSAGES = Object.freeze({
     OUT_OF_STOCK: "Product is out of stock",
   }),
 
-  /* Order Messages                                                           */
+  // Order Messages                                                          
 
   ORDER: Object.freeze({
     CREATED: "Order placed successfully",
@@ -103,7 +103,7 @@ export const MESSAGES = Object.freeze({
     NOT_FOUND: "Order not found",
   }),
 
-  /* Payment Messages                                                         */
+  // Payment Messages                                                        
 
   PAYMENT: Object.freeze({
     SUCCESS: "Payment successful",

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import ApiError from "./ApiError.js";
 
-/*                         Validate Mongo ObjectId                            */
+//                         Validate Mongo ObjectId                            
 
 const validateObjectId = (id, fieldName = "Id") => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -11,7 +11,7 @@ const validateObjectId = (id, fieldName = "Id") => {
   return true;
 };
 
-/*                        Validate Multiple ObjectIds                         */
+//                        Validate Multiple ObjectIds                         
 
 const validateObjectIds = (ids = [], fieldName = "Id") => {
   ids.forEach((id) => {
@@ -21,6 +21,6 @@ const validateObjectIds = (ids = [], fieldName = "Id") => {
   return true;
 };
 
-/*                                  Export                                    */
+//                                  Export                                    
 
 export { validateObjectId, validateObjectIds };

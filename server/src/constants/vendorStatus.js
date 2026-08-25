@@ -1,27 +1,27 @@
 /**
- * Vendor Status Constants
- *
- * Used for:
- *  Vendor onboarding
- *  Admin approval workflow
- *  Vendor account management
- *  Marketplace control
+   Vendor Status Constants
+  
+   Used for:
+    Vendor onboarding
+    Admin approval workflow
+    Vendor account management
+    Marketplace control
  */
 
 export const VENDOR_STATUS = Object.freeze({
-  /* Registration Flow                                                        */
+  // Registration Flow
 
   PENDING: "pending",
 
   UNDER_REVIEW: "under_review",
 
-  /* Approval States                                                          */
+  // Approval States
 
   APPROVED: "approved",
 
   ACTIVE: "active",
 
-  /* Restriction States                                                       */
+  // Restriction States
 
   SUSPENDED: "suspended",
 
@@ -29,11 +29,11 @@ export const VENDOR_STATUS = Object.freeze({
 
   BANNED: "banned",
 
-  /* Rejection States                                                         */
+  // Rejection States
 
   REJECTED: "rejected",
 
-  /* Exit States                                                              */
+  // Exit States
 
   DEACTIVATED: "deactivated",
 });

@@ -1,5 +1,5 @@
 
-/*                            Pagination Helper                               */
+//                           Pagination Helper                               
 
 const getPagination = (query = {}) => {
   let page = Number(query.page) || 1;
@@ -18,7 +18,7 @@ const getPagination = (query = {}) => {
   };
 };
 
-/*                          Pagination Response                               */
+//                         Pagination Response                               
 
 const getPaginationMeta = (totalDocuments, page, limit) => {
   const totalPages = Math.ceil(totalDocuments / limit);
@@ -33,6 +33,6 @@ const getPaginationMeta = (totalDocuments, page, limit) => {
   };
 };
 
-/*                                  Export                                    */
+//                                 Export                                    
 
 export { getPagination, getPaginationMeta };

@@ -1,9 +1,10 @@
 import fs from "fs";
 import cloudinary from "../config/cloudinary.js";
 
+//Upload On Cloudinary
 const uploadOnCloudinary = async (
   localFilePath,
-  folder = "shopsphere/others",
+  folder = "public/temp",
 ) => {
   try {
     if (!localFilePath) return null;
@@ -27,6 +28,7 @@ const uploadOnCloudinary = async (
   }
 };
 
+//Delete From Cloudinary
 const deleteFromCloudinary = async (publicId) => {
   try {
     if (!publicId) return null;

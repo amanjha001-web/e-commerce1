@@ -1,5 +1,4 @@
-
-/*                                 Logger                                     */
+//                                Logger                                     
 
 const getTime = () => {
   return new Date().toLocaleString("en-IN", {
@@ -8,7 +7,7 @@ const getTime = () => {
   });
 };
 
-/*                           Message Formatter                                */
+//                          Message Formatter                                
 
 const formatMessage = (messages) => {
   return messages
@@ -26,7 +25,7 @@ const formatMessage = (messages) => {
     .join(" ");
 };
 
-/*                                Logger                                      */
+//                               Logger                                      
 
 const log = (label, color, method, messages) => {
   method(`${color}[${label}]\x1b[0m ${getTime()} : ${formatMessage(messages)}`);
@@ -52,7 +51,7 @@ const http = (...messages) => {
   log("HTTP", "\x1b[35m", console.log, messages);
 };
 
-/*                                  Export                                    */
+//                                 Export                                    
 
 export default {
   info,

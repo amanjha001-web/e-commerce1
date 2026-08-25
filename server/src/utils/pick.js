@@ -1,5 +1,5 @@
 
-/*                              Pick Fields                                   */
+//                              Pick Fields                                   
 
 const pick = (object = {}, allowedFields = []) => {
   return Object.keys(object).reduce((result, key) => {
@@ -11,6 +11,6 @@ const pick = (object = {}, allowedFields = []) => {
   }, {});
 };
 
-/*                                  Export                                    */
+//                                  Export                                    
 
 export default pick;
