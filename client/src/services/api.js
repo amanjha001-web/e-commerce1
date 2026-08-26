@@ -1,21 +1,19 @@
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
 });
 
+// Request Interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
     return config;
   },
   (error) => {
@@ -23,13 +21,37 @@ api.interceptors.request.use(
   },
 );
 
+// Response Interceptor
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("accessToken");
+    const originalRequest = error.config;
+
+    if (!error.response) {
+      return Promise.reject({
+        message: "Network error. Please check your connection.",
+        originalError: error,
+      });
+    }
+
+    if (error.response.status === 401 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+
+      try {
+        await axios.post(
+          `${API_BASE_URL}/auth/refresh-token`,
+          {},
+          {
+            withCredentials: true,
+          },
+        );
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        return Promise.reject(refreshError);
+      }
     }
 
     return Promise.reject(error);
