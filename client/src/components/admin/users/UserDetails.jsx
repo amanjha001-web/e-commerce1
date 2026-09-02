@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useState } from "react";
 
 const UserDetails = ({
   user = null,
@@ -10,20 +11,14 @@ const UserDetails = ({
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    if (open) {
-      setActiveTab("overview");
-    }
-  }, [open, user]);
-
-  if (!open) return null;
+  if (!open || !user) return null;
 
   const userName =
-    user?.fullName || user?.name || user?.username || "Unknown User";
+    user.fullName || user.name || user.username || "Unknown User";
 
-  const email = user?.email || "-";
+  const email = user.email || "-";
 
-  const role = user?.role
+  const role = user.role
     ? user.role
         .toString()
         .replace(/_/g, " ")
@@ -31,9 +26,9 @@ const UserDetails = ({
     : "User";
 
   const status =
-    user?.status || (user?.isActive === false ? "inactive" : "active");
+    user.status || (user.isActive === false ? "inactive" : "active");
 
-  const avatar = user?.avatar || user?.profileImage || user?.image || null;
+  const avatar = user.avatar || user.profileImage || user.image || null;
 
   const getInitials = () => {
     return userName
@@ -82,15 +77,24 @@ const UserDetails = ({
     const statusMap = {
       active:
         "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      inactive: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-      blocked: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+
+      inactive:
+        "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+
+      blocked:
+        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+
       suspended:
         "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+
       pending:
         "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     };
 
-    return statusMap[status?.toLowerCase()] || "bg-muted text-muted-foreground";
+    return (
+      statusMap[status?.toLowerCase()] ||
+      "bg-muted text-muted-foreground"
+    );
   };
 
   const formatStatus = () => {
@@ -199,7 +203,9 @@ const UserDetails = ({
                   disabled={loading}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
                 >
-                  {status?.toLowerCase() === "active" ? "Block" : "Activate"}
+                  {status?.toLowerCase() === "active"
+                    ? "Block"
+                    : "Activate"}
                 </button>
               </div>
             </div>
@@ -244,6 +250,7 @@ const UserDetails = ({
 
           {/* Tab Content */}
           <div className="p-5 sm:p-6">
+            {/* Overview */}
             {activeTab === "overview" && (
               <div className="space-y-6">
                 {/* Account Information */}
@@ -254,23 +261,29 @@ const UserDetails = ({
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Full Name</p>
+                      <p className="text-xs text-muted-foreground">
+                        Full Name
+                      </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {user?.fullName || user?.name || "-"}
+                        {user.fullName || user.name || "-"}
                       </p>
                     </div>
 
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Username</p>
+                      <p className="text-xs text-muted-foreground">
+                        Username
+                      </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {user?.username ? `@${user.username}` : "-"}
+                        {user.username ? `@${user.username}` : "-"}
                       </p>
                     </div>
 
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-xs text-muted-foreground">
+                        Email
+                      </p>
 
                       <p className="mt-1 break-all text-sm font-medium text-foreground">
                         {email}
@@ -278,15 +291,19 @@ const UserDetails = ({
                     </div>
 
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Phone</p>
+                      <p className="text-xs text-muted-foreground">
+                        Phone
+                      </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {user?.phone || user?.phoneNumber || "-"}
+                        {user.phone || user.phoneNumber || "-"}
                       </p>
                     </div>
 
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Role</p>
+                      <p className="text-xs text-muted-foreground">
+                        Role
+                      </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
                         {role}
@@ -294,16 +311,18 @@ const UserDetails = ({
                     </div>
 
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">User ID</p>
+                      <p className="text-xs text-muted-foreground">
+                        User ID
+                      </p>
 
                       <p className="mt-1 break-all text-sm font-medium text-foreground">
-                        {user?._id || user?.id || "-"}
+                        {user._id || user.id || "-"}
                       </p>
                     </div>
                   </div>
                 </section>
 
-                {/* Dates */}
+                {/* Account Dates */}
                 <section>
                   <h3 className="mb-4 text-sm font-semibold text-foreground">
                     Account Dates
@@ -311,10 +330,12 @@ const UserDetails = ({
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">Joined</p>
+                      <p className="text-xs text-muted-foreground">
+                        Joined
+                      </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDate(user?.createdAt)}
+                        {formatDate(user.createdAt)}
                       </p>
                     </div>
 
@@ -324,7 +345,7 @@ const UserDetails = ({
                       </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDate(user?.updatedAt)}
+                        {formatDate(user.updatedAt)}
                       </p>
                     </div>
 
@@ -334,14 +355,16 @@ const UserDetails = ({
                       </p>
 
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDateTime(user?.lastLoginAt || user?.lastLogin)}
+                        {formatDateTime(
+                          user.lastLoginAt || user.lastLogin,
+                        )}
                       </p>
                     </div>
                   </div>
                 </section>
 
                 {/* Address */}
-                {(user?.address || user?.addresses?.length) && (
+                {(user.address || user.addresses?.length) && (
                   <section>
                     <h3 className="mb-4 text-sm font-semibold text-foreground">
                       Address
@@ -380,9 +403,10 @@ const UserDetails = ({
               </div>
             )}
 
+            {/* Activity */}
             {activeTab === "activity" && (
               <div className="space-y-3">
-                {(user?.activity || []).length ? (
+                {(user.activity || []).length ? (
                   user.activity.map((item, index) => (
                     <div
                       key={item?._id || index}
@@ -391,7 +415,9 @@ const UserDetails = ({
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-sm font-medium text-foreground">
-                            {item?.title || item?.action || "User activity"}
+                            {item?.title ||
+                              item?.action ||
+                              "User activity"}
                           </p>
 
                           {item?.description && (
@@ -402,7 +428,9 @@ const UserDetails = ({
                         </div>
 
                         <span className="whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDateTime(item?.createdAt || item?.date)}
+                          {formatDateTime(
+                            item?.createdAt || item?.date,
+                          )}
                         </span>
                       </div>
                     </div>
@@ -421,9 +449,10 @@ const UserDetails = ({
               </div>
             )}
 
+            {/* Orders */}
             {activeTab === "orders" && (
               <div className="space-y-3">
-                {(user?.orders || []).length ? (
+                {(user.orders || []).length ? (
                   user.orders.map((order, index) => (
                     <div
                       key={order?._id || index}
@@ -447,7 +476,9 @@ const UserDetails = ({
                         <p className="text-sm font-semibold text-foreground">
                           ₹
                           {Number(
-                            order?.totalAmount || order?.total || 0,
+                            order?.totalAmount ||
+                              order?.total ||
+                              0,
                           ).toLocaleString("en-IN")}
                         </p>
 

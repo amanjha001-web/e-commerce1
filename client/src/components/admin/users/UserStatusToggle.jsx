@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useState } from "react";
 
 const UserStatusToggle = ({
   user,
@@ -9,26 +10,25 @@ const UserStatusToggle = ({
 }) => {
   const [reason, setReason] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      setReason("");
-    }
-  }, [open]);
-
   if (!open || !user) return null;
 
   const currentStatus = String(
     user.status || (user.isActive === false ? "inactive" : "active"),
   ).toLowerCase();
 
-  const isActive = currentStatus === "active" || currentStatus === "approved";
+  const isActive =
+    currentStatus === "active" || currentStatus === "approved";
 
   const nextStatus = isActive ? "inactive" : "active";
 
   const actionLabel = isActive ? "Deactivate" : "Activate";
 
   const userName =
-    user.fullName || user.name || user.username || user.email || "this user";
+    user.fullName ||
+    user.name ||
+    user.username ||
+    user.email ||
+    "this user";
 
   const handleConfirm = () => {
     if (onConfirm) {
@@ -95,15 +95,21 @@ const UserStatusToggle = ({
             <span className="font-medium text-foreground">
               {actionLabel.toLowerCase()}
             </span>{" "}
-            <span className="font-medium text-foreground">{userName}</span>?
+            <span className="font-medium text-foreground">
+              {userName}
+            </span>
+            ?
           </p>
         </div>
 
-        {/* Current → Next status */}
+        {/* Current → Next Status */}
         <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
           <div className="flex items-center justify-between gap-3 text-sm">
+            {/* Current Status */}
             <div>
-              <p className="text-xs text-muted-foreground">Current Status</p>
+              <p className="text-xs text-muted-foreground">
+                Current Status
+              </p>
 
               <span
                 className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -116,6 +122,7 @@ const UserStatusToggle = ({
               </span>
             </div>
 
+            {/* Arrow */}
             <svg
               className="h-5 w-5 shrink-0 text-muted-foreground"
               viewBox="0 0 24 24"
@@ -130,8 +137,11 @@ const UserStatusToggle = ({
               />
             </svg>
 
+            {/* New Status */}
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">New Status</p>
+              <p className="text-xs text-muted-foreground">
+                New Status
+              </p>
 
               <span
                 className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -171,6 +181,7 @@ const UserStatusToggle = ({
 
         {/* Actions */}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          {/* Cancel */}
           <button
             type="button"
             onClick={onClose}
@@ -180,6 +191,7 @@ const UserStatusToggle = ({
             Cancel
           </button>
 
+          {/* Confirm */}
           <button
             type="button"
             onClick={handleConfirm}
@@ -213,6 +225,7 @@ const UserStatusToggle = ({
                     strokeLinecap="round"
                   />
                 </svg>
+
                 Processing...
               </span>
             ) : (

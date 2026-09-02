@@ -1,27 +1,48 @@
+
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+
+import Loader from "../components/common/Loader";
 import useAuth from "../hooks/useAuth";
 
-const ProtectedRoute = ({ allowedRoles = [] }) => {
-  const { isAuthenticated, isLoading, role } = useAuth();
+const ProtectedRoute = ({
+  allowedRoles = [],
+  children,
+}) => {
   const location = useLocation();
+  const { user, loading, isAuthenticated } = useAuth();
 
-  // Auth check chal raha hai
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-blue-600" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader />
       </div>
     );
   }
 
-  // User login nahi hai
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!isAuthenticated || !user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location }}
+      />
+    );
   }
 
-  // Role check
-  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    return <Navigate to="/" replace />;
+  if (
+    allowedRoles.length > 0 &&
+    !allowedRoles.includes(user?.role)
+  ) {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+  }
+
+  if (children) {
+    return children;
   }
 
   return <Outlet />;

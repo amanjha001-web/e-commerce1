@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 
 const UserFilters = ({
   filters = {},
@@ -6,21 +5,12 @@ const UserFilters = ({
   onReset,
   loading = false,
 }) => {
-  const [search, setSearch] = useState(filters.search || "");
-  const [status, setStatus] = useState(filters.status || "all");
-  const [role, setRole] = useState(filters.role || "all");
-  const [sortBy, setSortBy] = useState(filters.sortBy || "newest");
-
-  useEffect(() => {
-    setSearch(filters.search || "");
-    setStatus(filters.status || "all");
-    setRole(filters.role || "all");
-    setSortBy(filters.sortBy || "newest");
-  }, [filters]);
+  const search = filters.search || "";
+  const status = filters.status || "all";
+  const role = filters.role || "all";
+  const sortBy = filters.sortBy || "newest";
 
   const handleSearchChange = (value) => {
-    setSearch(value);
-
     onFilterChange?.({
       ...filters,
       search: value,
@@ -28,8 +18,6 @@ const UserFilters = ({
   };
 
   const handleStatusChange = (value) => {
-    setStatus(value);
-
     onFilterChange?.({
       ...filters,
       status: value,
@@ -37,8 +25,6 @@ const UserFilters = ({
   };
 
   const handleRoleChange = (value) => {
-    setRole(value);
-
     onFilterChange?.({
       ...filters,
       role: value,
@@ -46,8 +32,6 @@ const UserFilters = ({
   };
 
   const handleSortChange = (value) => {
-    setSortBy(value);
-
     onFilterChange?.({
       ...filters,
       sortBy: value,
@@ -55,11 +39,6 @@ const UserFilters = ({
   };
 
   const handleReset = () => {
-    setSearch("");
-    setStatus("all");
-    setRole("all");
-    setSortBy("newest");
-
     onReset?.();
   };
 
