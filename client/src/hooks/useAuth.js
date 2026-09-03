@@ -11,7 +11,7 @@ import {
 const useAuth = () => {
   const dispatch = useDispatch();
 
-  const { user, isAuthenticated, isLoading, error, accessToken } = useSelector(
+  const { user, isAuthenticated, loading, error, accessToken } = useSelector(
     (state) => state.auth,
   );
 
@@ -40,7 +40,7 @@ const useAuth = () => {
   return {
     user,
     isAuthenticated,
-    isLoading,
+    loading,
     error,
     accessToken,
 

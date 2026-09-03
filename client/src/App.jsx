@@ -1,9 +1,8 @@
-function App() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-700">
-      <h1 className="text-5xl font-bold text-indigo-600">ShopSphere 🚀</h1>
-    </div>
-  );
-}
+
+import AppRoutes from "./routes/AppRoutes";
+
+const App = () => {
+  return <AppRoutes />;
+};
 
 export default App;

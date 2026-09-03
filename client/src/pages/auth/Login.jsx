@@ -15,28 +15,43 @@ const Login = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [socialLoading, setSocialLoading] =
-    useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const from =
     location.state?.from?.pathname || "/";
 
   const handleLogin = async (data) => {
-    const result = await onLogin?.(data);
+    if (!onLogin) {
+      console.error(
+        "Login handler is not provided."
+      );
+      return false;
+    }
+
+    const result = await onLogin(data);
 
     if (result !== false) {
-      navigate(from, { replace: true });
+      navigate(from, {
+        replace: true,
+      });
     }
 
     return result;
   };
 
   const handleSocialLogin = async (provider) => {
+    if (!onSocialLogin) {
+      console.error(
+        "Social login handler is not provided."
+      );
+      return false;
+    }
+
     try {
       setSocialLoading(true);
 
       const result =
-        await onSocialLogin?.(provider);
+        await onSocialLogin(provider);
 
       if (result !== false) {
         navigate(from, {
@@ -87,6 +102,7 @@ const Login = ({
         {/* Register */}
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
+
           <Link
             to="/register"
             className="font-medium text-primary transition-colors hover:text-primary/80"

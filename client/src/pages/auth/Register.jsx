@@ -21,10 +21,10 @@ const Register = ({
     const result = await onRegister?.(data);
 
     if (result !== false) {
-      navigate("/login", {
+      navigate("/verify-email", {
         replace: true,
         state: {
-          registered: true,
+          email: data?.email,
         },
       });
     }
