@@ -1,111 +1,100 @@
-
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import AuthLayout from "../../layouts/AuthLayout";
 import ResetPasswordForm from "../../components/auth/ResetPasswordForm";
 
-const ResetPassword = ({
-  loading = false,
-  error = "",
-  onResetPassword,
-}) => {
+const ResetPassword = ({ loading = false, error = "", onResetPassword }) => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
-  const [success, setSuccess] =
-    useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const email =
-    location.state?.email || "";
-
-  const otp =
-    location.state?.otp || "";
+  // URL:
+  // /login/reset-password?token=xxxxxxxx
+  const token = searchParams.get("token");
 
   const handleSubmit = async (data) => {
-    const payload = {
-      ...data,
-      email,
-      otp,
-    };
-
-    const result =
-      await onResetPassword?.(payload);
-
-    if (result !== false) {
-      setSuccess(true);
+    if (!token) {
+      return false;
     }
 
-    return result;
+    try {
+      const result = await onResetPassword({
+        token,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+
+      if (result?.success === true) {
+        setSuccess(true);
+        return result;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
   };
 
+  // Success screen
   if (success) {
     return (
-      <AuthLayout
-        title="Password Reset Successful"
-        subtitle="Your password has been updated successfully"
-      >
-        <div className="space-y-6 text-center">
-          <div className="rounded-2xl border border-border bg-muted/30 p-6">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-2xl text-primary">
-              ✓
-            </div>
-
-            <h2 className="mt-4 text-lg font-semibold text-foreground">
-              Password Updated
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Your password has been reset successfully.
-              You can now sign in with your new password.
-            </p>
+      <div className="space-y-6 text-center">
+        <div className="rounded-2xl border border-border bg-muted/30 p-6">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-2xl text-primary">
+            ✓
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/login", {
-                replace: true,
-              })
-            }
-            className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-          >
-            Continue to Login
-          </button>
+          <h2 className="mt-4 text-lg font-semibold text-foreground">
+            Password Updated
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Your password has been reset successfully. You can now sign in with
+            your new password.
+          </p>
         </div>
-      </AuthLayout>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/login", {
+              replace: true,
+            })
+          }
+          className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+        >
+          Continue to Login
+        </button>
+      </div>
     );
   }
 
   return (
-    <AuthLayout
-      title="Reset Password"
-      subtitle="Create a new secure password for your account"
-    >
-      <div className="space-y-6">
-        {!email && (
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
-            Your reset session is incomplete.
-            Please start the password reset process again.
-          </div>
-        )}
-
-        <ResetPasswordForm
-          loading={loading}
-          error={error}
-          onSubmit={handleSubmit}
-        />
-
-        <div className="text-center">
-          <Link
-            to="/login"
-            className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
-          >
-            ← Back to Login
-          </Link>
+    <div className="space-y-6">
+      {/* Token Missing */}
+      {!token && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400">
+          Your password reset link is invalid or incomplete. Please start the
+          password reset process again.
         </div>
+      )}
+
+      <ResetPasswordForm
+        loading={loading}
+        error={error}
+        onSubmit={handleSubmit}
+      />
+
+      <div className="text-center">
+        <Link
+          to="/login"
+          className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          ← Back to Login
+        </Link>
       </div>
-    </AuthLayout>
+    </div>
   );
 };
 

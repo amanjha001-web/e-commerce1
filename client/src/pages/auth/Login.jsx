@@ -1,117 +1,94 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import AuthLayout from "../../layouts/AuthLayout";
 import LoginForm from "../../components/auth/LoginForm";
 import SocialLogin from "../../components/auth/SocialLogin";
+import useAuth from "../../hooks/useAuth";
 
-const Login = ({
-  loading = false,
-  error = "",
-  onLogin,
-  onSocialLogin,
-}) => {
+const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const { login, loading, error } = useAuth();
+
   const [socialLoading, setSocialLoading] = useState(false);
 
-  const from =
-    location.state?.from?.pathname || "/";
+  const from = location.state?.from?.pathname || "/";
 
-  const handleLogin = async (data) => {
-    if (!onLogin) {
-      console.error(
-        "Login handler is not provided."
-      );
-      return false;
-    }
+  const handleLogin = async (credentials) => {
+    const result = await login(credentials);
 
-    const result = await onLogin(data);
-
-    if (result !== false) {
+    if (result.meta.requestStatus === "fulfilled") {
       navigate(from, {
         replace: true,
       });
+
+      return true;
     }
 
-    return result;
+    return false;
   };
 
-  const handleSocialLogin = async (provider) => {
-    if (!onSocialLogin) {
-      console.error(
-        "Social login handler is not provided."
-      );
-      return false;
-    }
-
+  const handleSocialLogin = async () => {
     try {
       setSocialLoading(true);
 
-      const result =
-        await onSocialLogin(provider);
-
-      if (result !== false) {
-        navigate(from, {
-          replace: true,
-        });
-      }
-
-      return result;
+      return false;
     } finally {
       setSocialLoading(false);
     }
   };
 
   return (
-    <AuthLayout
-      title="Welcome Back"
-      subtitle="Sign in to your ShopSphere account"
-    >
-      <div className="space-y-6">
-        {/* Login Form */}
-        <LoginForm
-          loading={loading}
-          error={error}
-          onSubmit={handleLogin}
-        />
+    <div className="space-y-6">
+      <LoginForm onSubmit={handleLogin} loading={loading} />
 
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
 
-          <div className="relative flex justify-center">
-            <span className="bg-background px-3 text-sm text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
+      {/* Forgot Password */}
+      <div className="text-right">
+        <Link
+          to="/login/forgot-password"
+          className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          Forgot Password?
+        </Link>
+      </div>
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
         </div>
 
-        {/* Social Login */}
-        <SocialLogin
-          loading={
-            loading || socialLoading
-          }
-          onLogin={handleSocialLogin}
-        />
-
-        {/* Register */}
-        <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-
-          <Link
-            to="/register"
-            className="font-medium text-primary transition-colors hover:text-primary/80"
-          >
-            Create an account
-          </Link>
-        </p>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-3 text-sm text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
       </div>
-    </AuthLayout>
+
+      {/* Social Login */}
+      <SocialLogin
+        loading={loading || socialLoading}
+        onLogin={handleSocialLogin}
+      />
+
+      {/* Register */}
+      <p className="text-center text-sm text-muted-foreground">
+        Don't have an account?{" "}
+        <Link
+          to="/login/register"
+          className="font-medium text-primary transition-colors hover:text-primary/80"
+        >
+          Create an account
+        </Link>
+      </p>
+    </div>
   );
 };
 

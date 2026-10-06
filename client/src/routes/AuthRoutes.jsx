@@ -9,22 +9,51 @@ import ResetPassword from "../pages/auth/ResetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
 import VerifyOTP from "../pages/auth/VerifyOTP";
 
+import useAuth from "../hooks/useAuth";
+
 const AuthRoutes = () => {
+  const { forgotPassword, resetPassword, loading, error } = useAuth();
+
   return (
     <Routes>
       <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
+        {/* Login */}
+        <Route index element={<Login />} />
 
-        <Route path="/register" element={<Register />} />
+        {/* Register */}
+        <Route path="register" element={<Register />} />
 
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        {/* Forgot Password */}
+        <Route
+          path="forgot-password"
+          element={
+            <ForgotPassword
+              loading={loading}
+              error={error}
+              onForgotPassword={forgotPassword}
+            />
+          }
+        />
 
-        <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Reset Password */}
+        <Route
+          path="reset-password"
+          element={
+            <ResetPassword
+              loading={loading}
+              error={error}
+              onResetPassword={resetPassword}
+            />
+          }
+        />
 
-        <Route path="/verify-email" element={<VerifyEmail />} />
+        {/* Verify Email */}
+        <Route path="verify-email" element={<VerifyEmail />} />
 
-        <Route path="/verify-otp" element={<VerifyOTP />} />
+        {/* Verify OTP */}
+        <Route path="verify-otp" element={<VerifyOTP />} />
 
+        {/* Invalid Auth Route */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Route>
     </Routes>

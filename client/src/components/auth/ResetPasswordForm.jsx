@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-const ResetPassword = ({
-  token = "",
+const ResetPasswordForm = ({
   onSubmit,
   onBackToLogin,
   loading = false,
+  error = "",
 }) => {
   const [form, setForm] = useState({
     password: "",
@@ -13,7 +13,8 @@ const ResetPassword = ({
 
   const [errors, setErrors] = useState({});
 
-  const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -26,9 +27,8 @@ const ResetPassword = ({
     setErrors((prev) => ({
       ...prev,
       [name]: "",
+      submit: "",
     }));
-
-    setSuccess(false);
   };
 
   const validate = () => {
@@ -60,58 +60,24 @@ const ResetPassword = ({
 
     try {
       await onSubmit?.({
-        token,
         password: form.password,
+        confirmPassword: form.confirmPassword,
       });
-
-      setSuccess(true);
     } catch {
-      setErrors({
-        submit: "Unable to reset password. Please try again.",
-      });
+      // Error is handled by Redux/API error state.
     }
   };
 
   const inputClass = (field) =>
-    `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
+    `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 pr-11 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
       errors[field]
-        ? "border-red-500"
+        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
         : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
     }`;
 
-  if (success) {
-    return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-gray-800 dark:bg-gray-900">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-2xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
-          ✓
-        </div>
-
-        <h2 className="mt-5 text-xl font-bold text-gray-900 dark:text-white">
-          Password Reset Successful
-        </h2>
-
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Your password has been updated successfully.
-        </p>
-
-        {onBackToLogin && (
-          <button
-            type="button"
-            onClick={onBackToLogin}
-            className="mt-6 w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            Back to Login
-          </button>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"
-    >
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Header */}
       <div className="mb-6 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl dark:bg-blue-900/20">
           🔐
@@ -126,7 +92,14 @@ const ResetPassword = ({
         </p>
       </div>
 
-      {/* Password */}
+      {/* Backend Error */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* New Password */}
       <div>
         <label
           htmlFor="reset-password"
@@ -135,16 +108,29 @@ const ResetPassword = ({
           New Password
         </label>
 
-        <input
-          id="reset-password"
-          type="password"
-          name="password"
-          value={form.password}
-          onChange={handleChange}
-          placeholder="Enter new password"
-          autoComplete="new-password"
-          className={inputClass("password")}
-        />
+        <div className="relative">
+          <input
+            id="reset-password"
+            type={showPassword ? "text" : "password"}
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Enter new password"
+            autoComplete="new-password"
+            disabled={loading}
+            className={inputClass("password")}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            disabled={loading}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
 
         {errors.password && (
           <p className="mt-1 text-xs text-red-500">{errors.password}</p>
@@ -152,7 +138,7 @@ const ResetPassword = ({
       </div>
 
       {/* Confirm Password */}
-      <div className="mt-4">
+      <div>
         <label
           htmlFor="reset-confirmPassword"
           className="text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -160,42 +146,55 @@ const ResetPassword = ({
           Confirm Password
         </label>
 
-        <input
-          id="reset-confirmPassword"
-          type="password"
-          name="confirmPassword"
-          value={form.confirmPassword}
-          onChange={handleChange}
-          placeholder="Confirm new password"
-          autoComplete="new-password"
-          className={inputClass("confirmPassword")}
-        />
+        <div className="relative">
+          <input
+            id="reset-confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm new password"
+            autoComplete="new-password"
+            disabled={loading}
+            className={inputClass("confirmPassword")}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            disabled={loading}
+            aria-label={
+              showConfirmPassword
+                ? "Hide confirm password"
+                : "Show confirm password"
+            }
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            {showConfirmPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
 
         {errors.confirmPassword && (
           <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>
         )}
       </div>
 
-      {errors.submit && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-          {errors.submit}
-        </p>
-      )}
-
+      {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
-        className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={loading || !form.password || !form.confirmPassword}
+        className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? "Resetting..." : "Reset Password"}
       </button>
 
+      {/* Optional Back Button */}
       {onBackToLogin && (
         <button
           type="button"
           onClick={onBackToLogin}
           disabled={loading}
-          className="mt-3 w-full rounded-lg border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="w-full rounded-lg border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
           Back to Login
         </button>
@@ -204,4 +203,4 @@ const ResetPassword = ({
   );
 };
 
-export default ResetPassword;
+export default ResetPasswordForm;

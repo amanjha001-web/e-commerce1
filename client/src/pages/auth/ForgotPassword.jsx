@@ -1,36 +1,33 @@
-
 import { useNavigate } from "react-router-dom";
-
-import AuthLayout from "../../layouts/AuthLayout";
 import ForgotPasswordForm from "../../components/auth/ForgotPasswordForm";
 
-const ForgotPassword = ({
-  loading = false,
-  error = "",
-  onForgotPassword,
-}) => {
+const ForgotPassword = ({ loading = false, error = "", onForgotPassword }) => {
   const navigate = useNavigate();
 
-  const handleSubmit = async (data) => {
-    const result = await onForgotPassword?.(data);
+  const handleSubmit = async (email) => {
+    try {
+      const result = await onForgotPassword?.(email);
 
-    if (result !== false) {
-      navigate("/verify-otp", {
-        replace: true,
-        state: {
-          email: data?.email,
-          purpose: "reset-password",
-        },
-      });
+      if (result?.success) {
+        const token = result?.data?.token;
+
+        if (token) {
+          navigate(`/login/reset-password?token=${token}`, {
+            replace: true,
+          });
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return false;
     }
-
-    return result;
   };
 
   return (
-    <AuthLayout
-      title="Forgot Password?"
-      subtitle="Enter your email address and we'll help you reset your password"
+    <
+      
     >
       <div className="space-y-6">
         <ForgotPasswordForm
@@ -49,7 +46,7 @@ const ForgotPassword = ({
           </button>
         </div>
       </div>
-    </AuthLayout>
+    </>
   );
 };
 
