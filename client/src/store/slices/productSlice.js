@@ -1,3 +1,4 @@
+
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
@@ -42,11 +43,13 @@ const productSlice = createSlice({
 
       state.products = action.payload.products || [];
 
+      const pagination = action.payload.pagination || {};
+
       state.pagination = {
-        page: action.payload.page || 1,
-        limit: action.payload.limit || 12,
-        total: action.payload.total || 0,
-        totalPages: action.payload.totalPages || 0,
+        page: pagination.currentPage || pagination.page || 1,
+        limit: pagination.limit || 12,
+        total: pagination.totalProducts || pagination.total || 0,
+        totalPages: pagination.totalPages || pagination.pages || 0,
       };
 
       state.error = null;
@@ -86,12 +89,15 @@ const productSlice = createSlice({
         ...state.filters,
         ...action.payload,
       };
+
+      state.pagination.page = 1;
     },
 
     setFilter: (state, action) => {
       const { name, value } = action.payload;
 
       state.filters[name] = value;
+      state.pagination.page = 1;
     },
 
     clearFilters: (state) => {

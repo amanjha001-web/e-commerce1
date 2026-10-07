@@ -1,39 +1,121 @@
-import ProductGrid from "../../components/product/ProductGrid";
 
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+
+import ProductGrid from "../../components/product/ProductGrid";
 import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
+
+import { fetchProducts } from "../../store/slices/productThunk.js";
 
 const Home = ({
   user = null,
   banners = [],
   categories = [],
-  featuredProducts = [],
-  latestProducts = [],
-  loading = false,
-  productsLoading = false,
   onCategoryClick,
-  onProductClick,
   onAddToCart,
   onToggleWishlist,
   onShopNow,
-  onNavigate,
 }) => {
-  const products =
-    featuredProducts.length > 0 ? featuredProducts : latestProducts;
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // =========================
+  // Redux Product State
+  // =========================
+
+  const {
+    products = [],
+    loading: productsLoading = false,
+    error: productsError = null,
+  } = useSelector((state) => state.product || {});
+
+  // =========================
+  // Fetch Products
+  // =========================
+
+  useEffect(() => {
+    dispatch(
+      fetchProducts({
+        page: 1,
+        limit: 12,
+        sort: "latest",
+      }),
+    );
+  }, [dispatch]);
+
+  // =========================
+  // Featured Products
+  // =========================
+
+  const featuredProducts = products.filter(
+    (product) => product?.featured === true,
+  );
+
+  // =========================
+  // Latest Products
+  // =========================
+
+  const latestProducts = [...products].sort((a, b) => {
+    return (
+      new Date(b?.createdAt || 0).getTime() -
+      new Date(a?.createdAt || 0).getTime()
+    );
+  });
+
+  // =========================
+  // Products To Show
+  // =========================
+
+  const productsToShow =
+    featuredProducts.length > 0
+      ? featuredProducts
+      : latestProducts;
+
+  const sectionTitle =
+    featuredProducts.length > 0
+      ? "Featured Products"
+      : "Latest Products";
+
+  // =========================
+  // Navigation Handlers
+  // =========================
+
+  const handleShopNow = () => {
+    if (onShopNow) {
+      onShopNow();
+      return;
+    }
+
+    navigate("/products");
+  };
+
+  const handleCategories = () => {
+    navigate("/categories");
+  };
+
+  const handleProducts = () => {
+    navigate("/products");
+  };
+
+  // =========================
+  // Hero Banner
+  // =========================
 
   const activeBanner = banners?.[0] || null;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      {/* Hero */}
+      {/* =========================
+          Hero Section
+      ========================= */}
+
       <section className="relative overflow-hidden border-b border-border">
-        {loading ? (
-          <div className="flex min-h-[420px] items-center justify-center">
-            <Loader />
-          </div>
-        ) : activeBanner ? (
+        {activeBanner ? (
           <div className="relative min-h-[420px] sm:min-h-[500px]">
             {/* Banner Image */}
+
             {activeBanner.image && (
               <img
                 src={activeBanner.image}
@@ -43,9 +125,11 @@ const Home = ({
             )}
 
             {/* Overlay */}
+
             <div className="absolute inset-0 bg-black/50" />
 
             {/* Banner Content */}
+
             <div className="relative mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-16 sm:min-h-[500px] sm:px-6 lg:px-8">
               <div className="max-w-2xl text-white">
                 {activeBanner.subtitle && (
@@ -66,7 +150,7 @@ const Home = ({
                 )}
 
                 <div className="mt-8">
-                  <Button onClick={onShopNow}>
+                  <Button onClick={handleShopNow}>
                     {activeBanner.buttonText || "Shop Now"}
                   </Button>
                 </div>
@@ -92,11 +176,11 @@ const Home = ({
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button onClick={onShopNow}>Shop Now</Button>
+                <Button onClick={handleShopNow}>Shop Now</Button>
 
                 <Button
                   variant="outline"
-                  onClick={() => onNavigate?.("/categories")}
+                  onClick={handleCategories}
                 >
                   Explore Categories
                 </Button>
@@ -106,19 +190,26 @@ const Home = ({
         )}
       </section>
 
-      {/* Categories */}
+      {/* =========================
+          Categories Section
+      ========================= */}
+
       {categories.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-primary">Explore</p>
+              <p className="text-sm font-medium text-primary">
+                Explore
+              </p>
 
-              <h2 className="mt-1 text-2xl font-bold">Shop by Category</h2>
+              <h2 className="mt-1 text-2xl font-bold">
+                Shop by Category
+              </h2>
             </div>
 
             <button
               type="button"
-              onClick={() => onNavigate?.("/categories")}
+              onClick={handleCategories}
               className="text-sm font-semibold text-primary hover:underline"
             >
               View All
@@ -145,7 +236,8 @@ const Home = ({
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-primary">
-                        {category?.name?.charAt(0)?.toUpperCase() || "C"}
+                        {category?.name?.charAt(0)?.toUpperCase() ||
+                          "C"}
                       </div>
                     )}
                   </div>
@@ -162,23 +254,26 @@ const Home = ({
         </section>
       )}
 
-      {/* Featured / Latest Products */}
+      {/* =========================
+          Featured / Latest Products
+      ========================= */}
+
       <section className="bg-muted/30">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-primary">Just for You</p>
+              <p className="text-sm font-medium text-primary">
+                Just for You
+              </p>
 
               <h2 className="mt-1 text-2xl font-bold">
-                {featuredProducts.length > 0
-                  ? "Featured Products"
-                  : "Latest Products"}
+                {sectionTitle}
               </h2>
             </div>
 
             <button
               type="button"
-              onClick={() => onNavigate?.("/products")}
+              onClick={handleProducts}
               className="text-sm font-semibold text-primary hover:underline"
             >
               View All
@@ -189,12 +284,33 @@ const Home = ({
             <div className="flex min-h-[300px] items-center justify-center">
               <Loader />
             </div>
-          ) : products.length > 0 ? (
+          ) : productsError ? (
+            <div className="rounded-2xl border border-border bg-card p-10 text-center">
+              <p className="text-sm text-destructive">
+                {productsError}
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(
+                    fetchProducts({
+                      page: 1,
+                      limit: 12,
+                      sort: "latest",
+                    }),
+                  )
+                }
+                className="mt-4 text-sm font-semibold text-primary hover:underline"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : productsToShow.length > 0 ? (
             <ProductGrid
-              products={products.slice(0, 8)}
-              onProductClick={onProductClick}
+              products={productsToShow.slice(0, 8)}
               onAddToCart={onAddToCart}
-              onToggleWishlist={onToggleWishlist}
+              onWishlist={onToggleWishlist}
             />
           ) : (
             <div className="rounded-2xl border border-border bg-card p-10 text-center">
@@ -206,7 +322,10 @@ const Home = ({
         </div>
       </section>
 
-      {/* CTA */}
+      {/* =========================
+          CTA Section
+      ========================= */}
+
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-3xl bg-primary px-6 py-12 text-center text-primary-foreground shadow-xl sm:px-10 lg:px-16">
           <p className="text-sm font-semibold uppercase tracking-wider opacity-80">
@@ -225,7 +344,10 @@ const Home = ({
           </p>
 
           <div className="mt-7">
-            <Button variant="secondary" onClick={onShopNow}>
+            <Button
+              variant="secondary"
+              onClick={handleShopNow}
+            >
               Start Shopping
             </Button>
           </div>

@@ -1,5 +1,5 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import ProductFilters from "../../components/product/ProductFilters";
 import ProductGrid from "../../components/product/ProductGrid";
@@ -9,93 +9,188 @@ import SearchBar from "../../components/search/SearchBar";
 
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
-import Loader from "../../components/common/Loader";
+
 import Pagination from "../../components/common/Pagination";
 
+import { fetchProducts } from "../../store/slices/productThunk.js";
+
+import {
+  setFilter,
+  setPage,
+  clearFilters,
+} from "../../store/slices/productSlice.js";
+
 const Products = ({
-  products = [],
   categories = [],
   brands = [],
-  loading = false,
-  pagination = {},
-  onFilter,
-  onSort,
-  onSearch,
-  onPageChange,
   onProductSelect,
   onAddToCart,
-  onToggleWishlist,
+  onWishlist,
+  wishlistIds = [],
   onNavigate,
 }) => {
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("default");
+  const dispatch = useDispatch();
+
+  const {
+    products = [],
+    loading = false,
+    error = null,
+    filters = {},
+    pagination = {},
+  } = useSelector((state) => state.product);
+
+  const [search, setSearch] = useState(filters.search || "");
+
+  const [sort, setSort] = useState(filters.sort || "latest");
+
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+  /*
+   * Fetch products from API
+   */
+  useEffect(() => {
+    dispatch(
+      fetchProducts({
+        page: pagination.page || 1,
+        limit: pagination.limit || 12,
 
-    if (!keyword) return products;
+        search: filters.search || "",
+        category: filters.category || "",
+        brand: filters.brand || "",
 
-    return products.filter((product) => {
-      const name = product?.name || product?.title || "";
-      const brand =
-        product?.brand?.name || product?.brand || "";
-      const category =
-        product?.category?.name ||
-        product?.category ||
-        "";
+        minPrice: filters.minPrice || "",
+        maxPrice: filters.maxPrice || "",
 
-      return (
-        String(name).toLowerCase().includes(keyword) ||
-        String(brand).toLowerCase().includes(keyword) ||
-        String(category).toLowerCase().includes(keyword)
-      );
-    });
-  }, [products, search]);
+        rating: filters.rating || "",
 
+        sort: filters.sort || "latest",
+      }),
+    );
+  }, [
+    dispatch,
+
+    pagination.page,
+    pagination.limit,
+
+    filters.search,
+    filters.category,
+    filters.brand,
+
+    filters.minPrice,
+    filters.maxPrice,
+
+    filters.rating,
+    filters.sort,
+  ]);
+
+  /*
+   * Search
+   */
   const handleSearch = (value) => {
     setSearch(value);
-    onSearch?.(value);
+
+    dispatch(
+      setFilter({
+        name: "search",
+        value,
+      }),
+    );
   };
 
+  /*
+   * Sort
+   */
   const handleSort = (value) => {
     setSort(value);
-    onSort?.(value);
+
+    dispatch(
+      setFilter({
+        name: "sort",
+        value,
+      }),
+    );
   };
 
-  const totalPages =
-    pagination?.totalPages ||
-    pagination?.pages ||
-    1;
+  /*
+   * Filters
+   */
+  const handleFilter = (filterData) => {
+    if (!filterData || Object.keys(filterData).length === 0) {
+      dispatch(clearFilters());
 
-  const currentPage =
-    pagination?.currentPage ||
-    pagination?.page ||
-    1;
+      setSearch("");
+      setSort("latest");
+
+      return;
+    }
+
+    Object.entries(filterData).forEach(([name, value]) => {
+      dispatch(
+        setFilter({
+          name,
+          value,
+        }),
+      );
+    });
+  };
+
+  /*
+   * Pagination
+   */
+  const handlePageChange = (page) => {
+    dispatch(setPage(page));
+  };
+
+  const totalPages = pagination.totalPages || pagination.pages || 1;
+
+  const currentPage = pagination.currentPage || pagination.page || 1;
+
+  /*
+   * Error
+   */
+  if (error && !loading && products.length === 0) {
+    return (
+      <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
+          <h2 className="text-xl font-semibold">Failed to load products</h2>
+
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+
+          <Button
+            className="mt-5"
+            onClick={() =>
+              dispatch(
+                fetchProducts({
+                  page: 1,
+                  limit: 12,
+                }),
+              )
+            }
+          >
+            Try Again
+          </Button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Shop
-          </p>
+          <p className="text-sm font-medium text-primary">Shop</p>
 
           <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
             All Products
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Discover products from trusted sellers across
-            different categories.
+            Discover products from trusted sellers across different categories.
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => onNavigate?.("/categories")}
-        >
+        <Button variant="outline" onClick={() => onNavigate?.("/categories")}>
           Browse Categories
         </Button>
       </div>
@@ -113,7 +208,7 @@ const Products = ({
       {/* Mobile Filter Button */}
       <div className="mb-5 flex items-center justify-between lg:hidden">
         <p className="text-sm text-muted-foreground">
-          {filteredProducts.length} products
+          {pagination.total || products.length} products
         </p>
 
         <Button
@@ -127,20 +222,19 @@ const Products = ({
       <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
         {/* Filters */}
         <aside
-          className={[
-            filtersOpen ? "block" : "hidden",
-            "lg:block",
-          ].join(" ")}
+          className={[filtersOpen ? "block" : "hidden", "lg:block"].join(" ")}
         >
           <div className="sticky top-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-semibold">
-                Filters
-              </h2>
+              <h2 className="font-semibold">Filters</h2>
 
               <button
                 type="button"
-                onClick={() => onFilter?.({})}
+                onClick={() => {
+                  dispatch(clearFilters());
+                  setSearch("");
+                  setSort("latest");
+                }}
                 className="text-xs font-medium text-primary hover:underline"
               >
                 Clear
@@ -150,7 +244,7 @@ const Products = ({
             <ProductFilters
               categories={categories}
               brands={brands}
-              onFilter={onFilter}
+              onFilter={handleFilter}
             />
           </div>
         </aside>
@@ -161,8 +255,8 @@ const Products = ({
           <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium">
-                {filteredProducts.length}{" "}
-                {filteredProducts.length === 1
+                {pagination.total || products.length}{" "}
+                {(pagination.total || products.length) === 1
                   ? "Product"
                   : "Products"}
               </p>
@@ -179,19 +273,22 @@ const Products = ({
                 Sort by
               </span>
 
-              <ProductSort
-                value={sort}
-                onChange={handleSort}
-              />
+              <ProductSort value={sort} onChange={handleSort} />
             </div>
           </div>
 
           {/* Products */}
           {loading ? (
-            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-border bg-card">
-              <Loader />
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <ProductGrid
+                products={[]}
+                loading={true}
+                onAddToCart={onAddToCart}
+                onWishlist={onWishlist}
+                wishlistIds={wishlistIds}
+              />
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : products.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
               <EmptyState
                 title="No products found"
@@ -206,10 +303,10 @@ const Products = ({
                 <Button
                   variant="outline"
                   onClick={() => {
+                    dispatch(clearFilters());
+
                     setSearch("");
-                    setSort("default");
-                    onFilter?.({});
-                    onSearch?.("");
+                    setSort("latest");
                   }}
                 >
                   Clear Filters
@@ -218,26 +315,26 @@ const Products = ({
             </div>
           ) : (
             <ProductGrid
-              products={filteredProducts}
+              products={products}
               onProductSelect={onProductSelect}
               onAddToCart={onAddToCart}
-              onToggleWishlist={onToggleWishlist}
+              onWishlist={onWishlist}
+              wishlistIds={wishlistIds}
+              loading={loading}
             />
           )}
 
           {/* Pagination */}
-          {!loading &&
-            filteredProducts.length > 0 &&
-            totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
-                <Pagination
-                  currentPage={currentPage}
-                  page={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={onPageChange}
-                />
-              </div>
-            )}
+          {!loading && products.length > 0 && totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                page={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
         </section>
       </div>
 

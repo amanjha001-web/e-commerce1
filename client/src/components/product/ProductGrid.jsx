@@ -64,6 +64,7 @@ const ProductGrid = ({
             onAddToCart={onAddToCart}
             onWishlist={onWishlist}
             isWishlisted={isWishlisted}
+            loading={loading}
           />
         );
       })}

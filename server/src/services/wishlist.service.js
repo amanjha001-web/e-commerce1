@@ -66,7 +66,7 @@ const getWishlist = async (userId) => {
   }
 
   return {
-    ...wishlist.toObject(),
+    ...wishlist,
     totalProducts: wishlist.products.length,
   };
 };
