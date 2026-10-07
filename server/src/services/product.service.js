@@ -211,9 +211,7 @@ const getProductBySlug = async (slug) => {
 };
 /*                            Get All Products                                */
 
-const getAllProducts = async (
-  query = {},
-) => {
+const getAllProducts = async (query = {}) => {
   const {
     page = 1,
     limit = 10,
@@ -280,8 +278,7 @@ const getAllProducts = async (
   }
 
   if (featured !== undefined) {
-    filter.featured =
-      featured === "true";
+    filter.featured = featured === "true";
   }
 
   if (inStock === "true") {
@@ -292,41 +289,136 @@ const getAllProducts = async (
 
   /*                            Price Range                       */
 
-  if (
-    minPrice ||
-    maxPrice
-  ) {
+  if (minPrice || maxPrice) {
     filter.price = {};
 
     if (minPrice) {
-      filter.price.$gte =
-        Number(minPrice);
+      filter.price.$gte = Number(minPrice);
     }
 
     if (maxPrice) {
-      filter.price.$lte =
-        Number(maxPrice);
+      filter.price.$lte = Number(maxPrice);
     }
   }
 
   /*                Sort             */
 
-  const sort = {
-    [sortBy]:
-      order === "asc"
-        ? 1
-        : -1,
+  /*                Sort             */
+
+  let sort = {
+    createdAt: -1,
   };
 
-  return await productRepository.getAllProducts(
-    filter,
-    {
-      page: Number(page),
-      limit: Number(limit),
-      sort,
-    },
-  );
-};
+  switch (sortBy) {
+    case "latest":
+      sort = {
+        createdAt: -1,
+      };
+      break;
+
+    case "popular":
+      sort = {
+        totalReviews: -1,
+        averageRating: -1,
+      };
+      break;
+
+    case "price_asc":
+      sort = {
+        price: 1,
+      };
+      break;
+
+    case "price_desc":
+      sort = {
+        price: -1,
+      };
+      break;
+
+    case "rating":
+      sort = {
+        averageRating: -1,
+      };
+      break;
+
+    case "name_asc":
+      sort = {
+        name: 1,
+      };
+      break;
+
+    case "name_desc":
+      sort = {
+        name: -1,
+      };
+      break;
+
+    default:
+      sort = {
+        createdAt: -1,
+      };
+  }
+
+  switch (sortBy) {
+    case "latest":
+      sort = {
+        createdAt: -1,
+      };
+      break;
+
+    case "oldest":
+      sort = {
+        createdAt: 1,
+      };
+      break;
+
+    case "price_low":
+    case "price_asc":
+    case "low_to_high":
+      sort = {
+        price: 1,
+      };
+      break;
+
+    case "price_high":
+    case "price_desc":
+    case "high_to_low":
+      sort = {
+        price: -1,
+      };
+      break;
+
+    case "rating":
+    case "rating_high":
+      sort = {
+        averageRating: -1,
+      };
+      break;
+
+    case "name_asc":
+      sort = {
+        name: 1,
+      };
+      break;
+
+    case "name_desc":
+      sort = {
+        name: -1,
+      };
+      break;
+
+    default:
+      sort = {
+        createdAt: -1,
+      };
+  }
+
+  return await productRepository.getAllProducts(filter, {
+    page: Number(page),
+    limit: Number(limit),
+    sort,
+  });
+};;;
 
 /*                         Get Products By Vendor                             */
 

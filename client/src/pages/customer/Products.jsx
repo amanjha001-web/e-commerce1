@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import ProductFilters from "../../components/product/ProductFilters";
@@ -20,13 +20,17 @@ import {
   clearFilters,
 } from "../../store/slices/productSlice.js";
 
+import {
+  fetchWishlist,
+  addWishlistProduct,
+  removeWishlistProduct,
+} from "../../store/slices/wishlistThunk.js";
+
 const Products = ({
   categories = [],
   brands = [],
   onProductSelect,
   onAddToCart,
-  onWishlist,
-  wishlistIds = [],
   onNavigate,
 }) => {
   const dispatch = useDispatch();
@@ -39,14 +43,28 @@ const Products = ({
     pagination = {},
   } = useSelector((state) => state.product);
 
+  const { items: wishlist = [], actionLoading: wishlistActionLoading = false } =
+    useSelector((state) => state.wishlist);
+
   const [search, setSearch] = useState(filters.search || "");
-
   const [sort, setSort] = useState(filters.sort || "latest");
-
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   /*
-   * Fetch products from API
+   * Wishlist Product IDs
+   */
+  const wishlistIds = useMemo(() => {
+    return wishlist
+      .map((item) => {
+        const product = item?.product || item;
+
+        return product?._id || product?.id || item?.productId || null;
+      })
+      .filter(Boolean);
+  }, [wishlist]);
+
+  /*
+   * Fetch Products
    */
   useEffect(() => {
     dispatch(
@@ -68,20 +86,26 @@ const Products = ({
     );
   }, [
     dispatch,
-
     pagination.page,
     pagination.limit,
-
     filters.search,
     filters.category,
     filters.brand,
-
     filters.minPrice,
     filters.maxPrice,
-
     filters.rating,
     filters.sort,
   ]);
+
+  /*
+   * Fetch Wishlist
+   *
+   * Page open hote hi current wishlist
+   * Redux me load ho jayegi.
+   */
+  useEffect(() => {
+    dispatch(fetchWishlist());
+  }, [dispatch]);
 
   /*
    * Search
@@ -139,6 +163,27 @@ const Products = ({
    */
   const handlePageChange = (page) => {
     dispatch(setPage(page));
+  };
+
+  /*
+   * Wishlist
+   *
+   * ProductCard se complete product milega.
+   */
+  const handleWishlist = (product) => {
+    const productId = product?._id || product?.id || product?.slug;
+
+    if (!productId) {
+      return;
+    }
+
+    const isWishlisted = wishlistIds.includes(productId);
+
+    if (isWishlisted) {
+      dispatch(removeWishlistProduct(productId));
+    } else {
+      dispatch(addWishlistProduct(productId));
+    }
   };
 
   const totalPages = pagination.totalPages || pagination.pages || 1;
@@ -284,7 +329,7 @@ const Products = ({
                 products={[]}
                 loading={true}
                 onAddToCart={onAddToCart}
-                onWishlist={onWishlist}
+                onWishlist={handleWishlist}
                 wishlistIds={wishlistIds}
               />
             </div>
@@ -318,9 +363,9 @@ const Products = ({
               products={products}
               onProductSelect={onProductSelect}
               onAddToCart={onAddToCart}
-              onWishlist={onWishlist}
+              onWishlist={handleWishlist}
               wishlistIds={wishlistIds}
-              loading={loading}
+              loading={wishlistActionLoading}
             />
           )}
 

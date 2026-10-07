@@ -1,54 +1,30 @@
 import api from "./api";
 
 const wishlistService = {
-  getWishlist: async (params = {}) => {
-    const response = await api.get("/wishlist", {
-      params,
-    });
-
+  // GET /api/v1/wishlist
+  getWishlist: async () => {
+    const response = await api.get("/wishlist");
     return response.data;
   },
 
+  // POST /api/v1/wishlist
   addToWishlist: async (productId) => {
-    const response = await api.post("/wishlist/items", {
+    const response = await api.post("/wishlist", {
       productId,
     });
 
     return response.data;
   },
 
+  // DELETE /api/v1/wishlist/:productId
   removeFromWishlist: async (productId) => {
-    const response = await api.delete(`/wishlist/items/${productId}`);
-
+    const response = await api.delete(`/wishlist/${productId}`);
     return response.data;
   },
 
-  toggleWishlist: async (productId) => {
-    const response = await api.post(`/wishlist/items/${productId}/toggle`);
-
-    return response.data;
-  },
-
+  // DELETE /api/v1/wishlist
   clearWishlist: async () => {
     const response = await api.delete("/wishlist");
-
-    return response.data;
-  },
-
-  moveToCart: async (productId, quantity = 1) => {
-    const response = await api.post(
-      `/wishlist/items/${productId}/move-to-cart`,
-      {
-        quantity,
-      },
-    );
-
-    return response.data;
-  },
-
-  checkWishlist: async (productId) => {
-    const response = await api.get(`/wishlist/check/${productId}`);
-
     return response.data;
   },
 };
