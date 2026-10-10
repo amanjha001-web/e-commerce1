@@ -1,8 +1,6 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import AuthLayout from "../../layouts/AuthLayout";
 import RegisterForm from "../../components/auth/RegisterForm";
 import SocialLogin from "../../components/auth/SocialLogin";
 
@@ -14,8 +12,7 @@ const Register = ({
 }) => {
   const navigate = useNavigate();
 
-  const [socialLoading, setSocialLoading] =
-    useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const handleRegister = async (data) => {
     const result = await onRegister?.(data);
@@ -36,8 +33,7 @@ const Register = ({
     try {
       setSocialLoading(true);
 
-      const result =
-        await onSocialLogin?.(provider);
+      const result = await onSocialLogin?.(provider);
 
       if (result !== false) {
         navigate("/", {
@@ -52,16 +48,11 @@ const Register = ({
   };
 
   return (
-    <AuthLayout
-      title="Create Account"
-      subtitle="Join ShopSphere and start shopping today"
-    >
+    <>
       <div className="space-y-6">
         {/* Register Form */}
         <RegisterForm
-          loading={
-            loading || socialLoading
-          }
+          loading={loading || socialLoading}
           error={error}
           onSubmit={handleRegister}
         />
@@ -81,9 +72,7 @@ const Register = ({
 
         {/* Social Login */}
         <SocialLogin
-          loading={
-            loading || socialLoading
-          }
+          loading={loading || socialLoading}
           onLogin={handleSocialLogin}
         />
 
@@ -98,7 +87,7 @@ const Register = ({
           </Link>
         </p>
       </div>
-    </AuthLayout>
+    </>
   );
 };
 
