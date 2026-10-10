@@ -1,3 +1,4 @@
+
 import wishlistService from "../../services/wishlist.service";
 
 import {
@@ -25,13 +26,23 @@ export const fetchWishlist = () => async (dispatch) => {
 
     const response = await wishlistService.getWishlist();
 
+    const data = response?.data;
+
+    // Supports the existing products response and
+    // a direct array response.
+    const products = Array.isArray(data?.products)
+      ? data.products
+      : Array.isArray(data)
+        ? data
+        : [];
+
     dispatch(
-      fetchWishlistSuccess(
-        response?.data || {
-          products: [],
-        },
-      ),
+      fetchWishlistSuccess({
+        products,
+      }),
     );
+
+    return products;
   } catch (error) {
     const message =
       error?.response?.data?.message ||
@@ -39,6 +50,8 @@ export const fetchWishlist = () => async (dispatch) => {
       "Failed to fetch wishlist";
 
     dispatch(fetchWishlistFailure(message));
+
+    return [];
   }
 };
 
@@ -50,15 +63,43 @@ export const addWishlistProduct = (productId) => async (dispatch) => {
   try {
     dispatch(addToWishlistStart());
 
-    const response = await wishlistService.addToWishlist(productId);
+    const response =
+      await wishlistService.addToWishlist(productId);
 
-    const products = response?.data?.products || [];
+    const data = response?.data;
 
-    const addedProduct = products.find(
-      (product) => (product?._id || product?.id) === productId,
-    );
+    // Support different common API response shapes.
+    const products = Array.isArray(data?.products)
+      ? data.products
+      : [];
 
-    dispatch(addToWishlistSuccess(addedProduct || null));
+    const addedProduct =
+      products.find((item) => {
+        const product = item?.product || item;
+
+        const id =
+          product?._id ||
+          product?.id ||
+          item?.productId;
+
+        return String(id || "") === String(productId);
+      }) ||
+      (data?.product &&
+      typeof data.product === "object"
+        ? data.product
+        : null);
+
+    if (addedProduct) {
+      dispatch(addToWishlistSuccess(addedProduct));
+    }
+
+    // Re-fetch authoritative backend state after adding.
+    await dispatch(fetchWishlist());
+
+    return {
+      success: true,
+      data,
+    };
   } catch (error) {
     const message =
       error?.response?.data?.message ||
@@ -66,6 +107,11 @@ export const addWishlistProduct = (productId) => async (dispatch) => {
       "Failed to add product to wishlist";
 
     dispatch(addToWishlistFailure(message));
+
+    return {
+      success: false,
+      message,
+    };
   }
 };
 
@@ -80,6 +126,10 @@ export const removeWishlistProduct = (productId) => async (dispatch) => {
     await wishlistService.removeFromWishlist(productId);
 
     dispatch(removeFromWishlistSuccess(productId));
+
+    return {
+      success: true,
+    };
   } catch (error) {
     const message =
       error?.response?.data?.message ||
@@ -87,6 +137,11 @@ export const removeWishlistProduct = (productId) => async (dispatch) => {
       "Failed to remove product from wishlist";
 
     dispatch(removeFromWishlistFailure(message));
+
+    return {
+      success: false,
+      message,
+    };
   }
 };
 
@@ -101,6 +156,10 @@ export const clearWishlistProducts = () => async (dispatch) => {
     await wishlistService.clearWishlist();
 
     dispatch(clearWishlistSuccess());
+
+    return {
+      success: true,
+    };
   } catch (error) {
     const message =
       error?.response?.data?.message ||
@@ -108,5 +167,10 @@ export const clearWishlistProducts = () => async (dispatch) => {
       "Failed to clear wishlist";
 
     dispatch(clearWishlistFailure(message));
+
+    return {
+      success: false,
+      message,
+    };
   }
 };

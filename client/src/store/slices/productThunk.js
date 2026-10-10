@@ -1,3 +1,4 @@
+
 import productService from "../../services/product.service";
 
 import {
@@ -5,6 +6,10 @@ import {
   fetchProductsSuccess,
   fetchProductsFailure,
 } from "./productSlice";
+
+// =========================
+// Fetch Products
+// =========================
 
 export const fetchProducts =
   (params = {}) =>
@@ -14,12 +19,42 @@ export const fetchProducts =
 
       const response = await productService.getProducts(params);
 
+      // Support different API response structures.
+      const data = response?.data;
+
+      let products = [];
+
+      if (Array.isArray(data)) {
+        products = data;
+      } else if (Array.isArray(data?.products)) {
+        products = data.products;
+      } else if (Array.isArray(data?.data)) {
+        products = data.data;
+      } else if (Array.isArray(response?.products)) {
+        products = response.products;
+      } else if (Array.isArray(response?.results)) {
+        products = response.results;
+      }
+
+      // Preserve pagination when supplied by the API.
+      const pagination =
+        data?.pagination ||
+        data?.meta?.pagination ||
+        response?.pagination ||
+        {};
+
       dispatch(
         fetchProductsSuccess({
-          products: response?.data?.products || [],
-          pagination: response?.data?.pagination || {},
+          products,
+          pagination,
         }),
       );
+
+      return {
+        success: true,
+        products,
+        pagination,
+      };
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -27,5 +62,11 @@ export const fetchProducts =
         "Failed to fetch products";
 
       dispatch(fetchProductsFailure(message));
+
+      return {
+        success: false,
+        message,
+        products: [],
+      };
     }
   };

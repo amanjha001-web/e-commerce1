@@ -1,12 +1,8 @@
+
 import CartItem from "./CartItem";
 import CartEmpty from "./CartEmpty";
 
-const CartList = ({
-  items = [],
-  onQuantityChange,
-  onRemove,
-  loading = false,
-}) => {
+const CartList = ({ items = [], loading = false }) => {
   if (!items.length) {
     return <CartEmpty />;
   }
@@ -19,17 +15,31 @@ const CartList = ({
         </h2>
 
         <span className="text-sm text-gray-500 dark:text-gray-400">
-          {items.length} {items.length === 1 ? "item" : "items"}
+          {items.reduce(
+            (total, item) => total + Math.max(1, Number(item.quantity) || 1),
+            0
+          )}{" "}
+          {items.reduce(
+            (total, item) => total + Math.max(1, Number(item.quantity) || 1),
+            0
+          ) === 1
+            ? "item"
+            : "items"}
         </span>
       </div>
 
       <div>
         {items.map((item, index) => (
           <CartItem
-            key={item._id || item.id || item.productId || index}
+            key={
+              item.productId ||
+              item.product?._id ||
+              item.product?.id ||
+              item._id ||
+              item.id ||
+              index
+            }
             item={item}
-            onQuantityChange={onQuantityChange}
-            onRemove={onRemove}
             loading={loading}
           />
         ))}

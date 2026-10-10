@@ -101,7 +101,7 @@ const ProductQuantity = ({
           quantity <= minimum
         }
         aria-label="Decrease quantity"
-        className="flex h-10 w-10 items-center justify-center text-lg font-medium text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
+        className="flex h-10 w-10 items-center justify-center text-lg font-medium text-gray-500 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
       >
         −
       </button>
@@ -116,7 +116,7 @@ const ProductQuantity = ({
         onBlur={handleBlur}
         disabled={disabled}
         aria-label="Quantity"
-        className="h-10 w-14 border-x border-gray-300 bg-transparent text-center text-sm font-semibold text-gray-900 outline-none dark:border-gray-700 dark:text-white"
+        className="h-10 w-14 border-x border-gray-300 bg-transparent text-center text-sm font-semibold text-gray-900 outline-none dark:border-gray-700 dark:text-black"
       />
 
       {/* Increase */}

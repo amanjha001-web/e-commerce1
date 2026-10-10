@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -8,13 +8,15 @@ import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
+import { addCartProduct } from "../../store/slices/cartThunk.js";
+
+import productService from "../../services/product.service";
 
 const Home = ({
   user = null,
   banners = [],
   categories = [],
   onCategoryClick,
-  onAddToCart,
   onToggleWishlist,
   onShopNow,
 }) => {
@@ -32,7 +34,144 @@ const Home = ({
   } = useSelector((state) => state.product || {});
 
   // =========================
-  // Fetch Products
+  // Home Product Sections
+  // =========================
+
+  const [homeSections, setHomeSections] = useState({
+    flashSale: [],
+    trending: [],
+    bestSellers: [],
+    newArrivals: [],
+  });
+
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionsError, setSectionsError] = useState("");
+
+  // =========================
+  // Add Product To Cart
+  // =========================
+
+  const handleAddToCart = async (product) => {
+    const productId = product?._id || product?.id;
+
+    if (!productId) {
+      console.error("Add to Cart failed: Product ID is missing");
+      return;
+    }
+
+    try {
+      const result = await dispatch(addCartProduct(productId, 1));
+
+      if (!result?.success) {
+        console.error(
+          "Add to Cart failed:",
+          result?.message || "Unable to add product to cart",
+        );
+        return;
+      }
+
+      console.log("Product added to cart successfully");
+    } catch (error) {
+      console.error("Add to Cart failed:", error);
+    }
+  };
+
+  // =========================
+  // Normalize API Response
+  // =========================
+
+  const getProductsArray = (response) => {
+    const candidates = [
+      response?.data?.products,
+      response?.data?.data?.products,
+      response?.data?.data,
+      response?.data,
+      response?.products,
+      response?.results,
+    ];
+
+    return candidates.find(Array.isArray) || [];
+  };
+
+  // =========================
+  // Fetch Home Product Sections
+  // =========================
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHomeSections = async () => {
+      setSectionsLoading(true);
+      setSectionsError("");
+
+      const requests = await Promise.allSettled([
+        productService.getFlashSaleProducts(),
+        productService.getTrendingProducts(),
+        productService.getBestSellerProducts(),
+        productService.getNewArrivalProducts(),
+      ]);
+
+      if (!isMounted) return;
+
+      const [flashSale, trending, bestSellers, newArrivals] = requests;
+
+      const sectionResults = {
+        flashSale,
+        trending,
+        bestSellers,
+        newArrivals,
+      };
+
+      setHomeSections({
+        flashSale:
+          flashSale.status === "fulfilled"
+            ? getProductsArray(flashSale.value)
+            : [],
+        trending:
+          trending.status === "fulfilled"
+            ? getProductsArray(trending.value)
+            : [],
+        bestSellers:
+          bestSellers.status === "fulfilled"
+            ? getProductsArray(bestSellers.value)
+            : [],
+        newArrivals:
+          newArrivals.status === "fulfilled"
+            ? getProductsArray(newArrivals.value)
+            : [],
+      });
+
+      const failedSections = Object.entries(sectionResults)
+        .filter(([, result]) => result.status === "rejected")
+        .map(([name]) => {
+          const names = {
+            flashSale: "Flash Sale",
+            trending: "Trending Products",
+            bestSellers: "Best Sellers",
+            newArrivals: "New Arrivals",
+          };
+
+          return names[name];
+        });
+
+      if (failedSections.length > 0) {
+        setSectionsError(
+          `Unable to load: ${failedSections.join(", ")}.`,
+        );
+      }
+
+      setSectionsLoading(false);
+    };
+
+    loadHomeSections();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // =========================
+  // Fetch Main Products
   // =========================
 
   useEffect(() => {
@@ -65,7 +204,7 @@ const Home = ({
   });
 
   // =========================
-  // Products To Show
+  // Products To Display
   // =========================
 
   const productsToShow =
@@ -100,10 +239,47 @@ const Home = ({
   };
 
   // =========================
-  // Hero Banner
+  // Active Hero Banner
   // =========================
 
   const activeBanner = banners?.[0] || null;
+
+  // =========================
+  // Product Sections
+  // =========================
+
+  const productSections = [
+    {
+      title: sectionTitle,
+      products: productsToShow,
+      loading: productsLoading,
+      error: productsError,
+    },
+    {
+      title: "Flash Sale",
+      products: homeSections.flashSale,
+      loading: sectionsLoading,
+      error: null,
+    },
+    {
+      title: "Trending Products",
+      products: homeSections.trending,
+      loading: sectionsLoading,
+      error: null,
+    },
+    {
+      title: "Best Sellers",
+      products: homeSections.bestSellers,
+      loading: sectionsLoading,
+      error: null,
+    },
+    {
+      title: "New Arrivals",
+      products: homeSections.newArrivals,
+      loading: sectionsLoading,
+      error: null,
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -114,8 +290,6 @@ const Home = ({
       <section className="relative overflow-hidden border-b border-border">
         {activeBanner ? (
           <div className="relative min-h-[420px] sm:min-h-[500px]">
-            {/* Banner Image */}
-
             {activeBanner.image && (
               <img
                 src={activeBanner.image}
@@ -124,11 +298,7 @@ const Home = ({
               />
             )}
 
-            {/* Overlay */}
-
             <div className="absolute inset-0 bg-black/50" />
-
-            {/* Banner Content */}
 
             <div className="relative mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-16 sm:min-h-[500px] sm:px-6 lg:px-8">
               <div className="max-w-2xl text-white">
@@ -178,10 +348,7 @@ const Home = ({
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button onClick={handleShopNow}>Shop Now</Button>
 
-                <Button
-                  variant="outline"
-                  onClick={handleCategories}
-                >
+                <Button variant="outline" onClick={handleCategories}>
                   Explore Categories
                 </Button>
               </div>
@@ -198,9 +365,7 @@ const Home = ({
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-primary">
-                Explore
-              </p>
+              <p className="text-sm font-medium text-primary">Explore</p>
 
               <h2 className="mt-1 text-2xl font-bold">
                 Shop by Category
@@ -217,8 +382,8 @@ const Home = ({
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {categories.slice(0, 6).map((category) => {
-              const id = category?._id || category?.id;
+            {categories.slice(0, 6).map((category, index) => {
+              const id = category?._id || category?.id || category?.name || index;
 
               return (
                 <button
@@ -236,8 +401,7 @@ const Home = ({
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-primary">
-                        {category?.name?.charAt(0)?.toUpperCase() ||
-                          "C"}
+                        {category?.name?.charAt(0)?.toUpperCase() || "C"}
                       </div>
                     )}
                   </div>
@@ -255,72 +419,76 @@ const Home = ({
       )}
 
       {/* =========================
-          Featured / Latest Products
+          Home Product Sections
       ========================= */}
 
-      <section className="bg-muted/30">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary">
-                Just for You
-              </p>
+      {productSections.map((section) => (
+        <section
+          key={section.title}
+          className="border-b border-border bg-muted/30"
+        >
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-primary">
+                  ShopSphere Picks
+                </p>
 
-              <h2 className="mt-1 text-2xl font-bold">
-                {sectionTitle}
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleProducts}
-              className="text-sm font-semibold text-primary hover:underline"
-            >
-              View All
-            </button>
-          </div>
-
-          {productsLoading ? (
-            <div className="flex min-h-[300px] items-center justify-center">
-              <Loader />
-            </div>
-          ) : productsError ? (
-            <div className="rounded-2xl border border-border bg-card p-10 text-center">
-              <p className="text-sm text-destructive">
-                {productsError}
-              </p>
+                <h2 className="mt-1 text-2xl font-bold">
+                  {section.title}
+                </h2>
+              </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  dispatch(
-                    fetchProducts({
-                      page: 1,
-                      limit: 12,
-                      sort: "latest",
-                    }),
-                  )
-                }
-                className="mt-4 text-sm font-semibold text-primary hover:underline"
+                onClick={handleProducts}
+                className="text-sm font-semibold text-primary hover:underline"
               >
-                Try Again
+                View All
               </button>
             </div>
-          ) : productsToShow.length > 0 ? (
-            <ProductGrid
-              products={productsToShow.slice(0, 8)}
-              onAddToCart={onAddToCart}
-              onWishlist={onToggleWishlist}
-            />
-          ) : (
-            <div className="rounded-2xl border border-border bg-card p-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No products available right now.
-              </p>
-            </div>
-          )}
+
+            {section.loading ? (
+              <div className="flex min-h-[200px] items-center justify-center">
+                <Loader />
+              </div>
+            ) : section.error ? (
+              <div className="rounded-2xl border border-border bg-card p-8 text-center">
+                <p className="text-sm text-destructive">
+                  {typeof section.error === "string"
+                    ? section.error
+                    : "Unable to load products. Please try again."}
+                </p>
+              </div>
+            ) : section.products.length > 0 ? (
+              <ProductGrid
+                products={section.products.slice(0, 8)}
+                onAddToCart={handleAddToCart}
+                onWishlist={onToggleWishlist}
+              />
+            ) : (
+              <div className="rounded-2xl border border-border bg-card p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No products available in this section right now.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      ))}
+
+      {/* =========================
+          Home Sections API Error
+      ========================= */}
+
+      {sectionsError && (
+        <div
+          role="status"
+          className="mx-auto max-w-7xl px-4 py-4 text-sm text-muted-foreground sm:px-6 lg:px-8"
+        >
+          {sectionsError}
         </div>
-      </section>
+      )}
 
       {/* =========================
           CTA Section
@@ -344,10 +512,7 @@ const Home = ({
           </p>
 
           <div className="mt-7">
-            <Button
-              variant="secondary"
-              onClick={handleShopNow}
-            >
+            <Button variant="secondary" onClick={handleShopNow}>
               Start Shopping
             </Button>
           </div>

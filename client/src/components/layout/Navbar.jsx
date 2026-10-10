@@ -1,9 +1,12 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 
 import useAuth from "../../hooks/useAuth";
+import { fetchWishlist } from "../../store/slices/wishlistThunk.js";
+import { fetchCart } from "../../store/slices/cartThunk.js";
 
 const Navbar = ({
   logo = "ShopSphere",
@@ -14,27 +17,51 @@ const Navbar = ({
   className = "",
 }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const { user, isAuthenticated, logout } = useAuth();
 
   const [accountOpen, setAccountOpen] = useState(false);
 
+  // Wishlist Redux state
+  const wishlistItems = useSelector(
+    (state) => state.wishlist?.items || []
+  );
+
+  const wishlistCount = isAuthenticated
+    ? wishlistItems.length
+    : 0;
+
+  // Cart Redux state
+  const cartItems = useSelector(
+    (state) => state.cart?.items || []
+  );
+
+  // Total quantity of all products in cart
+  const cartCount = isAuthenticated
+    ? cartItems.reduce(
+        (total, item) =>
+          total + Math.max(0, Number(item?.quantity) || 0),
+        0
+      )
+    : 0;
+
+  // Fetch wishlist and cart for authenticated user
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchWishlist());
+      dispatch(fetchCart());
+    }
+  }, [dispatch, isAuthenticated]);
+
   const defaultNavItems = [
-    {
-      label: "Home",
-      to: "/",
-    },
-    {
-      label: "Products",
-      to: "/products",
-    },
-    {
-      label: "Categories",
-      to: "/categories",
-    },
+    { label: "Home", to: "/" },
+    { label: "Products", to: "/products" },
+    { label: "Categories", to: "/categories" },
   ];
 
-  const items = navItems.length > 0 ? navItems : defaultNavItems;
+  const items =
+    navItems.length > 0 ? navItems : defaultNavItems;
 
   const handleLogout = async () => {
     try {
@@ -42,7 +69,7 @@ const Navbar = ({
 
       if (result?.meta?.requestStatus === "fulfilled") {
         toast.success(
-          result?.payload?.message || "logged out successfully",
+          result?.payload?.message || "Logged out successfully"
         );
       }
     } finally {
@@ -91,7 +118,9 @@ const Navbar = ({
                 }`
               }
             >
-              {item.icon && <span className="mr-2">{item.icon}</span>}
+              {item.icon && (
+                <span className="mr-2">{item.icon}</span>
+              )}
               {item.label}
             </NavLink>
           ))}
@@ -104,26 +133,40 @@ const Navbar = ({
               {/* Wishlist */}
               <Link
                 to="/wishlist"
-                className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
-                aria-label="Wishlist"
+                className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                aria-label={`Wishlist, ${wishlistCount} items`}
               >
-                ♡
+                <span className="text-xl">♡</span>
+
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    {wishlistCount > 99 ? "99+" : wishlistCount}
+                  </span>
+                )}
               </Link>
 
               {/* Cart */}
               <Link
                 to="/cart"
-                className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                aria-label="Cart"
+                className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                aria-label={`Cart, ${cartCount} items`}
               >
-                🛒
+                <span className="text-xl">🛒</span>
+
+                {cartCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </Link>
 
               {/* Account Dropdown */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setAccountOpen((prev) => !prev)}
+                  onClick={() =>
+                    setAccountOpen((prev) => !prev)
+                  }
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   {user?.avatar?.url ? (
@@ -140,7 +183,9 @@ const Navbar = ({
 
                   <span className="hidden md:block">
                     {isAuthenticated
-                      ? user?.fullName || user?.username || "Account"
+                      ? user?.fullName ||
+                        user?.username ||
+                        "Account"
                       : "Account"}
                   </span>
 
@@ -154,10 +199,11 @@ const Navbar = ({
                   <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                     {isAuthenticated ? (
                       <>
-                        {/* User Info */}
                         <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                            {user?.fullName || user?.username || "User"}
+                            {user?.fullName ||
+                              user?.username ||
+                              "User"}
                           </p>
 
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
@@ -165,7 +211,6 @@ const Navbar = ({
                           </p>
                         </div>
 
-                        {/* Profile */}
                         <Link
                           to="/profile"
                           onClick={() => setAccountOpen(false)}
@@ -174,7 +219,6 @@ const Navbar = ({
                           My Profile
                         </Link>
 
-                        {/* Logout */}
                         <button
                           type="button"
                           onClick={handleLogout}
@@ -185,7 +229,6 @@ const Navbar = ({
                       </>
                     ) : (
                       <>
-                        {/* Login */}
                         <Link
                           to="/login"
                           onClick={() => setAccountOpen(false)}
@@ -194,7 +237,6 @@ const Navbar = ({
                           Login
                         </Link>
 
-                        {/* Register */}
                         <Link
                           to="/login/register"
                           onClick={() => setAccountOpen(false)}

@@ -1,16 +1,22 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
 
 import ProductBadge from "./ProductBadge";
 import ProductPrice from "./ProductPrice";
 import ProductRating from "./ProductRating";
 
+import { addCartProduct } from "../../store/slices/cartThunk";
+
 const ProductCard = ({
   product,
-  onAddToCart,
   onWishlist,
   isWishlisted = false,
   loading = false,
 }) => {
+  const dispatch = useDispatch();
+  const [addingToCart, setAddingToCart] = useState(false);
+
   if (!product) {
     return null;
   }
@@ -18,31 +24,30 @@ const ProductCard = ({
   const productId = product._id || product.id || product.slug;
   const productName = product.name || product.title || "Product";
 
-  // Product image
   const image =
-    product.thumbnail?.url ||
-    product.image ||
-    product.images?.[0]?.url ||
-    product.images?.[0] ||
+    (typeof product.thumbnail === "string"
+      ? product.thumbnail
+      : product.thumbnail?.url) ||
+    product.image?.url ||
+    (typeof product.image === "string" ? product.image : "") ||
+    (typeof product.images?.[0] === "string"
+      ? product.images[0]
+      : product.images?.[0]?.url) ||
     "";
 
-  // Category
   const categoryName =
     typeof product.category === "object"
       ? product.category?.name
       : product.category || "";
 
-  // Brand
   const brandName =
     typeof product.brand === "object"
       ? product.brand?.name
       : product.brand || "";
 
-  // Short description
   const shortDescription =
     product.shortDescription || product.description || "";
 
-  // Pricing
   const price = Number(product.price || 0);
   const discountPrice = Number(product.discountPrice || 0);
 
@@ -52,61 +57,68 @@ const ProductCard = ({
     ? Math.round(((price - discountPrice) / price) * 100)
     : Number(product.discountPercentage ?? product.discount ?? 0);
 
-  // Stock
   const stock = Number(product.stock ?? product.quantity ?? 0);
 
-  const isOutOfStock = product.inStock === false || stock <= 0;
+  const isOutOfStock =
+    product.inStock === false ||
+    product.isActive === false ||
+    product.status === "draft" ||
+    stock <= 0;
 
-  // Rating
   const rating = Number(product.averageRating ?? product.rating ?? 0);
 
   const reviewCount = Number(
     product.totalReviews ?? product.reviewCount ?? product.reviewsCount ?? 0,
   );
 
-  // Product badges
   const badges = [];
 
   if (product.bestSeller) {
-    badges.push({
-      type: "best_seller",
-      text: "Best Seller",
-    });
+    badges.push({ type: "best_seller", text: "Best Seller" });
   }
 
   if (product.newArrival) {
-    badges.push({
-      type: "new_arrival",
-      text: "New",
-    });
+    badges.push({ type: "new_arrival", text: "New" });
   }
 
   if (product.trending) {
-    badges.push({
-      type: "trending",
-      text: "Trending",
-    });
+    badges.push({ type: "trending", text: "Trending" });
   }
 
   if (product.flashSale) {
-    badges.push({
-      type: "flash_sale",
-      text: "Flash Sale",
-    });
+    badges.push({ type: "flash_sale", text: "Flash Sale" });
   }
 
   if (product.featured && badges.length === 0) {
-    badges.push({
-      type: "featured",
-      text: "Featured",
-    });
+    badges.push({ type: "featured", text: "Featured" });
   }
+
+  const handleAddToCart = async () => {
+    if (!productId || addingToCart || isOutOfStock) {
+      return;
+    }
+
+    setAddingToCart(true);
+
+    try {
+      const result = await dispatch(addCartProduct(productId, 1));
+
+      if (!result?.success) {
+        console.error(
+          "Add to cart failed:",
+          result?.message || "Please try again.",
+        );
+      }
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
-      {/* =========================
-          IMAGE
-      ========================== */}
+      {/* Product Image */}
       <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
         <Link
           to={`/products/${productId}`}
@@ -130,14 +142,12 @@ const ProductCard = ({
           )}
         </Link>
 
-        {/* Discount Badge */}
         {discountPercentage > 0 && (
           <div className="absolute left-3 top-3">
             <ProductBadge type="discount" text={`${discountPercentage}% OFF`} />
           </div>
         )}
 
-        {/* Product Badges */}
         {badges.length > 0 && (
           <div className="absolute bottom-3 left-3 flex max-w-[70%] flex-wrap gap-1.5">
             {badges.slice(0, 2).map((badge) => (
@@ -150,7 +160,6 @@ const ProductCard = ({
           </div>
         )}
 
-        {/* Out of Stock */}
         {isOutOfStock && (
           <div className="absolute right-3 top-3">
             <ProductBadge type="out_of_stock" />
@@ -180,11 +189,8 @@ const ProductCard = ({
         </button>
       </div>
 
-      {/* =========================
-          CONTENT
-      ========================== */}
+      {/* Product Content */}
       <div className="flex flex-1 flex-col p-4">
-        {/* Category & Brand */}
         {(categoryName || brandName) && (
           <div className="flex items-center justify-between gap-2">
             {categoryName ? (
@@ -203,31 +209,26 @@ const ProductCard = ({
           </div>
         )}
 
-        {/* Product Name */}
         <Link to={`/products/${productId}`} className="mt-1">
           <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
             {productName}
           </h3>
         </Link>
 
-        {/* Short Description */}
         {shortDescription && (
           <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
             {shortDescription}
           </p>
         )}
 
-        {/* Rating */}
         <div className="mt-2">
           <ProductRating rating={rating} reviewCount={reviewCount} />
         </div>
 
-        {/* Price */}
         <div className="mt-3">
           <ProductPrice product={product} />
         </div>
 
-        {/* Stock Status */}
         <div className="mt-2 min-h-5">
           {isOutOfStock ? (
             <p className="text-xs font-medium text-red-500">Out of stock</p>
@@ -240,14 +241,14 @@ const ProductCard = ({
           )}
         </div>
 
-        {/* Add To Cart */}
+        {/* Redux-powered Add to Cart */}
         <button
           type="button"
-          onClick={() => onAddToCart?.(product)}
-          disabled={loading || isOutOfStock}
+          onClick={handleAddToCart}
+          disabled={addingToCart || isOutOfStock}
           className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-gray-900"
         >
-          {loading
+          {addingToCart
             ? "Adding..."
             : isOutOfStock
               ? "Out of Stock"

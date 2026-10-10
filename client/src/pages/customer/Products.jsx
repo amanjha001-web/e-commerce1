@@ -13,6 +13,7 @@ import EmptyState from "../../components/common/EmptyState";
 import Pagination from "../../components/common/Pagination";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
+import { addCartProduct } from "../../store/slices/cartThunk.js";
 
 import {
   setFilter,
@@ -34,6 +35,24 @@ const Products = ({
   onNavigate,
 }) => {
   const dispatch = useDispatch();
+
+  const handleAddToCart = async (product) => {
+    const productId = product?._id || product?.id;
+
+    if (!productId) {
+      console.error("Product ID is missing");
+      return;
+    }
+
+    const result = await dispatch(addCartProduct(productId, 1));
+
+    if (!result?.success) {
+      console.error(result?.message || "Failed to add product");
+      return;
+    }
+
+    console.log("Product added successfully");
+  };
 
   const {
     products = [],
@@ -81,7 +100,7 @@ const Products = ({
 
         rating: filters.rating || "",
 
-        sort: filters.sort || "latest",
+        sortBy: filters.sort || "latest",
       }),
     );
   }, [
@@ -220,7 +239,7 @@ const Products = ({
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8 bg-background">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -328,7 +347,7 @@ const Products = ({
               <ProductGrid
                 products={[]}
                 loading={true}
-                onAddToCart={onAddToCart}
+                onAddToCart={handleAddToCart}
                 onWishlist={handleWishlist}
                 wishlistIds={wishlistIds}
               />

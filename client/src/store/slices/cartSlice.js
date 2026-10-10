@@ -1,5 +1,82 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// =========================
+// Helpers
+// =========================
+
+const getProductId = (item) => {
+  const product = item?.product || item;
+
+  return product?._id || product?.id || item?.productId || item?._id || null;
+};
+
+const normalizeCartItem = (item) => {
+  const product = item?.product || item;
+
+  const productId = getProductId(item);
+
+  const price = Number(
+    item?.priceAtPurchase ??
+      item?.price ??
+      product?.finalPrice ??
+      product?.discountPrice ??
+      product?.price ??
+      0,
+  );
+
+  return {
+    ...item,
+    product,
+    productId,
+    price,
+    quantity: Math.max(1, Number(item?.quantity) || 1),
+  };
+};
+
+const normalizeCart = (payload) => {
+  const data = payload?.data ?? payload ?? {};
+
+  const items = Array.isArray(data?.items)
+    ? data.items.map(normalizeCartItem)
+    : [];
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
+  const discount = Number(data?.discount) || 0;
+  const shipping = Number(data?.shipping) || 0;
+  const tax = Number(data?.tax) || 0;
+
+  return {
+    items,
+    subtotal,
+    discount,
+    shipping,
+    tax,
+    total:
+      data?.totalPrice != null
+        ? Number(data.totalPrice)
+        : data?.total != null
+          ? Number(data.total)
+          : Math.max(0, subtotal - discount + shipping + tax),
+    coupon: data?.coupon ?? data?.couponCode ?? null,
+  };
+};
+
+const calculateTotals = (state) => {
+  state.subtotal = state.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
+  state.total = Math.max(
+    0,
+    state.subtotal - state.discount + state.shipping + state.tax,
+  );
+};
+
 const initialState = {
   items: [],
   subtotal: 0,
@@ -12,24 +89,12 @@ const initialState = {
   error: null,
 };
 
-const calculateTotals = (state) => {
-  state.subtotal = state.items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0,
-  );
-
-  state.total = Math.max(
-    0,
-    state.subtotal - state.discount + state.shipping + state.tax,
-  );
-};
-
 const cartSlice = createSlice({
   name: "cart",
-
   initialState,
 
   reducers: {
+    // Fetch cart
     fetchCartStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -38,14 +103,15 @@ const cartSlice = createSlice({
     fetchCartSuccess: (state, action) => {
       state.loading = false;
 
-      state.items = action.payload.items || [];
-      state.subtotal = action.payload.subtotal || 0;
-      state.discount = action.payload.discount || 0;
-      state.shipping = action.payload.shipping || 0;
-      state.tax = action.payload.tax || 0;
-      state.total = action.payload.total || 0;
-      state.coupon = action.payload.coupon || null;
+      const cart = normalizeCart(action.payload);
 
+      state.items = cart.items;
+      state.subtotal = cart.subtotal;
+      state.discount = cart.discount;
+      state.shipping = cart.shipping;
+      state.tax = cart.tax;
+      state.total = cart.total;
+      state.coupon = cart.coupon;
       state.error = null;
     },
 
@@ -54,20 +120,31 @@ const cartSlice = createSlice({
       state.error = action.payload;
     },
 
+    // Local add/update reducer
     addToCart: (state, action) => {
-      const product = action.payload;
+      const product = action.payload?.product || action.payload;
+
+      const productId = getProductId(action.payload);
+
+      if (!productId) return;
+
+      const quantity = Math.max(1, Number(action.payload?.quantity) || 1);
 
       const existingItem = state.items.find(
-        (item) => item.productId === product.productId,
+        (item) => String(item.productId) === String(productId),
       );
 
       if (existingItem) {
-        existingItem.quantity += product.quantity || 1;
+        existingItem.quantity += quantity;
       } else {
-        state.items.push({
-          ...product,
-          quantity: product.quantity || 1,
-        });
+        state.items.push(
+          normalizeCartItem({
+            ...action.payload,
+            product,
+            productId,
+            quantity,
+          }),
+        );
       }
 
       calculateTotals(state);
@@ -75,7 +152,7 @@ const cartSlice = createSlice({
 
     removeFromCart: (state, action) => {
       state.items = state.items.filter(
-        (item) => item.productId !== action.payload,
+        (item) => String(item.productId) !== String(action.payload),
       );
 
       calculateTotals(state);
@@ -84,10 +161,12 @@ const cartSlice = createSlice({
     updateQuantity: (state, action) => {
       const { productId, quantity } = action.payload;
 
-      const item = state.items.find((item) => item.productId === productId);
+      const item = state.items.find(
+        (item) => String(item.productId) === String(productId),
+      );
 
       if (item) {
-        item.quantity = Math.max(1, quantity);
+        item.quantity = Math.max(1, Number(quantity) || 1);
       }
 
       calculateTotals(state);
@@ -95,7 +174,7 @@ const cartSlice = createSlice({
 
     increaseQuantity: (state, action) => {
       const item = state.items.find(
-        (item) => item.productId === action.payload,
+        (item) => String(item.productId) === String(action.payload),
       );
 
       if (item) {
@@ -107,7 +186,7 @@ const cartSlice = createSlice({
 
     decreaseQuantity: (state, action) => {
       const item = state.items.find(
-        (item) => item.productId === action.payload,
+        (item) => String(item.productId) === String(action.payload),
       );
 
       if (item) {
@@ -117,9 +196,10 @@ const cartSlice = createSlice({
       calculateTotals(state);
     },
 
+    // Coupon
     applyCoupon: (state, action) => {
       state.coupon = action.payload.coupon;
-      state.discount = action.payload.discount || 0;
+      state.discount = Number(action.payload.discount) || 0;
 
       calculateTotals(state);
     },
@@ -131,6 +211,7 @@ const cartSlice = createSlice({
       calculateTotals(state);
     },
 
+    // Clear cart
     clearCart: (state) => {
       state.items = [];
       state.subtotal = 0;
@@ -139,16 +220,20 @@ const cartSlice = createSlice({
       state.tax = 0;
       state.total = 0;
       state.coupon = null;
+      state.error = null;
     },
 
+    // Replace cart from API
     setCart: (state, action) => {
-      state.items = action.payload.items || [];
-      state.subtotal = action.payload.subtotal || 0;
-      state.discount = action.payload.discount || 0;
-      state.shipping = action.payload.shipping || 0;
-      state.tax = action.payload.tax || 0;
-      state.total = action.payload.total || 0;
-      state.coupon = action.payload.coupon || null;
+      const cart = normalizeCart(action.payload);
+
+      state.items = cart.items;
+      state.subtotal = cart.subtotal;
+      state.discount = cart.discount;
+      state.shipping = cart.shipping;
+      state.tax = cart.tax;
+      state.total = cart.total;
+      state.coupon = cart.coupon;
     },
 
     setCartLoading: (state, action) => {

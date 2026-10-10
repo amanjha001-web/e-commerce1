@@ -11,6 +11,28 @@ const productService = {
     return response.data;
   },
 
+  // Customer: Home page product sections
+
+  getFlashSaleProducts: async (params = {}) => {
+    const response = await api.get("/products/flash-sale", { params });
+    return response.data;
+  },
+
+  getTrendingProducts: async (params = {}) => {
+    const response = await api.get("/products/trending", { params });
+    return response.data;
+  },
+
+  getBestSellerProducts: async (params = {}) => {
+    const response = await api.get("/products/best-sellers", { params });
+    return response.data;
+  },
+
+  getNewArrivalProducts: async (params = {}) => {
+    const response = await api.get("/products/new-arrivals", { params });
+    return response.data;
+  },
+
   getProductById: async (productId) => {
     const response = await api.get(`/products/${productId}`);
 
