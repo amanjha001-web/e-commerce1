@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import AuthLayout from "../../layouts/AuthLayout";
+
 import OTPForm from "../../components/auth/OTPForm";
 
 const VerifyEmail = ({
@@ -46,9 +46,7 @@ const VerifyEmail = ({
 
   if (success) {
     return (
-      <AuthLayout
-        title="Email Verified"
-        subtitle="Your email address has been verified successfully"
+      <
       >
         <div className="space-y-6 text-center">
           <div className="rounded-2xl border border-border bg-muted/30 p-6">
@@ -78,18 +76,12 @@ const VerifyEmail = ({
             Continue to Login
           </button>
         </div>
-      </AuthLayout>
+      </>
     );
   }
 
   return (
-    <AuthLayout
-      title="Verify Your Email"
-      subtitle={
-        email
-          ? `Enter the OTP sent to ${email}`
-          : "Enter the OTP sent to your email address"
-      }
+    <
     >
       <div className="space-y-6">
         {!email && (
@@ -115,7 +107,7 @@ const VerifyEmail = ({
           </Link>
         </div>
       </div>
-    </AuthLayout>
+    </>
   );
 };
 

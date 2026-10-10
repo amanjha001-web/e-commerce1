@@ -5,6 +5,7 @@ const RegisterForm = ({
   onSubmit,
   loading = false,
   onLogin,
+  error = "",
 }) => {
   const [form, setForm] = useState({
     fullName: "",
@@ -15,6 +16,22 @@ const RegisterForm = ({
   });
 
   const [errors, setErrors] = useState({});
+
+  // Backend error ko form ke andar show karne ke liye
+  const getErrorMessage = (err) => {
+    if (!err) return "";
+
+    if (typeof err === "string") {
+      return err;
+    }
+
+    return (
+      err?.response?.data?.message ||
+      err?.data?.message ||
+      err?.message ||
+      "Something went wrong. Please try again."
+    );
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -43,7 +60,7 @@ const RegisterForm = ({
     if (!form.username.trim()) {
       newErrors.username = "Username is required.";
     } else if (
-      !/^[a-zA-Z0-9_]{3,30}$/.test(form.username)
+      !/^[a-zA-Z0-9_]{3,30}$/.test(form.username.trim())
     ) {
       newErrors.username =
         "Username must be 3-30 characters and contain only letters, numbers, and underscores.";
@@ -53,7 +70,7 @@ const RegisterForm = ({
     if (!form.email.trim()) {
       newErrors.email = "Email is required.";
     } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
     ) {
       newErrors.email = "Enter a valid email.";
     }
@@ -61,9 +78,23 @@ const RegisterForm = ({
     // Password
     if (!form.password) {
       newErrors.password = "Password is required.";
-    } else if (form.password.length < 8) {
-      newErrors.password =
-        "Password must be at least 8 characters.";
+    } else {
+      if (form.password.length < 8) {
+        newErrors.password =
+          "Password must be at least 8 characters.";
+      } else if (!/[A-Z]/.test(form.password)) {
+        newErrors.password =
+          "Password must contain one uppercase letter.";
+      } else if (!/[a-z]/.test(form.password)) {
+        newErrors.password =
+          "Password must contain one lowercase letter.";
+      } else if (!/[0-9]/.test(form.password)) {
+        newErrors.password =
+          "Password must contain one number.";
+      } else if (!/[^a-zA-Z0-9]/.test(form.password)) {
+        newErrors.password =
+          "Password must contain one special character.";
+      }
     }
 
     // Confirm Password
@@ -82,22 +113,40 @@ const RegisterForm = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Purane backend error ko clear karo
+    setErrors({});
 
     if (!validate()) {
       return;
     }
 
-    // Don't send confirmPassword to backend.
     const data = {
       fullName: form.fullName.trim(),
       username: form.username.trim(),
       email: form.email.trim(),
       password: form.password,
+      confirmPassword: form.confirmPassword,
     };
 
-    onSubmit?.(data);
+    try {
+      const result = await onSubmit?.(data);
+
+      // Agar parent false return kare, toh error show karo
+      if (result === false) {
+        setErrors({
+          submit:
+            getErrorMessage(error) ||
+            "Registration failed. Please check your details.",
+        });
+      }
+    } catch (err) {
+      setErrors({
+        submit: getErrorMessage(err),
+      });
+    }
   };
 
   const inputClass = (field) =>
@@ -107,10 +156,14 @@ const RegisterForm = ({
         : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
     }`;
 
+  // Local ya backend error ko display karne ke liye
+  const submitError = errors.submit || getErrorMessage(error);
+
   return (
     <form
       onSubmit={handleSubmit}
       className="space-y-4"
+      noValidate
     >
       {/* Full Name */}
       <div>
@@ -245,10 +298,14 @@ const RegisterForm = ({
         )}
       </div>
 
-      {/* Submit Error */}
-      {errors.submit && (
-        <p className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-          {errors.submit}
+      {/* Backend / Submit Error */}
+      {submitError && (
+        <p
+          role="alert"
+          aria-live="polite"
+          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400"
+        >
+          {submitError}
         </p>
       )}
 
