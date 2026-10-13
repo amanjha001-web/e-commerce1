@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 import ApiError from "../utils/ApiError.js";
@@ -9,15 +8,31 @@ import productRepository from "../repositories/product.repository.js";
 import couponRepository from "../repositories/coupon.repository.js";
 import userRepository from "../repositories/user.repository.js";
 import addressRepository from "../repositories/address.repository.js";
+import vendorRepository from "../repositories/vendor.repository.js";
+import vendorEarningRepository from "../repositories/vendorEarning.repository.js";
 
 const PLATFORM_COMMISSION_RATE = 10;
 
-/*                             Helper Functions                               */
+const ALLOWED_ORDER_STATUSES = [
+  "Pending",
+  "Confirmed",
+  "Processing",
+  "Shipped",
+  "Out For Delivery",
+  "Delivered",
+  "Cancelled",
+  "Returned",
+  "Refunded",
+];
+
+const ALLOWED_PAYMENT_STATUSES = ["Pending", "Paid", "Failed", "Refunded"];
+
+/*                         Helper Functions                                 */
 
 const getProductPrice = (product) => {
-  return product.discountPrice > 0
-    ? product.discountPrice
-    : product.price;
+  const discountPrice = Number(product.discountPrice || 0);
+
+  return discountPrice > 0 ? discountPrice : Number(product.price || 0);
 };
 
 const validateCoupon = async (couponCode, subtotal) => {
@@ -64,13 +79,9 @@ const validateCoupon = async (couponCode, subtotal) => {
   let discount = 0;
 
   if (coupon.discountType === "percentage") {
-    discount =
-      (subtotal * coupon.discountValue) / 100;
+    discount = (subtotal * coupon.discountValue) / 100;
 
-    if (
-      coupon.maximumDiscount > 0 &&
-      discount > coupon.maximumDiscount
-    ) {
+    if (coupon.maximumDiscount > 0 && discount > coupon.maximumDiscount) {
       discount = coupon.maximumDiscount;
     }
   } else {
@@ -83,126 +94,123 @@ const validateCoupon = async (couponCode, subtotal) => {
   };
 };
 
-/*                              Create Order                                  */
+/*                       Create Vendor Earnings                              */
+
+const createVendorEarnings = async (order, orderItems, session) => {
+  const earningRecords = [];
+
+  for (const item of orderItems) {
+    const vendorUserId = item.vendor?._id || item.vendor;
+
+    if (!vendorUserId) {
+      throw new ApiError(400, `Vendor is missing for product ${item.product}`);
+    }
+
+    const vendorProfile =
+      await vendorRepository.getVendorByUserId(vendorUserId);
+
+    if (!vendorProfile) {
+      throw new ApiError(
+        400,
+        `Vendor profile not found for product ${item.product}`,
+      );
+    }
+
+    earningRecords.push({
+      vendor: vendorProfile._id,
+      order: order._id,
+      orderItem: null,
+      product: item.product,
+
+      grossAmount: item.totalPrice,
+      discountAmount: 0,
+      taxAmount: 0,
+      shippingAmount: 0,
+      commissionAmount: item.platformCommission,
+      refundAmount: 0,
+      netEarning: item.vendorAmount,
+
+      type: "sale",
+      status: "pending",
+      description: `Earning for order ${order.orderNumber}`,
+    });
+  }
+
+  return vendorEarningRepository.createMany(earningRecords, session);
+};
+
+/*                           Create Order                                   */
 
 const createOrder = async (
   userId,
-  {
-    addressId,
-    paymentMethod = "COD",
-    couponCode = null,
-    notes = "",
-  } = {},
+  { addressId, paymentMethod = "COD", couponCode = null, notes = "" } = {},
 ) => {
   const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
 
-    /*                              Get Cart                                  */
+    const cart = await cartRepository.getCartByUserId(userId);
 
-    const cart =
-      await cartRepository.getCartByUserId(userId);
-
-    if (!cart || cart.items.length === 0) {
-      throw new ApiError(
-        400,
-        "Your cart is empty",
-      );
+    if (!cart || !cart.items.length) {
+      throw new ApiError(400, "Your cart is empty");
     }
 
-    /*                              Get User                                  */
-
-    const user =
-      await userRepository.getUserById(userId);
+    const user = await userRepository.getUserById(userId);
 
     if (!user) {
-      throw new ApiError(
-        404,
-        "User not found",
-      );
+      throw new ApiError(404, "User not found");
     }
-
-    /*                        Get Shipping Address                            */
 
     let shippingAddress;
 
     if (addressId) {
-      shippingAddress =
-        await addressRepository.getAddressById(
-          addressId,
-        );
+      shippingAddress = await addressRepository.getAddressById(addressId);
 
       if (
         !shippingAddress ||
-        shippingAddress.user.toString() !==
-          userId.toString()
+        shippingAddress.user.toString() !== userId.toString()
       ) {
-        throw new ApiError(
-          400,
-          "Invalid shipping address",
-        );
+        throw new ApiError(400, "Invalid shipping address");
       }
     } else {
       shippingAddress =
-        await addressRepository.getDefaultShippingAddress(
-          userId,
-        );
+        await addressRepository.getDefaultShippingAddress(userId);
     }
 
     if (!shippingAddress) {
-      throw new ApiError(
-        400,
-        "Shipping address not found",
-      );
+      throw new ApiError(400, "Shipping address not found");
     }
 
     const orderShippingAddress = {
       fullName: shippingAddress.fullName,
       phone: shippingAddress.phone,
-      addressLine1:
-        shippingAddress.addressLine1,
-      addressLine2:
-        shippingAddress.addressLine2 || "",
-      landmark:
-        shippingAddress.landmark || "",
+      addressLine1: shippingAddress.addressLine1,
+      addressLine2: shippingAddress.addressLine2 || "",
+      landmark: shippingAddress.landmark || "",
       city: shippingAddress.city,
       state: shippingAddress.state,
       country: shippingAddress.country,
       postalCode: shippingAddress.pincode,
     };
 
-    /*                    Validate Products & Build Items                    */
-
     const orderItems = [];
-
     let subtotal = 0;
 
     for (const cartItem of cart.items) {
-      const product =
-        await productRepository.getProductById(
-          cartItem.product._id ||
-            cartItem.product,
-        );
+      const product = await productRepository.getProductById(
+        cartItem.product._id || cartItem.product,
+      );
 
       if (!product) {
-        throw new ApiError(
-          404,
-          "Product not found",
-        );
+        throw new ApiError(404, "Product not found");
       }
 
       if (!product.isActive) {
-        throw new ApiError(
-          400,
-          `${product.name} is currently unavailable`,
-        );
+        throw new ApiError(400, `${product.name} is currently unavailable`);
       }
 
-      if (
-        product.status &&
-        product.status !== "published"
-      ) {
+      if (product.status && product.status !== "published") {
         throw new ApiError(
           400,
           `${product.name} is not available for purchase`,
@@ -217,66 +225,34 @@ const createOrder = async (
       }
 
       const price = getProductPrice(product);
-
-      const totalPrice =
-        price * cartItem.quantity;
+      const totalPrice = Number((price * cartItem.quantity).toFixed(2));
 
       const platformCommission = Number(
-        (
-          (totalPrice *
-            PLATFORM_COMMISSION_RATE) /
-          100
-        ).toFixed(2),
+        ((totalPrice * PLATFORM_COMMISSION_RATE) / 100).toFixed(2),
       );
 
-      const vendorAmount = Number(
-        (
-          totalPrice -
-          platformCommission
-        ).toFixed(2),
-      );
+      const vendorAmount = Number((totalPrice - platformCommission).toFixed(2));
 
       subtotal += totalPrice;
 
       orderItems.push({
         product: product._id,
-
-        vendor:
-          product.vendor?._id ||
-          product.vendor,
-
+        vendor: product.vendor?._id || product.vendor,
         sku: product.sku,
-
         name: product.name,
-
         slug: product.slug,
-
-        image:
-          product.thumbnail?.url || "",
-
+        image: product.thumbnail?.url || "",
         quantity: cartItem.quantity,
-
         priceAtPurchase: price,
-
         totalPrice,
-
         vendorAmount,
-
         platformCommission,
       });
     }
 
-    /*                           Apply Coupon                                 */
+    subtotal = Number(subtotal.toFixed(2));
 
-    const {
-      coupon,
-      discount,
-    } = await validateCoupon(
-      couponCode,
-      subtotal,
-    );
-
-    /*                       Shipping & Tax                                   */
+    const { coupon, discount } = await validateCoupon(couponCode, subtotal);
 
     let shippingCharge = 0;
 
@@ -284,63 +260,37 @@ const createOrder = async (
       shippingCharge = 80;
     }
 
-    const taxableAmount =
-      Math.max(subtotal - discount, 0);
+    const taxableAmount = Math.max(subtotal - discount, 0);
 
-    const tax = Number(
-      (taxableAmount * 0.18).toFixed(2),
-    );
+    const tax = Number((taxableAmount * 0.18).toFixed(2));
 
     const totalAmount = Number(
-      (
-        subtotal +
-        shippingCharge +
-        tax -
-        discount
-      ).toFixed(2),
+      (subtotal + shippingCharge + tax - discount).toFixed(2),
     );
 
-    /*                           Create Order                                 */
+    const order = await orderRepository.createOrder(
+      {
+        user: userId,
+        items: orderItems,
+        shippingAddress: orderShippingAddress,
+        subtotal,
+        discount,
+        shippingCharge,
+        tax,
+        totalAmount,
+        paymentMethod,
+        coupon: coupon ? coupon._id : null,
+        paymentStatus: "Pending",
+        orderStatus: "Pending",
+        notes,
+      },
+      session,
+    );
 
-    const order =
-      await orderRepository.createOrder(
-        {
-          user: userId,
+    // Create vendor earnings in the same transaction as the order.
+    await createVendorEarnings(order, orderItems, session);
 
-          items: orderItems,
-
-          shippingAddress:
-            orderShippingAddress,
-
-          subtotal,
-
-          discount,
-
-          shippingCharge,
-
-          tax,
-
-          totalAmount,
-
-          paymentMethod,
-
-          coupon: coupon
-            ? coupon._id
-            : null,
-
-          paymentStatus: "Pending",
-
-          orderStatus: "Pending",
-
-          notes,
-
-          
-        },
-        session,
-      );
-
-    /*                        Update Product Stock                            */
-
+    // Update product stock.
     for (const item of orderItems) {
       await productRepository.updateProductStock(
         item.product,
@@ -349,8 +299,7 @@ const createOrder = async (
       );
     }
 
-    /*                         Update Coupon Usage                            */
-
+    // Update coupon usage.
     if (coupon) {
       await couponRepository.updateCoupon(
         coupon._id,
@@ -363,8 +312,7 @@ const createOrder = async (
       );
     }
 
-    /*                            Clear Cart                                  */
-
+    // Clear cart.
     await cartRepository.updateCart(
       userId,
       {
@@ -374,8 +322,6 @@ const createOrder = async (
       },
       session,
     );
-
-    /*                         Commit Transaction                             */
 
     await session.commitTransaction();
 
@@ -391,12 +337,9 @@ const createOrder = async (
   }
 };
 
-/*                             Get My Orders                                  */
+/*                            Get My Orders                                 */
 
-const getMyOrders = async (
-  userId,
-  query = {},
-) => {
+const getMyOrders = async (userId, query = {}) => {
   const {
     page = 1,
     limit = 10,
@@ -419,62 +362,43 @@ const getMyOrders = async (
   }
 
   const sort = {
-    [sortBy]:
-      order === "asc" ? 1 : -1,
+    [sortBy]: order === "asc" ? 1 : -1,
   };
 
-  return await orderRepository.getAllOrders(
-    filter,
-    {
-      page: Number(page),
-      limit: Number(limit),
-      sort,
-    },
-  );
+  return orderRepository.getAllOrders(filter, {
+    page: Number(page),
+    limit: Number(limit),
+    sort,
+  });
 };
 
-//get vendor orders
+/*                          Get Vendor Orders                               */
+
 const getVendorOrders = async (vendorId, options = {}) => {
-  return await orderRepository.getVendorOrders(vendorId, options);
+  return orderRepository.getVendorOrders(vendorId, options);
 };
 
-/*                           Get Order By Id                                  */
+/*                           Get Order By Id                                */
 
-const getOrderById = async (
-  orderId,
-  user,
-) => {
-  const order =
-    await orderRepository.getOrderById(
-      orderId,
-    );
+const getOrderById = async (orderId, user) => {
+  const order = await orderRepository.getOrderById(orderId);
 
   if (!order) {
-    throw new ApiError(
-      404,
-      "Order not found",
-    );
+    throw new ApiError(404, "Order not found");
   }
 
-  if (
-    user.role !== "admin" &&
-    order.user._id.toString() !==
-      user._id.toString()
-  ) {
-    throw new ApiError(
-      403,
-      "You are not authorized to access this order",
-    );
+  const orderUserId = order.user?._id || order.user;
+
+  if (user.role !== "admin" && orderUserId.toString() !== user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to access this order");
   }
 
   return order;
 };
 
-/*                           Get All Orders                                  */
+/*                           Get All Orders                                 */
 
-const getAllOrders = async (
-  query = {},
-) => {
+const getAllOrders = async (query = {}) => {
   const {
     page = 1,
     limit = 10,
@@ -496,72 +420,53 @@ const getAllOrders = async (
   }
 
   if (orderStatus) {
-    filter.orderStatus =
-      orderStatus;
+    filter.orderStatus = orderStatus;
   }
 
   if (paymentStatus) {
-    filter.paymentStatus =
-      paymentStatus;
+    filter.paymentStatus = paymentStatus;
   }
 
   if (paymentMethod) {
-    filter.paymentMethod =
-      paymentMethod;
+    filter.paymentMethod = paymentMethod;
   }
 
   const sort = {
-    [sortBy]:
-      order === "asc" ? 1 : -1,
+    [sortBy]: order === "asc" ? 1 : -1,
   };
 
-  return await orderRepository.getAllOrders(
-    filter,
-    {
-      page: Number(page),
-      limit: Number(limit),
-      sort,
-    },
-  );
+  return orderRepository.getAllOrders(filter, {
+    page: Number(page),
+    limit: Number(limit),
+    sort,
+  });
 };
 
-/*                             Cancel Order                                  */
+/*                            Cancel Order                                  */
 
-const cancelOrder = async (
-  orderId,
-  user,
-) => {
-  const session =
-    await mongoose.startSession();
+const cancelOrder = async (orderId, user) => {
+  const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
 
-    const order =
-      await orderRepository.getOrderById(
-        orderId,
-      );
+    const order = await orderRepository.getOrderById(orderId);
 
     if (!order) {
-      throw new ApiError(
-        404,
-        "Order not found",
-      );
+      throw new ApiError(404, "Order not found");
     }
+
+    const orderUserId = order.user?._id || order.user;
 
     if (
       user.role !== "admin" &&
-      order.user._id.toString() !==
-        user._id.toString()
+      orderUserId.toString() !== user._id.toString()
     ) {
-      throw new ApiError(
-        403,
-        "You are not authorized to cancel this order",
-      );
+      throw new ApiError(403, "You are not authorized to cancel this order");
     }
 
     if (
-      ["Delivered", "Cancelled"].includes(
+      ["Delivered", "Cancelled", "Returned", "Refunded"].includes(
         order.orderStatus,
       )
     ) {
@@ -571,22 +476,17 @@ const cancelOrder = async (
       );
     }
 
-    /*                    Restore Product Stock                            */
-
     for (const item of order.items) {
       if (!item.product) {
         continue;
       }
 
       await productRepository.updateProductStock(
-        item.product._id ||
-          item.product,
+        item.product._id || item.product,
         -item.quantity,
         session,
       );
     }
-
-    /*                         Update Order                                 */
 
     const updatedOrder = await orderRepository.updateOrder(
       orderId,
@@ -604,6 +504,12 @@ const cancelOrder = async (
       session,
     );
 
+    await vendorEarningRepository.updateStatusByOrder(
+      orderId,
+      "cancelled",
+      session,
+    );
+
     await session.commitTransaction();
 
     return updatedOrder;
@@ -618,152 +524,230 @@ const cancelOrder = async (
   }
 };
 
-/*                         Update Order Status                                */
+/*                       Update Order Status                               */
 
-const updateOrderStatus = async (
-  orderId,
-  status,
-) => {
-  const order =
-    await orderRepository.getOrderById(
-      orderId,
-    );
+const updateOrderStatus = async (orderId, status) => {
+  const session = await mongoose.startSession();
 
-  if (!order) {
-    throw new ApiError(
-      404,
-      "Order not found",
-    );
-  }
+  try {
+    session.startTransaction();
 
-  const updateData = {
-    orderStatus: status,
-    $push: {
-      statusHistory: {
-        status,
-        note: `Order status updated to ${status}`,
-        updatedAt: new Date(),
-      },
-    },
-  };
+    const order = await orderRepository.getOrderById(orderId);
 
-  if (status === "Delivered") {
-    updateData.deliveredAt =
-      new Date();
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    if (!ALLOWED_ORDER_STATUSES.includes(status)) {
+      throw new ApiError(400, "Invalid order status");
+    }
+
+    if (["Cancelled", "Returned", "Refunded"].includes(order.orderStatus)) {
+      throw new ApiError(
+        400,
+        `Cannot update an order with status ${order.orderStatus}`,
+      );
+    }
+
+    const allowedTransitions = {
+      Pending: ["Confirmed", "Cancelled"],
+      Confirmed: ["Processing", "Cancelled"],
+      Processing: ["Shipped", "Cancelled"],
+      Shipped: ["Out For Delivery", "Delivered", "Cancelled"],
+      "Out For Delivery": ["Delivered", "Cancelled"],
+      Delivered: ["Returned", "Refunded"],
+    };
 
     if (
-      order.paymentMethod === "COD"
+      order.orderStatus !== status &&
+      !allowedTransitions[order.orderStatus]?.includes(status)
     ) {
-      updateData.paymentStatus =
-        "Paid";
-
-      updateData.paidAt =
-        new Date();
+      throw new ApiError(
+        400,
+        `Cannot change order status from ${order.orderStatus} to ${status}`,
+      );
     }
-  }
 
-  if (status === "Cancelled") {
-    updateData.cancelledAt =
-      new Date();
-  }
+    if (order.orderStatus === status) {
+      await session.abortTransaction();
+      return order;
+    }
 
-  return await orderRepository.updateOrder(
-    orderId,
-    updateData,
-  );
+    const updateData = {
+      orderStatus: status,
+      $push: {
+        statusHistory: {
+          status,
+          note: `Order status updated to ${status}`,
+          updatedAt: new Date(),
+        },
+      },
+    };
+
+    if (status === "Delivered") {
+      updateData.deliveredAt = new Date();
+
+      if (order.paymentMethod === "COD") {
+        updateData.paymentStatus = "Paid";
+        updateData.paidAt = new Date();
+      }
+    }
+
+    if (status === "Cancelled") {
+      updateData.cancelledAt = new Date();
+    }
+
+    if (status === "Returned") {
+      updateData.returnedAt = new Date();
+    }
+
+    if (status === "Refunded") {
+      updateData.refundedAt = new Date();
+      updateData.paymentStatus = "Refunded";
+    }
+
+    const updatedOrder = await orderRepository.updateOrder(
+      orderId,
+      updateData,
+      session,
+    );
+
+    if (status === "Delivered") {
+      const isPaid =
+        order.paymentMethod === "COD" || order.paymentStatus === "Paid";
+
+      if (isPaid) {
+        await vendorEarningRepository.updateStatusByOrder(
+          orderId,
+          "available",
+          session,
+        );
+      }
+    }
+
+    if (["Cancelled", "Returned", "Refunded"].includes(status)) {
+      await vendorEarningRepository.updateStatusByOrder(
+        orderId,
+        "cancelled",
+        session,
+      );
+    }
+
+    await session.commitTransaction();
+
+    return updatedOrder;
+  } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 };
 
-/*                        Update Payment Status                               */
+/*                       Update Payment Status                             */
 
-const updatePaymentStatus = async (
-  orderId,
-  paymentStatus,
-) => {
-  const order =
-    await orderRepository.getOrderById(
+const updatePaymentStatus = async (orderId, paymentStatus) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const order = await orderRepository.getOrderById(orderId);
+
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    if (!ALLOWED_PAYMENT_STATUSES.includes(paymentStatus)) {
+      throw new ApiError(400, "Invalid payment status");
+    }
+
+    if (order.paymentStatus === "Refunded" && paymentStatus !== "Refunded") {
+      throw new ApiError(400, "A refunded payment cannot be changed");
+    }
+
+    const updateData = {
+      paymentStatus,
+    };
+
+    if (paymentStatus === "Paid") {
+      updateData.paidAt = new Date();
+    }
+
+    if (paymentStatus === "Refunded") {
+      updateData.refundedAt = new Date();
+    }
+
+    const updatedOrder = await orderRepository.updateOrder(
       orderId,
+      updateData,
+      session,
     );
+
+    // If payment is confirmed after delivery, release pending earnings.
+    if (paymentStatus === "Paid" && order.orderStatus === "Delivered") {
+      await vendorEarningRepository.updateStatusByOrder(
+        orderId,
+        "available",
+        session,
+      );
+    }
+
+    if (paymentStatus === "Refunded") {
+      await vendorEarningRepository.updateStatusByOrder(
+        orderId,
+        "cancelled",
+        session,
+      );
+    }
+
+    await session.commitTransaction();
+
+    return updatedOrder;
+  } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+/*                            Return Order                                  */
+
+const returnOrder = async (orderId, reason) => {
+  const order = await orderRepository.getOrderById(orderId);
 
   if (!order) {
-    throw new ApiError(
-      404,
-      "Order not found",
-    );
+    throw new ApiError(404, "Order not found");
   }
 
-  const updateData = {
-    paymentStatus,
-  };
-
-  if (paymentStatus === "Paid") {
-    updateData.paidAt =
-      new Date();
+  if (order.orderStatus !== "Delivered") {
+    throw new ApiError(400, "Only delivered orders can be returned");
   }
 
-  return await orderRepository.updateOrder(
-    orderId,
-    updateData,
-  );
+  return orderRepository.updateOrder(orderId, {
+    returnStatus: "Requested",
+    returnReason: reason,
+    returnRequestedAt: new Date(),
+  });
 };
 
-/*                             Return Order                                   */
-
-const returnOrder = async (
-  orderId,
-  reason,
-) => {
-  const order =
-    await orderRepository.getOrderById(
-      orderId,
-    );
-
-  if (!order) {
-    throw new ApiError(
-      404,
-      "Order not found",
-    );
-  }
-
-  if (
-    order.orderStatus !==
-    "Delivered"
-  ) {
-    throw new ApiError(
-      400,
-      "Only delivered orders can be returned",
-    );
-  }
-
-  return await orderRepository.updateOrder(
-    orderId,
-    {
-      returnStatus: "Requested",
-      returnReason: reason,
-      returnRequestedAt:
-        new Date(),
-    },
-  );
-};
-
-/*                                  Export                                    */
+/*                               Export                                     */
 
 export default {
   createOrder,
-
   getMyOrders,
-
   getVendorOrders,
-
   getOrderById,
-
   getAllOrders,
-
   cancelOrder,
-
   updateOrderStatus,
-
   updatePaymentStatus,
-
   returnOrder,
 };
-

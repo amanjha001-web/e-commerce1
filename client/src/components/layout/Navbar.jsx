@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,36 +22,49 @@ const Navbar = ({
 
   const [accountOpen, setAccountOpen] = useState(false);
 
-  // Wishlist Redux state
-  const wishlistItems = useSelector(
-    (state) => state.wishlist?.items || []
-  );
+  // Support string roles as well as object-based roles.
+  const rawRole =
+    user?.role?.name ||
+    user?.role?.roleName ||
+    user?.role ||
+    user?.userRole ||
+    "";
 
-  const wishlistCount = isAuthenticated
-    ? wishlistItems.length
-    : 0;
+  const role = String(rawRole)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  const isAdmin = ["admin", "superadmin", "super_admin"].includes(role);
+  const isVendor = ["vendor", "seller"].includes(role);
+  const isCustomer = ["customer", "user"].includes(role);
+
+  // Wishlist Redux state
+  const wishlistItems = useSelector((state) => state.wishlist?.items || []);
+
+  const wishlistCount =
+    isAuthenticated && isCustomer ? wishlistItems.length : 0;
 
   // Cart Redux state
-  const cartItems = useSelector(
-    (state) => state.cart?.items || []
-  );
+  const cartItems = useSelector((state) => state.cart?.items || []);
 
-  // Total quantity of all products in cart
-  const cartCount = isAuthenticated
-    ? cartItems.reduce(
-        (total, item) =>
-          total + Math.max(0, Number(item?.quantity) || 0),
-        0
-      )
-    : 0;
+  const cartCount =
+    isAuthenticated && isCustomer
+      ? cartItems.reduce(
+          (total, item) => total + Math.max(0, Number(item?.quantity) || 0),
+          0,
+        )
+      : 0;
 
-  // Fetch wishlist and cart for authenticated user
+  // Only customers should fetch customer cart and wishlist.
   useEffect(() => {
-    if (isAuthenticated) {
-      dispatch(fetchWishlist());
-      dispatch(fetchCart());
+    if (!isAuthenticated || !isCustomer) {
+      return;
     }
-  }, [dispatch, isAuthenticated]);
+
+    dispatch(fetchWishlist());
+    dispatch(fetchCart());
+  }, [dispatch, isAuthenticated, isCustomer]);
 
   const defaultNavItems = [
     { label: "Home", to: "/" },
@@ -60,20 +72,19 @@ const Navbar = ({
     { label: "Categories", to: "/categories" },
   ];
 
-  const items =
-    navItems.length > 0 ? navItems : defaultNavItems;
+  const items = navItems.length > 0 ? navItems : defaultNavItems;
+
+  const closeAccount = () => setAccountOpen(false);
 
   const handleLogout = async () => {
     try {
       const result = await logout();
 
       if (result?.meta?.requestStatus === "fulfilled") {
-        toast.success(
-          result?.payload?.message || "Logged out successfully"
-        );
+        toast.success(result?.payload?.message || "Logged out successfully");
       }
     } finally {
-      setAccountOpen(false);
+      closeAccount();
       navigate("/login", { replace: true });
     }
   };
@@ -118,9 +129,7 @@ const Navbar = ({
                 }`
               }
             >
-              {item.icon && (
-                <span className="mr-2">{item.icon}</span>
-              )}
+              {item.icon && <span className="mr-2">{item.icon}</span>}
               {item.label}
             </NavLink>
           ))}
@@ -130,44 +139,47 @@ const Navbar = ({
         <div className="ml-auto flex items-center gap-2">
           {rightContent || (
             <>
-              {/* Wishlist */}
-              <Link
-                to="/wishlist"
-                className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
-                aria-label={`Wishlist, ${wishlistCount} items`}
-              >
-                <span className="text-xl">♡</span>
+              {/* Customer Wishlist */}
+              {(!isAuthenticated || isCustomer) && (
+                <Link
+                  to="/wishlist"
+                  className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label={`Wishlist, ${wishlistCount} items`}
+                >
+                  <span className="text-xl">♡</span>
 
-                {wishlistCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                    {wishlistCount > 99 ? "99+" : wishlistCount}
-                  </span>
-                )}
-              </Link>
+                  {wishlistCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
-              {/* Cart */}
-              <Link
-                to="/cart"
-                className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                aria-label={`Cart, ${cartCount} items`}
-              >
-                <span className="text-xl">🛒</span>
+              {/* Customer Cart */}
+              {(!isAuthenticated || isCustomer) && (
+                <Link
+                  to="/cart"
+                  className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-label={`Cart, ${cartCount} items`}
+                >
+                  <span className="text-xl">🛒</span>
 
-                {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                    {cartCount > 99 ? "99+" : cartCount}
-                  </span>
-                )}
-              </Link>
+                  {cartCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               {/* Account Dropdown */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() =>
-                    setAccountOpen((prev) => !prev)
-                  }
+                  onClick={() => setAccountOpen((prev) => !prev)}
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  aria-expanded={accountOpen}
                 >
                   {user?.avatar?.url ? (
                     <img
@@ -183,41 +195,81 @@ const Navbar = ({
 
                   <span className="hidden md:block">
                     {isAuthenticated
-                      ? user?.fullName ||
-                        user?.username ||
-                        "Account"
+                      ? user?.fullName || user?.username || "Account"
                       : "Account"}
                   </span>
 
-                  <span className="text-xs">
-                    {accountOpen ? "▲" : "▼"}
-                  </span>
+                  <span className="text-xs">{accountOpen ? "▲" : "▼"}</span>
                 </button>
 
                 {/* Dropdown */}
                 {accountOpen && (
-                  <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                     {isAuthenticated ? (
                       <>
                         <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                            {user?.fullName ||
-                              user?.username ||
-                              "User"}
+                            {user?.fullName || user?.username || "User"}
                           </p>
 
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
                             {user?.email || ""}
                           </p>
+
+                          <p className="mt-1 text-xs capitalize text-gray-500 dark:text-gray-400">
+                            Role: {role || "Unknown"}
+                          </p>
                         </div>
 
-                        <Link
-                          to="/profile"
-                          onClick={() => setAccountOpen(false)}
-                          className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                          My Profile
-                        </Link>
+                        {isCustomer && (
+                          <>
+                            <Link
+                              to="/profile"
+                              onClick={closeAccount}
+                              className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                            >
+                              My Profile
+                            </Link>
+
+                            <Link
+                              to="/become-seller"
+                              onClick={closeAccount}
+                              className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                            >
+                              Become a Seller
+                            </Link>
+                          </>
+                        )}
+
+                        {isVendor && (
+                          <Link
+                            to="/vendor"
+                            onClick={closeAccount}
+                            className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
+                          >
+                            Vendor Dashboard
+                          </Link>
+                        )}
+
+                        {isAdmin && (
+                          <Link
+                            to="/admin"
+                            onClick={closeAccount}
+                            className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-purple-600 hover:bg-purple-50 dark:border-gray-800 dark:text-purple-400 dark:hover:bg-purple-950/30"
+                          >
+                            Admin Dashboard
+                          </Link>
+                        )}
+
+                        {!isVendor && !isAdmin && (
+                          <Link
+                            to="/login?role=vendor"
+                            onClick={closeAccount}
+                            className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
+                          >
+                            Seller / Vendor Login
+                          </Link>
+                        )}
 
                         <button
                           type="button"
@@ -231,18 +283,42 @@ const Navbar = ({
                       <>
                         <Link
                           to="/login"
-                          onClick={() => setAccountOpen(false)}
+                          onClick={closeAccount}
                           className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
-                          Login
+                          Customer Login
                         </Link>
 
                         <Link
                           to="/login/register"
-                          onClick={() => setAccountOpen(false)}
-                          className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                          onClick={closeAccount}
+                          className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                         >
                           Register
+                        </Link>
+
+                        <Link
+                          to="/login?role=admin"
+                          onClick={closeAccount}
+                          className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-purple-600 hover:bg-purple-50 dark:border-gray-800 dark:text-purple-400 dark:hover:bg-purple-950/30"
+                        >
+                          Admin Login
+                        </Link>
+
+                        <Link
+                          to="/become-seller"
+                          onClick={closeAccount}
+                          className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                        >
+                          Become a Seller
+                        </Link>
+
+                        <Link
+                          to="/login?role=vendor"
+                          onClick={closeAccount}
+                          className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                        >
+                          Seller / Vendor Login
                         </Link>
                       </>
                     )}

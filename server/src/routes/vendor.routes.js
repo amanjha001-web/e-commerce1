@@ -4,6 +4,8 @@ import {
   vendorController
 } from "../controllers/index.js";
 
+import { getVendorDashboard } from "../controllers/vendorDashboard.controller.js";
+
 
 import {
   uploadVendorFiles,
@@ -18,6 +20,14 @@ import {
 } from "../validators/index.js";
 
 const router = Router();
+
+router.get(
+  "/dashboard",
+  verifyJWT,
+  authorizeRoles("vendor"),
+  getVendorDashboard,
+);
+
 
 /*                               Public Routes                                */
 
@@ -39,6 +49,7 @@ router.post(
   vendorController.createVendor,
 );
 
+
 // Update Vendor Profile
 router.patch(
   "/:id",
@@ -56,5 +67,7 @@ router.delete(
   authorizeRoles("vendor", "admin"),
   vendorController.deleteVendor,
 );
+
+
 
 export default router;

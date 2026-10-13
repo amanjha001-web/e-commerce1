@@ -23,7 +23,7 @@ import StoreSettings from "../pages/vendor/StoreSettings";
 const VendorRoutes = () => {
   return (
     <Routes>
-      <Route element={<ProtectedRoute allowedRoles={["VENDOR"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["vendor"]} />}>
         <Route element={<VendorLayout />}>
           <Route path="/vendor" element={<Dashboard />} />
 

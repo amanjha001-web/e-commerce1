@@ -37,7 +37,7 @@ const vendorEarningSchema = new Schema(
 
       ref: "OrderItem",
 
-      required: true,
+      default:null,
     },
 
     product: {

@@ -10,7 +10,7 @@ const vendorRequestService = {
   },
 
   getMyRequest: async () => {
-    const response = await api.get("/vendor-requests/my-request");
+    const response = await api.get("/vendor-requests/me");
 
     return response.data;
   },

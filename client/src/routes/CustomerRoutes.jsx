@@ -1,70 +1,112 @@
+
+import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
 import ProtectedRoute from "./ProtectedRoute";
 
-import Home from "../pages/customer/Home";
-import Products from "../pages/customer/Products";
-import ProductDetails from "../pages/customer/ProductDetails";
-import Categories from "../pages/customer/Categories";
+// Public Customer Pages
+const Home = lazy(() => import("../pages/customer/Home"));
+const Products = lazy(() => import("../pages/customer/Products"));
+const ProductDetails = lazy(
+  () => import("../pages/customer/ProductDetails")
+);
+const Categories = lazy(() => import("../pages/customer/Categories"));
 
-import Cart from "../pages/customer/Cart";
-import Checkout from "../pages/customer/Checkout";
+// Protected Customer Pages
+const Cart = lazy(() => import("../pages/customer/Cart"));
+const Checkout = lazy(() => import("../pages/customer/Checkout"));
 
-import Orders from "../pages/customer/Orders";
-import OrderDetails from "../pages/customer/OrderDetails";
+const Orders = lazy(() => import("../pages/customer/Orders"));
+const OrderDetails = lazy(
+  () => import("../pages/customer/OrderDetails")
+);
 
-import Profile from "../pages/customer/Profile";
-import Addresses from "../pages/customer/Addresses";
+import BecomeSeller from "../pages/customer/BecomeSeller";
+import SellerRequestStatus from "../pages/customer/SellerRequestStatus";
 
-import Wishlist from "../pages/customer/Wishlist";
-import Reviews from "../pages/customer/Reviews";
+const Profile = lazy(() => import("../pages/customer/Profile"));
+const Addresses = lazy(() => import("../pages/customer/Addresses"));
 
-import Notifications from "../pages/customer/Notifications";
-import Chat from "../pages/customer/Chat";
-import Support from "../pages/customer/Support";
+const Wishlist = lazy(() => import("../pages/customer/Wishlist"));
+const Reviews = lazy(() => import("../pages/customer/Reviews"));
+
+const Notifications = lazy(
+  () => import("../pages/customer/Notifications")
+);
+const Chat = lazy(() => import("../pages/customer/Chat"));
+const Support = lazy(() => import("../pages/customer/Support"));
+
+// Loading UI
+const PageLoader = () => {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"
+          role="status"
+          aria-label="Loading"
+        />
+
+        <p className="text-sm text-gray-500">
+          Loading page...
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const CustomerRoutes = () => {
   return (
-    <Routes>
-      <Route element={<MainLayout />}>
-        {/* Public Customer Pages */}
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route element={<MainLayout />}>
+          {/* Public Customer Pages */}
 
-        <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home />} />
 
-        <Route path="/products" element={<Products />} />
+          <Route path="/products" element={<Products />} />
 
-        <Route path="/products/:productId" element={<ProductDetails />} />
+          <Route path="/products/:productId" element={<ProductDetails />} />
 
-        <Route path="/categories" element={<Categories />} />
+          <Route path="/categories" element={<Categories />} />
 
-        {/* Protected Customer Pages */}
+          {/* Protected Customer Pages */}
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="/cart" element={<Cart />} />
+          <Route
+  element={<ProtectedRoute allowedRoles={["customer"]} />}
+>
+            <Route path="/become-seller" element={<BecomeSeller />} />
 
-          <Route path="/checkout" element={<Checkout />} />
+            <Route
+              path="/seller/request-status"
+              element={<SellerRequestStatus />}
+            />
+            <Route path="/cart" element={<Cart />} />
 
-          <Route path="/orders" element={<Orders />} />
+            <Route path="/checkout" element={<Checkout />} />
 
-          <Route path="/orders/:orderId" element={<OrderDetails />} />
+            <Route path="/orders" element={<Orders />} />
 
-          <Route path="/profile" element={<Profile />} />
+            <Route path="/orders/:orderId" element={<OrderDetails />} />
 
-          <Route path="/addresses" element={<Addresses />} />
+            <Route path="/profile" element={<Profile />} />
 
-          <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/addresses" element={<Addresses />} />
 
-          <Route path="/reviews" element={<Reviews />} />
+            <Route path="/wishlist" element={<Wishlist />} />
 
-          <Route path="/notifications" element={<Notifications />} />
+            <Route path="/reviews" element={<Reviews />} />
 
-          <Route path="/chat" element={<Chat />} />
+            <Route path="/notifications" element={<Notifications />} />
 
-          <Route path="/support" element={<Support />} />
+            <Route path="/chat" element={<Chat />} />
+
+            <Route path="/support" element={<Support />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
