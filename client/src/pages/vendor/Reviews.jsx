@@ -1,9 +1,6 @@
 
 import { useMemo, useState } from "react";
 
-import VendorHeader from "../../components/vendor/VendorHeader";
-import VendorSidebar from "../../components/vendor/VendorSidebar";
-
 import RatingStars from "../../components/review/RatingStars";
 import RatingSummary from "../../components/review/RatingSummary";
 import ReviewList from "../../components/review/ReviewList";
@@ -15,24 +12,20 @@ import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 
 const Reviews = ({
-  user = null,
+ 
   reviews = [],
   loading = false,
-  notificationCount = 0,
+ 
 
   onViewReview,
   onReplyReview,
-  onNavigate,
-  onLogout,
+  
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+ 
   const [search, setSearch] = useState("");
   const [rating, setRating] = useState("all");
 
-  const handleNavigate = (item) => {
-    setSidebarOpen(false);
-    onNavigate?.(item);
-  };
+
 
   const filteredReviews = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -116,34 +109,11 @@ const Reviews = ({
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <VendorSidebar
-        activeItem="reviews"
-        collapsed={false}
-        onNavigate={handleNavigate}
-        onLogout={onLogout}
-        mobileOpen={sidebarOpen}
-        onMobileClose={() =>
-          setSidebarOpen(false)
-        }
-      />
+      
+      
 
-      <div className="lg:pl-64">
-        <VendorHeader
-          title="Reviews"
-          subtitle="Monitor customer feedback and product ratings"
-          user={user}
-          notificationCount={notificationCount}
-          onMenuClick={() =>
-            setSidebarOpen(true)
-          }
-          onLogout={onLogout}
-          onProfileClick={() =>
-            handleNavigate("profile")
-          }
-          onNotificationsClick={() =>
-            handleNavigate("notifications")
-          }
-        />
+      <div >
+        
 
         <main className="p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl space-y-6">

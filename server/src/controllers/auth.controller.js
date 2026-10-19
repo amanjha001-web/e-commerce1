@@ -38,11 +38,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
 /*                                Login User                                  */
 
-const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
 
-  if (!email || !password) {
-    throw new ApiError(400, "Email and password are required");
+const loginUser = asyncHandler(async (req, res) => {
+  const { email, password, role } = req.body;
+
+  if (!email || !password || !role) {
+    throw new ApiError(400, "Email, password and role are required");
   }
 
   const result = await authService.loginUser(req.body);
@@ -63,6 +64,7 @@ const loginUser = asyncHandler(async (req, res) => {
       ),
     );
 });
+
 /*                               Logout User                                  */
 
 const logoutUser = asyncHandler(async (req, res) => {

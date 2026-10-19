@@ -14,6 +14,12 @@ const ProtectedRoute = ({ allowedRoles = [], children }) => {
 
   const { user, loading, isAuthenticated } = useAuth();
 
+  console.log("PROTECTED ROUTE", {
+    loading,
+    isAuthenticated,
+    user,
+  });
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">

@@ -36,13 +36,19 @@ export const registerSchema = z.object({
 
 /*                                Login                                       */
 
+
 export const loginSchema = z.object({
   body: z.object({
     email,
 
     password: z.string().min(1, "Password is required"),
+
+    role: z.enum(["admin", "vendor", "customer"], {
+      message: "Invalid login role",
+    }),
   }),
 });
+
 
 /*                           Refresh Token                                    */
 

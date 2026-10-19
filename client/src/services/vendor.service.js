@@ -46,21 +46,13 @@ const vendorService = {
   },
 
   updateStoreLogo: async (formData) => {
-    const response = await api.patch("/vendor/store/logo", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await api.patch("/vendor/store/logo", formData);
 
     return response.data;
   },
 
   updateStoreBanner: async (formData) => {
-    const response = await api.patch("/vendor/store/banner", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await api.patch("/vendor/store/banner", formData);
 
     return response.data;
   },
@@ -68,7 +60,7 @@ const vendorService = {
   // Vendor Dashboard
 
   getDashboard: async (params = {}) => {
-    const response = await api.get("/vendor/dashboard", {
+    const response = await api.get("/vendors/dashboard", {
       params,
     });
 
@@ -76,7 +68,7 @@ const vendorService = {
   },
 
   getStats: async (params = {}) => {
-    const response = await api.get("/vendor/dashboard/stats", {
+    const response = await api.get("/vendors/dashboard/stats", {
       params,
     });
 
@@ -84,7 +76,7 @@ const vendorService = {
   },
 
   getSalesReport: async (params = {}) => {
-    const response = await api.get("/vendor/dashboard/sales", {
+    const response = await api.get("/vendors/dashboard/sales", {
       params,
     });
 
@@ -139,7 +131,7 @@ const vendorService = {
     return response.data;
   },
 
-  // Vendor account
+  // Vendor Account
 
   getProfile: async () => {
     const response = await api.get("/vendor/profile");

@@ -1,8 +1,7 @@
 
 import { useMemo, useState } from "react";
 
-import VendorHeader from "../../components/vendor/VendorHeader";
-import VendorSidebar from "../../components/vendor/VendorSidebar";
+
 
 import DataTable from "../../components/vendor/DataTable";
 import DashboardCard from "../../components/vendor/DashboardCard";
@@ -16,20 +15,18 @@ import Loader from "../../components/common/Loader";
 import Textarea from "../../components/common/Textarea";
 
 const Coupons = ({
-  user = null,
   coupons = [],
   loading = false,
   saving = false,
-  notificationCount = 0,
+
 
   onCreateCoupon,
   onUpdateCoupon,
   onDeleteCoupon,
   onToggleCoupon,
-  onLogout,
-  onNavigate,
+ 
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
 
@@ -47,10 +44,7 @@ const Coupons = ({
     status: "active",
   });
 
-  const handleNavigate = (item) => {
-    setSidebarOpen(false);
-    onNavigate?.(item);
-  };
+ 
 
   const filteredCoupons = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -315,34 +309,9 @@ const Coupons = ({
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <VendorSidebar
-        activeItem="coupons"
-        collapsed={false}
-        onNavigate={handleNavigate}
-        onLogout={onLogout}
-        mobileOpen={sidebarOpen}
-        onMobileClose={() =>
-          setSidebarOpen(false)
-        }
-      />
+      
 
-      <div className="lg:pl-64">
-        <VendorHeader
-          title="Coupons"
-          subtitle="Create and manage discount coupons for your store"
-          user={user}
-          notificationCount={notificationCount}
-          onMenuClick={() =>
-            setSidebarOpen(true)
-          }
-          onLogout={onLogout}
-          onProfileClick={() =>
-            handleNavigate("profile")
-          }
-          onNotificationsClick={() =>
-            handleNavigate("notifications")
-          }
-        />
+      <div>
 
         <main className="p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl space-y-6">

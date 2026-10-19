@@ -4,6 +4,7 @@ import VendorHeader from "../components/vendor/VendorHeader";
 import VendorSidebar from "../components/vendor/VendorSidebar";
 
 const VendorLayout = () => {
+  console.log("VENDOR LAYOUT RENDERED");
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
       <VendorHeader />

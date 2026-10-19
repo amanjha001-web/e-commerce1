@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 
 import VendorLayout from "../layouts/VendorLayout";
 import ProtectedRoute from "./ProtectedRoute";
@@ -24,35 +24,27 @@ const VendorRoutes = () => {
   return (
     <Routes>
       <Route element={<ProtectedRoute allowedRoles={["vendor"]} />}>
-        <Route element={<VendorLayout />}>
-          <Route path="/vendor" element={<Dashboard />} />
+        <Route path="/" element={<VendorLayout />}>
+          <Route index element={<Dashboard />} />
 
-          <Route path="/vendor/products" element={<Products />} />
+          <Route path="dashboard" element={<Navigate to="/vendor" replace />} />
 
-          <Route path="/vendor/products/add" element={<AddProduct />} />
+          <Route path="products" element={<Products />} />
+          <Route path="products/add" element={<AddProduct />} />
+          <Route path="products/edit/:productId" element={<EditProduct />} />
 
-          <Route
-            path="/vendor/products/edit/:productId"
-            element={<EditProduct />}
-          />
+          <Route path="inventory" element={<Inventory />} />
 
-          <Route path="/vendor/inventory" element={<Inventory />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="orders/:orderId" element={<OrderDetails />} />
 
-          <Route path="/vendor/orders" element={<Orders />} />
+          <Route path="coupons" element={<Coupons />} />
+          <Route path="earnings" element={<Earnings />} />
+          <Route path="payouts" element={<Payouts />} />
 
-          <Route path="/vendor/orders/:orderId" element={<OrderDetails />} />
-
-          <Route path="/vendor/coupons" element={<Coupons />} />
-
-          <Route path="/vendor/earnings" element={<Earnings />} />
-
-          <Route path="/vendor/payouts" element={<Payouts />} />
-
-          <Route path="/vendor/reviews" element={<Reviews />} />
-
-          <Route path="/vendor/profile" element={<Profile />} />
-
-          <Route path="/vendor/store-settings" element={<StoreSettings />} />
+          <Route path="reviews" element={<Reviews />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="store-settings" element={<StoreSettings />} />
         </Route>
       </Route>
     </Routes>

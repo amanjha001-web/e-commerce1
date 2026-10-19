@@ -87,35 +87,35 @@ const registerUser = async (userData) => {
 
 
 const loginUser = async (loginData) => {
-  const { email, password } = loginData;
+  const { email, password, role } = loginData;
 
-  const user =
-    await userRepository.getUserWithPasswordByEmail(
-      email.toLowerCase(),
-    );
+  const allowedRoles = ["admin", "vendor", "customer"];
+
+  if (!allowedRoles.includes(role)) {
+    throw new ApiError(400, "Invalid login role");
+  }
+
+  const user = await userRepository.getUserWithPasswordByEmail(
+    email.toLowerCase(),
+  );
 
   if (!user) {
-    throw new ApiError(
-      401,
-      "Invalid email or password",
-    );
+    throw new ApiError(401, "Invalid email or password");
   }
 
   if (user.isBlocked) {
-    throw new ApiError(
-      403,
-      "Your account has been blocked",
-    );
+    throw new ApiError(403, "Your account has been blocked");
   }
 
-  const isPasswordCorrect =
-    await user.isPasswordCorrect(password);
+  const isPasswordCorrect = await user.isPasswordCorrect(password);
 
   if (!isPasswordCorrect) {
-    throw new ApiError(
-      401,
-      "Invalid email or password",
-    );
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  // Role validation
+  if (user.role !== role) {
+    throw new ApiError(403, `This account cannot login as ${role}`);
   }
 
   user.lastLogin = new Date();
@@ -124,18 +124,11 @@ const loginUser = async (loginData) => {
     validateBeforeSave: false,
   });
 
-  const {
-    accessToken,
-    refreshToken,
-  } =
-    await generateAccessAndRefreshTokens(
-      user._id,
-    );
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id,
+  );
 
-  const loggedInUser =
-    await userRepository.getUserById(
-      user._id,
-    );
+  const loggedInUser = await userRepository.getUserById(user._id);
 
   return {
     user: loggedInUser,

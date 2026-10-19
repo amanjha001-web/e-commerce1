@@ -1,4 +1,7 @@
+
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import {
   LayoutDashboard,
   Users,
@@ -32,10 +35,7 @@ const MENU_ITEMS = [
     label: "Vendors",
     icon: Store,
     children: [
-      {
-        label: "All Vendors",
-        path: "/admin/vendors",
-      },
+      { label: "All Vendors", path: "/admin/vendors" },
       {
         label: "Vendor Requests",
         path: "/admin/vendor-requests",
@@ -61,22 +61,10 @@ const MENU_ITEMS = [
     label: "Catalog",
     icon: FolderTree,
     children: [
-      {
-        label: "Categories",
-        path: "/admin/categories",
-      },
-      {
-        label: "Brands",
-        path: "/admin/brands",
-      },
-      {
-        label: "Banners",
-        path: "/admin/banners",
-      },
-      {
-        label: "Coupons",
-        path: "/admin/coupons",
-      },
+      { label: "Categories", path: "/admin/categories" },
+      { label: "Brands", path: "/admin/brands" },
+      { label: "Banners", path: "/admin/banners" },
+      { label: "Coupons", path: "/admin/coupons" },
     ],
   },
   {
@@ -113,10 +101,43 @@ const AdminSidebar = ({
   onNavigate,
   onLogout,
 }) => {
-  const [openGroup, setOpenGroup] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
+  // undefined means: use the currently active group by default.
+  // null means: the user explicitly closed all groups.
+  const [openGroup, setOpenGroup] = useState(undefined);
+
+  const currentPath = location.pathname;
+
+  const isPathActive = (path) => {
+    if (!path) return false;
+
+    if (path === "/admin") {
+      return (
+        currentPath === "/admin" ||
+        currentPath === "/admin/"
+      );
+    }
+
+    return (
+      currentPath === path ||
+      currentPath.startsWith(`${path}/`)
+    );
+  };
+
+  const activeGroup = MENU_ITEMS.find((item) =>
+    item.children?.some((child) =>
+      isPathActive(child.path)
+    )
+  )?.label;
+
+  const displayedOpenGroup =
+    openGroup === undefined ? activeGroup : openGroup;
+
+  // Close sidebar on Escape; no state updates inside the effect.
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
 
     const handleEscape = (event) => {
       if (event.key === "Escape") {
@@ -134,100 +155,115 @@ const AdminSidebar = ({
   const handleNavigate = (path) => {
     if (!path) return;
 
+    if (location.pathname !== path) {
+      navigate(path);
+    }
+
     onNavigate?.(path);
     onClose?.();
   };
 
   const handleGroupToggle = (label) => {
-    setOpenGroup((previous) => (previous === label ? null : label));
+    setOpenGroup((previous) => {
+      const current = previous === undefined
+        ? activeGroup
+        : previous;
+
+      return current === label ? null : label;
+    });
   };
 
-  const handleLogout = () => {
-    onLogout?.();
-  };
+  const fullName =
+    user?.fullName ||
+    user?.name ||
+    user?.username ||
+    "Administrator";
 
   const initials =
-    user?.fullName
-      ?.trim()
+    fullName
+      .trim()
       .split(/\s+/)
       .filter(Boolean)
-      .map((name) => name[0])
+      .map((part) => part[0])
       .join("")
       .slice(0, 2)
-      .toUpperCase() ||
-    user?.username?.slice(0, 2).toUpperCase() ||
-    "AD";
+      .toUpperCase() || "AD";
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile overlay: starts below the navbar */}
       {open && (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label="Close navigation"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-x-0 bottom-0 top-16 z-30 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
         />
       )}
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col",
-          "border-r border-border bg-background",
-          "transition-transform duration-300",
+          "fixed bottom-0 left-0 top-16 z-40",
+          "flex w-[272px] flex-col",
+          "border-r border-slate-200/80 bg-white",
+          "shadow-sm transition-transform duration-300 ease-in-out",
+          "dark:border-slate-800 dark:bg-slate-950",
           open ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0",
         ].join(" ")}
       >
-        {/* Logo / Header */}
-        <div className="flex h-20 items-center justify-between border-b border-border px-5">
+        {/* Brand */}
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-slate-100 px-5 dark:border-slate-800">
           <button
             type="button"
             onClick={() => handleNavigate("/admin")}
-            className="flex items-center gap-3"
+            className="flex min-w-0 items-center gap-3 text-left"
+            aria-label="Open admin dashboard"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-extrabold text-white shadow-md shadow-blue-600/20">
               S
             </div>
 
-            <div className="text-left">
-              <p className="text-lg font-bold leading-none">ShopSphere</p>
-
-              <p className="mt-1 text-xs text-muted-foreground">Admin Panel</p>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+                ShopSphere
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">
+                Administration
+              </p>
             </div>
           </button>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground lg:hidden"
             aria-label="Close sidebar"
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
           >
-            <X className="h-5 w-5" />
+            <X size={19} />
           </button>
         </div>
 
-        {/* User */}
-        <div className="border-b border-border p-4">
-          <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-3">
-            {user?.avatar ? (
+        {/* Profile */}
+        <div className="shrink-0 px-4 py-4">
+          <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900">
+            {user?.avatar || user?.profileImage ? (
               <img
-                src={user.avatar}
-                alt={user.fullName || "Admin"}
-                className="h-10 w-10 shrink-0 rounded-full object-cover"
+                src={user.avatar || user.profileImage}
+                alt={fullName}
+                className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white dark:ring-slate-700"
               />
             ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                 {initials}
               </div>
             )}
 
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {user?.fullName || user?.username || "Administrator"}
+              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {fullName}
               </p>
-
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
                 {user?.email || "Admin Account"}
               </p>
             </div>
@@ -236,65 +272,123 @@ const AdminSidebar = ({
 
         {/* Navigation */}
         <nav
-          className="flex-1 overflow-y-auto px-3 py-4"
           aria-label="Admin navigation"
+          className="min-h-0 flex-1 overflow-y-auto px-3 pb-4"
         >
+          <p className="mb-2 px-3 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+            Workspace
+          </p>
+
           <div className="space-y-1">
             {MENU_ITEMS.map((item) => {
               const Icon = item.icon;
-              const hasChildren =
-                Array.isArray(item.children) && item.children.length > 0;
-              const isOpen = openGroup === item.label;
+              const hasChildren = Boolean(item.children?.length);
+
+              const groupIsActive = item.children?.some(
+                (child) => isPathActive(child.path)
+              );
+
+              const isOpen =
+                displayedOpenGroup === item.label;
 
               if (hasChildren) {
                 return (
                   <div key={item.label}>
                     <button
                       type="button"
-                      onClick={() => handleGroupToggle(item.label)}
                       aria-expanded={isOpen}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                      onClick={() =>
+                        handleGroupToggle(item.label)
+                      }
+                      className={[
+                        "group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors",
+                        groupIsActive
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
+                      ].join(" ")}
                     >
                       <span className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 shrink-0" />
+                        <Icon
+                          size={18}
+                          strokeWidth={1.8}
+                          className={
+                            groupIsActive
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
+                          }
+                        />
                         {item.label}
                       </span>
 
                       <ChevronDown
+                        size={15}
                         className={[
-                          "h-4 w-4 transition-transform duration-200",
+                          "text-slate-400 transition-transform duration-200",
                           isOpen ? "rotate-180" : "",
                         ].join(" ")}
                       />
                     </button>
 
                     {isOpen && (
-                      <div className="ml-5 mt-1 space-y-1 border-l border-border pl-3">
-                        {item.children.map((child) => (
-                          <button
-                            key={child.path}
-                            type="button"
-                            onClick={() => handleNavigate(child.path)}
-                            className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          >
-                            {child.label}
-                          </button>
-                        ))}
+                      <div className="ml-[21px] mt-1 space-y-1 border-l border-slate-200 pl-3 dark:border-slate-700">
+                        {item.children.map((child) => {
+                          const active = isPathActive(child.path);
+
+                          return (
+                            <button
+                              key={child.path}
+                              type="button"
+                              onClick={() =>
+                                handleNavigate(child.path)
+                              }
+                              aria-current={
+                                active ? "page" : undefined
+                              }
+                              className={[
+                                "relative flex w-full items-center rounded-lg px-3 py-2 text-left text-[12px] transition-colors",
+                                active
+                                  ? "bg-blue-50 font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+                                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white",
+                              ].join(" ")}
+                            >
+                              {active && (
+                                <span className="absolute -left-[16px] h-5 w-[2px] rounded-full bg-blue-600" />
+                              )}
+                              {child.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
                 );
               }
 
+              const active = isPathActive(item.path);
+
               return (
                 <button
                   key={item.path}
                   type="button"
                   onClick={() => handleNavigate(item.path)}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-current={active ? "page" : undefined}
+                  className={[
+                    "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150",
+                    active
+                      ? "bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
+                  ].join(" ")}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {item.label}
+                  <Icon
+                    size={18}
+                    strokeWidth={1.8}
+                    className={
+                      active
+                        ? "text-white"
+                        : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
+                    }
+                  />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
@@ -302,13 +396,13 @@ const AdminSidebar = ({
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-border p-3">
+        <div className="shrink-0 border-t border-slate-100 p-3 dark:border-slate-800">
           <button
             type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-red-500/10 hover:text-red-600"
+            onClick={() => onLogout?.()}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut size={18} />
             Logout
           </button>
         </div>
