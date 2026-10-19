@@ -9,6 +9,7 @@ import notificationReducer from "./slices/notificationSlice";
 import uiReducer from "./slices/uiSlice";
 import vendorDashboardReducer from "./slices/vendorDashboardSlice";
 import vendorReducer from "./slices/vendorSlice";
+import adminDashboardReducer from "./slices/adminDashboardSlice";
 
 const store = configureStore({
   reducer: {
@@ -21,6 +22,7 @@ const store = configureStore({
     ui: uiReducer,
     vendorDashboard: vendorDashboardReducer,
     vendor: vendorReducer,
+    adminDashboard: adminDashboardReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

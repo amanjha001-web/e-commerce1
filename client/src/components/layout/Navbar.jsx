@@ -85,7 +85,7 @@ const Navbar = ({
       }
     } finally {
       closeAccount();
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     }
   };
 

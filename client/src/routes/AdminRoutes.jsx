@@ -1,5 +1,4 @@
-
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
 import AdminLayout from "../layouts/AdminLayout";
 import ProtectedRoute from "./ProtectedRoute";
@@ -25,11 +24,16 @@ import Permissions from "../pages/admin/Permissions";
 const AdminRoutes = () => {
   return (
     <Routes>
-      <Route element={<ProtectedRoute allowedRoles={["admin", "SUPER_ADMIN"]} />}>
+      <Route
+        element={<ProtectedRoute allowedRoles={["admin", "SUPER_ADMIN"]} />}
+      >
         <Route element={<AdminLayout />}>
-          <Route index element={<Navigate to="/admin" replace />} />
+          {/* /admin */}
+          <Route index element={<Dashboard />} />
 
+          {/* /admin/dashboard */}
           <Route path="dashboard" element={<Dashboard />} />
+
           <Route path="users" element={<Users />} />
           <Route path="users/:userId" element={<UserDetails />} />
           <Route path="vendors" element={<Vendors />} />

@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useSearchParams,
-} from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import LoginForm from "../../components/auth/LoginForm";
 import SocialLogin from "../../components/auth/SocialLogin";
@@ -35,7 +31,6 @@ const getDashboardPath = (role) => {
 
 const Login = () => {
   const navigate = useNavigate();
-  
   const [searchParams] = useSearchParams();
 
   const { login, loading, error } = useAuth();
@@ -58,36 +53,50 @@ const Login = () => {
   const handleLogin = async (credentials) => {
     setRoleError("");
 
-    const result = await login(credentials);
+    const allowedRoles = ["customer", "vendor", "admin"];
 
-    if (result.meta.requestStatus !== "fulfilled") {
+    if (!allowedRoles.includes(requestedRole)) {
+      setRoleError("Invalid login role.");
       return false;
     }
 
-    // Use the actual role returned by the backend.
-    const responseUser = result.payload?.data?.user;
+    // Send the selected login role to the backend.
+    const result = await login({
+      ...credentials,
+      role: requestedRole,
+    });
 
-    let storedUser;
-
-    try {
-      storedUser = JSON.parse(localStorage.getItem("user") || "null");
-    } catch {
-      storedUser = null;
+    if (result?.meta?.requestStatus !== "fulfilled") {
+      return false;
     }
 
-    const actualRole = responseUser?.role || storedUser?.role;
+    const responseUser = result.payload?.data?.user;
+
+   const actualRole = normalizeRole(responseUser?.role);
+
+    
+
+    // Verify the actual authenticated user's role.
+    const roleMatches =
+      requestedRole === actualRole ||
+      (requestedRole === "admin" && actualRole === "super_admin") ||
+      (requestedRole === "vendor" && actualRole === "seller");
+
+    if (!roleMatches) {
+      setRoleError(
+        "Your account does not have permission to log in through this page.",
+      );
+
+      return false;
+    }
 
     const dashboardPath = getDashboardPath(actualRole);
 
     if (!dashboardPath) {
-      setRoleError(
-        "Login succeeded, but your account role is missing or unsupported. Please contact support.",
-      );
+      setRoleError("Unsupported account role.");
       return false;
     }
 
-    // Always open the dashboard for the authenticated role.
-    // Do not blindly redirect a vendor/admin to the customer home.
     navigate(dashboardPath, { replace: true });
 
     return true;

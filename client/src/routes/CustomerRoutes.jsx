@@ -73,9 +73,9 @@ const CustomerRoutes = () => {
 
           {/* Protected Customer Pages */}
 
-          <Route
-  element={<ProtectedRoute allowedRoles={["customer"]} />}
->
+        <Route
+          element={<ProtectedRoute allowedRoles={["customer"]} />}
+     >
             <Route path="/become-seller" element={<BecomeSeller />} />
 
             <Route

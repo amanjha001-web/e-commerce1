@@ -1,34 +1,23 @@
 import { useState } from "react";
 
-import AdminHeader from "../../components/admin/AdminHeader";
-import AdminSidebar from "../../components/admin/AdminSidebar";
-
 import OrderFilters from "../../components/admin/orders/OrderFilters";
 import OrderTable from "../../components/admin/orders/OrderTable";
 import OrderDetails from "../../components/admin/orders/OrderDetails";
 import OrderStatus from "../../components/admin/orders/OrderStatus";
 
 const Orders = ({
-  user = null,
   orders = [],
   totalOrders = 0,
   loading = false,
   saving = false,
   filters = {},
 
-  notificationCount = 0,
-
   onFilterChange,
   onViewOrder,
   onUpdateOrderStatus,
   onCancelOrder,
   onDeleteOrder,
-
-  onLogout,
-  onNavigate,
 }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -43,6 +32,8 @@ const Orders = ({
   };
 
   const handleCloseDetails = () => {
+    if (loading) return;
+
     setDetailsOpen(false);
     setSelectedOrder(null);
   };
@@ -82,67 +73,46 @@ const Orders = ({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <AdminHeader
-        user={user}
-        notificationCount={notificationCount}
-        onMenuClick={() => setSidebarOpen(true)}
-        onNavigate={onNavigate}
-        onLogout={onLogout}
-      />
+      <main className="min-w-0 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Orders
+            </h1>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <AdminSidebar
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          user={user}
-          onNavigate={onNavigate}
-          onLogout={onLogout}
-        />
-
-        {/* Main Content */}
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            {/* Page Header */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Orders
-              </h1>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Manage customer orders, status and order information.
-              </p>
-            </div>
-
-            {/* Filters */}
-            <div className="mb-6">
-              <OrderFilters filters={filters} onChange={onFilterChange} />
-            </div>
-
-            {/* Order Count */}
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground">Total Orders</p>
-
-              <p className="text-2xl font-semibold">
-                {totalOrders || orders.length}
-              </p>
-            </div>
-
-            {/* Orders Table */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <OrderTable
-                orders={orders}
-                loading={loading}
-                onView={handleViewOrder}
-                onStatusChange={handleStatusClick}
-                onCancel={handleCancelOrder}
-                onDelete={handleDeleteOrder}
-              />
-            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage customer orders, status and order information.
+            </p>
           </div>
-        </main>
-      </div>
+
+          {/* Filters */}
+          <div className="mb-6">
+            <OrderFilters filters={filters} onChange={onFilterChange} />
+          </div>
+
+          {/* Order Count */}
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">Total Orders</p>
+
+            <p className="text-2xl font-semibold">
+              {totalOrders || orders.length}
+            </p>
+          </div>
+
+          {/* Orders Table */}
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <OrderTable
+              orders={orders}
+              loading={loading}
+              onView={handleViewOrder}
+              onStatusChange={handleStatusClick}
+              onCancel={handleCancelOrder}
+              onDelete={handleDeleteOrder}
+            />
+          </div>
+        </div>
+      </main>
 
       {/* Order Details */}
       {detailsOpen && selectedOrder && (

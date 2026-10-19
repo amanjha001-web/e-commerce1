@@ -2,6 +2,7 @@ import User from "../models/User.model.js";
 import Vendor from "../models/Vendor.model.js";
 import Product from "../models/Product.model.js";
 import Order from "../models/Order.model.js";
+import VendorRequest from "../models/VendorRequest.model.js";
 
 import ApiError from "../utils/ApiError.js";
 
@@ -32,8 +33,10 @@ const getDashboardStats = async () => {
 
     Order.countDocuments(),
 
-    Vendor.countDocuments({
-      status: VENDOR_STATUS.PENDING,
+    // Count actual vendor applications
+    VendorRequest.countDocuments({
+      status: "pending",
+      isDeleted: false,
     }),
 
     Product.countDocuments({

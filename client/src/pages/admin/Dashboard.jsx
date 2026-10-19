@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
-import AdminHeader from "../../components/admin/AdminHeader";
-import AdminSidebar from "../../components/admin/AdminSidebar";
+import { fetchAdminDashboard } from "../../store/slices/adminDashboardSlice";
 
 import DashboardStats from "../../components/admin/dashboard/DashboardStats";
 import SalesChart from "../../components/admin/dashboard/SalesChart";
@@ -10,98 +11,76 @@ import RecentOrders from "../../components/admin/dashboard/RecentOrders";
 import RecentUsers from "../../components/admin/dashboard/RecentUsers";
 import TopProducts from "../../components/admin/dashboard/TopProducts";
 
-const AdminDashboard = ({
-  user = null,
-  stats = {},
-  salesData = [],
-  revenueData = [],
-  recentOrders = [],
-  recentUsers = [],
-  topProducts = [],
-  loading = false,
-  notificationCount = 0,
+const PERIODS = [
+  { label: "7 Days", value: "7d" },
+  { label: "30 Days", value: "30d" },
+  { label: "90 Days", value: "90d" },
+];
 
-  onLogout,
-  onNavigate,
-  onViewOrder,
-  onViewUser,
-  onViewProduct,
-  onPeriodChange,
-}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const ADMIN_ROUTES = {
+  users: "/admin/users",
+  vendors: "/admin/vendors",
+  vendorRequests: "/admin/vendor-requests",
+  products: "/admin/products",
+  orders: "/admin/orders",
+};
+
+const AdminDashboard = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const { loading, error } = useSelector((state) => state.adminDashboard);
+
   const [period, setPeriod] = useState("7d");
 
-  const dashboardStats = useMemo(
-    () => ({
-      totalUsers: stats?.totalUsers ?? 0,
-      totalVendors: stats?.totalVendors ?? 0,
-      totalProducts: stats?.totalProducts ?? 0,
-      totalOrders: stats?.totalOrders ?? 0,
-      totalRevenue: stats?.totalRevenue ?? 0,
-      pendingOrders: stats?.pendingOrders ?? 0,
+  useEffect(() => {
+    dispatch(fetchAdminDashboard());
+  }, [dispatch]);
 
-      totalUsersChange: stats?.totalUsersChange,
-      totalVendorsChange: stats?.totalVendorsChange,
-      totalProductsChange: stats?.totalProductsChange,
-      totalOrdersChange: stats?.totalOrdersChange,
-      totalRevenueChange: stats?.totalRevenueChange,
-      pendingOrdersChange: stats?.pendingOrdersChange,
-    }),
-    [stats],
-  );
+  const handleNavigate = (page) => {
+    const route = ADMIN_ROUTES[page];
 
-  const handleNavigate = (item) => {
-    setSidebarOpen(false);
-    onNavigate?.(item);
+    if (route) navigate(route);
   };
 
-  const handlePeriodChange = (value) => {
-    setPeriod(value);
-    onPeriodChange?.(value);
+  const handleRetry = () => {
+    dispatch(fetchAdminDashboard());
   };
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Sidebar */}
-      <AdminSidebar
-        activeItem="dashboard"
-        collapsed={false}
-        onNavigate={handleNavigate}
-        onLogout={onLogout}
-        mobileOpen={sidebarOpen}
-        onMobileClose={() => setSidebarOpen(false)}
-      />
+      <main className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          {error && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            >
+              <span>{error}</span>
 
-      {/* Main Area */}
-      <div className="lg:pl-64">
-        <AdminHeader
-          title="Dashboard"
-          subtitle="Overview of your store performance"
-          user={user}
-          notificationCount={notificationCount}
-          onMenuClick={() => setSidebarOpen(true)}
-          onLogout={onLogout}
-          onProfileClick={() => handleNavigate("profile")}
-          onNotificationsClick={() => handleNavigate("notifications")}
-        />
-
-        <main className="p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl space-y-6">
-            {/* Dashboard Stats */}
-            <DashboardStats stats={dashboardStats} loading={loading} />
-
-            {/* Charts */}
-            <div className="grid gap-6 xl:grid-cols-2">
-              <SalesChart data={salesData} period={period} loading={loading} />
-
-              <RevenueChart
-                data={revenueData}
-                period={period}
-                loading={loading}
-              />
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={loading}
+                className="rounded-lg border border-red-300 px-3 py-2 font-medium transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Retrying..." : "Retry"}
+              </button>
             </div>
+          )}
 
-            {/* Store Activity Header */}
+          {/* Dashboard Statistics */}
+          <DashboardStats />
+
+          {/* Charts */}
+          <div className="grid gap-6 xl:grid-cols-2">
+            <SalesChart data={[]} period={period} loading={loading} />
+
+            <RevenueChart data={[]} period={period} loading={loading} />
+          </div>
+
+          {/* Store Activity */}
+          <section className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
@@ -113,60 +92,53 @@ const AdminDashboard = ({
                 </p>
               </div>
 
-              {/* Period Selector */}
               <div className="flex rounded-xl border border-border bg-background p-1">
-                {[
-                  { label: "7 Days", value: "7d" },
-                  { label: "30 Days", value: "30d" },
-                  { label: "90 Days", value: "90d" },
-                ].map((item) => {
-                  const isActive = period === item.value;
-
-                  return (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => handlePeriodChange(item.value)}
-                      className={[
-                        "rounded-lg px-3 py-2 text-xs font-medium transition",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-muted",
-                      ].join(" ")}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
+                {PERIODS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPeriod(value)}
+                    aria-pressed={period === value}
+                    className={`rounded-lg px-3 py-2 text-xs font-medium transition ${
+                      period === value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Recent Orders */}
             <RecentOrders
-              orders={recentOrders}
-              loading={loading}
-              onViewOrder={onViewOrder}
+              orders={[]}
+              loading={false}
+              onViewOrder={(order) => navigate(`/admin/orders/${order._id}`)}
               onViewAll={() => handleNavigate("orders")}
             />
 
             {/* Recent Users */}
             <RecentUsers
-              users={recentUsers}
-              loading={loading}
-              onViewUser={onViewUser}
+              users={[]}
+              loading={false}
+              onViewUser={(user) => navigate(`/admin/users/${user._id}`)}
               onViewAll={() => handleNavigate("users")}
             />
 
             {/* Top Products */}
             <TopProducts
-              products={topProducts}
-              loading={loading}
-              onViewProduct={onViewProduct}
+              products={[]}
+              loading={false}
+              onViewProduct={(product) =>
+                navigate(`/admin/products/${product._id}`)
+              }
               onViewAll={() => handleNavigate("products")}
             />
-          </div>
-        </main>
-      </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 };

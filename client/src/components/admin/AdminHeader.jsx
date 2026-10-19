@@ -75,19 +75,20 @@ const AdminHeader = ({
     onNotificationsClick?.();
   };
 
-  const handleLogout = async () => {
-    setProfileOpen(false);
+  
+const handleLogout = async () => {
+  setProfileOpen(false);
 
-    try {
-      await dispatch(logout()).unwrap();
-    } catch (error) {
-      // Your authSlice also clears auth state on logout.rejected.
-      console.error("Logout request failed:", error);
-    } finally {
-      onLogout?.();
-      navigate("/", { replace: true });
-    }
-  };
+  try {
+    await dispatch(logout()).unwrap();
+  } catch (error) {
+    console.error("Logout request failed:", error);
+  } finally {
+    onLogout?.();
+    navigate("/", { replace: true });
+  }
+};
+
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
