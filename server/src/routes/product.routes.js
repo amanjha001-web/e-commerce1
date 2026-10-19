@@ -58,6 +58,15 @@ router.post(
   productController.createProduct,
 );
 
+// Submit Product For Approval
+router.patch(
+  "/:id/submit",
+  verifyJWT,
+  authorizeRoles("vendor"),
+  validate(productIdSchema),
+  productController.submitProductForApproval,
+);
+
 // Approve / Publish Product
 router.patch(
   "/:id/approve",

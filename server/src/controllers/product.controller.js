@@ -109,6 +109,25 @@ const toggleProductStatus = asyncHandler(async (req, res) => {
 });
 
 
+/* Submit Product For Approval */
+
+const submitProductForApproval = asyncHandler(async (req, res) => {
+  const product = await productService.submitProductForApproval(
+    req.params.id,
+    req.user,
+  );
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      product,
+      "Product submitted for approval successfully",
+    ),
+  );
+});
+
+
+
 /*                         Approve Product                                   */
 
 const approveProduct = asyncHandler(async (req, res) => {
@@ -234,6 +253,7 @@ export default {
   deleteProduct,
   restoreProduct,
   toggleProductStatus,
+  submitProductForApproval,
   approveProduct,
   updateProductStock,
   getFlashSaleProducts,

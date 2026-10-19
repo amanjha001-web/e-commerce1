@@ -133,7 +133,6 @@ const productSchema = new mongoose.Schema(
       min: 0,
     },
 
-
     stock: {
       type: Number,
       required: true,
@@ -212,7 +211,7 @@ const productSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
+      enum: ["draft", "pending_approval", "published", "rejected", "archived"],
       default: "draft",
     },
 

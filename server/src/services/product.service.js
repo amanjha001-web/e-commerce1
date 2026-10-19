@@ -583,6 +583,47 @@ const toggleProductStatus = async (productId) => {
   });
 };
 
+/*                    Submit Product For Approval                    */
+
+const submitProductForApproval = async (productId, user) => {
+  const product = await productRepository.getProductById(productId);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // Verify product ownership
+  const productVendorId = product.vendor?._id
+    ? product.vendor._id.toString()
+    : product.vendor.toString();
+
+  if (
+    user.role !== "vendor" ||
+    productVendorId !== user._id.toString()
+  ) {
+    throw new ApiError(
+      403,
+      "You are not authorized to submit this product",
+    );
+  }
+
+  if (product.deletedAt) {
+    throw new ApiError(400, "Deleted product cannot be submitted");
+  }
+
+  if (!["draft", "rejected"].includes(product.status)) {
+    throw new ApiError(
+      400,
+      "Only draft or rejected products can be submitted",
+    );
+  }
+
+  return await productRepository.updateProduct(productId, {
+    status: "pending_approval",
+    isActive: false,
+  });
+};
+
 /*                         Approve / Publish Product                         */
 
 const approveProduct = async (productId) => {
@@ -685,6 +726,8 @@ export default {
   restoreProduct,
 
   toggleProductStatus,
+
+  submitProductForApproval,
 
   approveProduct,
 
