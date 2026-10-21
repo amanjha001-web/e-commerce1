@@ -29,7 +29,9 @@ const AdminDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loading, error } = useSelector((state) => state.adminDashboard);
+  const { stats, loading, error } = useSelector(
+    (state) => state.adminDashboard,
+  );
 
   const [period, setPeriod] = useState("7d");
 
@@ -70,7 +72,7 @@ const AdminDashboard = () => {
           )}
 
           {/* Dashboard Statistics */}
-          <DashboardStats />
+          <DashboardStats stats={stats} loading={loading} />
 
           {/* Charts */}
           <div className="grid gap-6 xl:grid-cols-2">
@@ -114,7 +116,7 @@ const AdminDashboard = () => {
             {/* Recent Orders */}
             <RecentOrders
               orders={[]}
-              loading={false}
+              loading={loading}
               onViewOrder={(order) => navigate(`/admin/orders/${order._id}`)}
               onViewAll={() => handleNavigate("orders")}
             />
@@ -122,7 +124,7 @@ const AdminDashboard = () => {
             {/* Recent Users */}
             <RecentUsers
               users={[]}
-              loading={false}
+              loading={loading}
               onViewUser={(user) => navigate(`/admin/users/${user._id}`)}
               onViewAll={() => handleNavigate("users")}
             />
@@ -130,7 +132,7 @@ const AdminDashboard = () => {
             {/* Top Products */}
             <TopProducts
               products={[]}
-              loading={false}
+              loading={loading}
               onViewProduct={(product) =>
                 navigate(`/admin/products/${product._id}`)
               }

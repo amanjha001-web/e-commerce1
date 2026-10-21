@@ -5,11 +5,11 @@ const Sidebar = ({
   items = [],
   logo = "ShopSphere",
   sectionTitle = "Menu",
-  user = null,
+  
   isOpen = false,
   onClose,
   onItemClick,
-  onLogout,
+
   variant = "admin",
 }) => {
   const location = useLocation();
@@ -176,43 +176,7 @@ const Sidebar = ({
         <div className="space-y-1">{menuItems.map(renderItem)}</div>
       </nav>
 
-      <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-800">
-        <div className="mb-3 flex min-w-0 items-center gap-3">
-          {user?.avatar || user?.profileImage ? (
-            <img
-              src={user.avatar || user.profileImage}
-              alt="Profile"
-              className="h-10 w-10 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-              {(user?.fullName || user?.name || user?.username || logo)
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-              {user?.fullName || user?.name || user?.username || logo}
-            </p>
-            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-              {user?.email || sectionTitle}
-            </p>
-          </div>
-        </div>
-
-        {onLogout && (
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
-          >
-            <span className="mr-3">↪</span>
-            Logout
-          </button>
-        )}
-      </div>
+      
     </>
   );
 

@@ -161,6 +161,38 @@ router.get(
   adminController.getAllOrders,
 );
 
+router.get(
+  "/vendors/:id",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.VENDOR_READ),
+  adminController.getVendorById,
+);
+
+router.patch(
+  "/vendors/:id",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.VENDOR_UPDATE),
+  adminController.updateVendor,
+);
+
+router.delete(
+  "/vendors/:id",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.VENDOR_DELETE),
+  adminController.deleteVendor,
+);
+
+router.patch(
+  "/vendors/:id/status",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.VENDOR_UPDATE),
+  adminController.toggleVendorStatus,
+);
+
 /*                           Export Router                                   */
 
 export default router;

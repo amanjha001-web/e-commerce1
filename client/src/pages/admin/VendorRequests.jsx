@@ -5,8 +5,11 @@ import VendorRequestDetails from "../../components/admin/vendors/VendorRequestDe
 
 const VendorRequests = ({
   requests = [],
+  selectedRequest: reduxSelectedRequest = null,
   totalRequests = 0,
+  pagination = {},
   loading = false,
+  detailsLoading = false,
   saving = false,
   filters = {},
 
@@ -15,14 +18,17 @@ const VendorRequests = ({
   onApproveRequest,
   onRejectRequest,
   onDeleteRequest,
+  onCloseDetails,
 }) => {
-  const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [localSelectedRequest, setLocalSelectedRequest] = useState(null);
+
+  // Prefer the detailed request fetched from Redux.
+  const selectedRequest = reduxSelectedRequest || localSelectedRequest;
 
   const handleViewRequest = (request) => {
-    setSelectedRequest(request);
+    setLocalSelectedRequest(request);
     setDetailsOpen(true);
-
     onViewRequest?.(request);
   };
 
@@ -30,7 +36,8 @@ const VendorRequests = ({
     if (saving) return;
 
     setDetailsOpen(false);
-    setSelectedRequest(null);
+    setLocalSelectedRequest(null);
+    onCloseDetails?.();
   };
 
   const handleApprove = async (request) => {
@@ -39,10 +46,10 @@ const VendorRequests = ({
     await onApproveRequest(request);
   };
 
-  const handleReject = async (request) => {
+  const handleReject = async (request, reason = "") => {
     if (!onRejectRequest || saving) return;
 
-    await onRejectRequest(request);
+    await onRejectRequest(request, reason);
   };
 
   const handleDelete = async (request) => {
@@ -55,6 +62,7 @@ const VendorRequests = ({
     onFilterChange?.({
       ...filters,
       status,
+      page: 1,
     });
   };
 
@@ -64,6 +72,8 @@ const VendorRequests = ({
     { label: "Rejected", value: "rejected" },
     { label: "All", value: "" },
   ];
+
+  const displayedTotal = totalRequests || pagination?.total || requests.length;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -111,9 +121,7 @@ const VendorRequests = ({
           <div className="mb-4">
             <p className="text-sm text-muted-foreground">Total Requests</p>
 
-            <p className="text-2xl font-semibold">
-              {totalRequests || requests.length}
-            </p>
+            <p className="text-2xl font-semibold">{displayedTotal}</p>
           </div>
 
           {/* Requests Table */}
@@ -121,26 +129,78 @@ const VendorRequests = ({
             <VendorRequestTable
               requests={requests}
               loading={loading}
+              saving={saving}
               onView={handleViewRequest}
               onApprove={handleApprove}
               onReject={handleReject}
               onDelete={handleDelete}
             />
           </div>
+
+          {/* Pagination summary */}
+          {pagination?.totalPages > 1 && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+              <p>
+                Page {pagination.page || filters.page || 1} of{" "}
+                {pagination.totalPages}
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={
+                    saving ||
+                    loading ||
+                    !(
+                      pagination.hasPrevPage ??
+                      Number(pagination.page || filters.page || 1) > 1
+                    )
+                  }
+                  onClick={() =>
+                    onFilterChange?.({
+                      ...filters,
+                      page: Number(pagination.page || filters.page || 1) - 1,
+                    })
+                  }
+                  className="rounded-lg border border-border px-3 py-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    saving ||
+                    loading ||
+                    !(
+                      pagination.hasNextPage ??
+                      Number(pagination.page || filters.page || 1) <
+                        pagination.totalPages
+                    )
+                  }
+                  onClick={() =>
+                    onFilterChange?.({
+                      ...filters,
+                      page: Number(pagination.page || filters.page || 1) + 1,
+                    })
+                  }
+                  className="rounded-lg border border-border px-3 py-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
       {/* Request Details */}
-      {detailsOpen && selectedRequest && (
+      {detailsOpen && (
         <VendorRequestDetails
-          key={
-            selectedRequest?._id ||
-            selectedRequest?.id ||
-            "vendor-request-details"
-          }
+          key={selectedRequest?._id || "vendor-request-details"}
           request={selectedRequest}
           open={detailsOpen}
-          loading={loading}
+          loading={detailsLoading}
           saving={saving}
           onClose={handleCloseDetails}
           onApprove={handleApprove}

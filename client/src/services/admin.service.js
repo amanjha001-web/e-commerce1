@@ -11,6 +11,16 @@ const adminService = {
     return response.data;
   },
 
+  // Vendors
+
+  getVendors: async (params = {}) => {
+    const response = await api.get("/admin/vendors", {
+      params,
+    });
+
+    return response.data;
+  },
+
   getStats: async (params = {}) => {
     const response = await api.get("/admin/dashboard/stats", {
       params,

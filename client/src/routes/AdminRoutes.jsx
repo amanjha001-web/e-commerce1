@@ -7,7 +7,7 @@ import Dashboard from "../pages/admin/Dashboard";
 import Users from "../pages/admin/Users";
 import UserDetails from "../pages/admin/UserDetails";
 import Vendors from "../pages/admin/Vendors";
-import VendorRequests from "../pages/admin/VendorRequests";
+import VendorRequestsContainer from "../pages/admin/VendorRequestsContainer";
 import Products from "../pages/admin/Products";
 import Categories from "../pages/admin/Categories";
 import Brands from "../pages/admin/Brands";
@@ -37,7 +37,7 @@ const AdminRoutes = () => {
           <Route path="users" element={<Users />} />
           <Route path="users/:userId" element={<UserDetails />} />
           <Route path="vendors" element={<Vendors />} />
-          <Route path="vendor-requests" element={<VendorRequests />} />
+          <Route path="vendor-requests" element={<VendorRequestsContainer />} />
           <Route path="products" element={<Products />} />
           <Route path="categories" element={<Categories />} />
           <Route path="brands" element={<Brands />} />

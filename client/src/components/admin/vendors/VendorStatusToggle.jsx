@@ -1,38 +1,48 @@
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-const VendorStatusToggle = ({
-  vendor = null,
-  open = false,
-  loading = false,
-  onClose,
-  onConfirm,
-}) => {
+import { clearSelectedVendor } from "../../../store/slices/adminVendorsSlice";
+
+const VendorStatusToggle = () => {
+  const dispatch = useDispatch();
+
+  const { selectedVendor: vendor, saving } = useSelector(
+    (state) => state.adminVendors,
+  );
+
   const [reason, setReason] = useState("");
 
-  if (!open || !vendor) return null;
+  if (!vendor) return null;
 
   const vendorName =
+    vendor?.shopName ||
     vendor?.businessName ||
     vendor?.storeName ||
     vendor?.companyName ||
+    vendor?.user?.fullName ||
     vendor?.fullName ||
     vendor?.name ||
     vendor?.username ||
     "this vendor";
 
-  const currentStatus = String(
-    vendor?.status || (vendor?.isActive === false ? "inactive" : "active"),
-  ).toLowerCase();
-
-  const isActive = currentStatus === "active" || currentStatus === "approved";
-
+  const isActive = vendor?.isActive !== false;
   const nextStatus = isActive ? "inactive" : "active";
   const actionLabel = isActive ? "Deactivate" : "Activate";
 
-  const handleConfirm = () => {
-    if (loading) return;
+  const handleClose = () => {
+    if (saving) return;
 
-    onConfirm?.(vendor, nextStatus, reason.trim());
+    setReason("");
+    dispatch(clearSelectedVendor());
+  };
+
+  const handleConfirm = () => {
+    if (saving) return;
+
+    // Status-update thunk yahan connect hoga.
+    console.log("Vendor:", vendor._id);
+    console.log("New status:", nextStatus);
+    console.log("Reason:", reason.trim());
   };
 
   const formatStatus = (value) =>
@@ -43,7 +53,7 @@ const VendorStatusToggle = ({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl"
@@ -52,7 +62,6 @@ const VendorStatusToggle = ({
         aria-modal="true"
         aria-labelledby="vendor-status-title"
       >
-        {/* Icon */}
         <div className="mb-5 flex justify-center">
           <div
             className={[
@@ -94,7 +103,6 @@ const VendorStatusToggle = ({
           </div>
         </div>
 
-        {/* Title */}
         <div className="text-center">
           <h2
             id="vendor-status-title"
@@ -112,7 +120,6 @@ const VendorStatusToggle = ({
           </p>
         </div>
 
-        {/* Status Change */}
         <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -126,7 +133,7 @@ const VendorStatusToggle = ({
                     : "bg-gray-100 text-gray-700",
                 ].join(" ")}
               >
-                {formatStatus(currentStatus)}
+                {formatStatus(isActive ? "active" : "inactive")}
               </span>
             </div>
 
@@ -162,7 +169,6 @@ const VendorStatusToggle = ({
           </div>
         </div>
 
-        {/* Reason */}
         <div className="mt-5">
           <label
             htmlFor="vendorStatusReason"
@@ -178,7 +184,7 @@ const VendorStatusToggle = ({
             id="vendorStatusReason"
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            disabled={loading}
+            disabled={saving}
             rows={3}
             maxLength={500}
             placeholder={`Enter reason for ${actionLabel.toLowerCase()}ing this vendor...`}
@@ -190,12 +196,11 @@ const VendorStatusToggle = ({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
-            disabled={loading}
+            onClick={handleClose}
+            disabled={saving}
             className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
@@ -204,7 +209,7 @@ const VendorStatusToggle = ({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={saving}
             className={[
               "rounded-xl px-4 py-2.5 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-60",
               isActive
@@ -212,35 +217,7 @@ const VendorStatusToggle = ({
                 : "bg-primary hover:bg-primary/90",
             ].join(" ")}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    className="opacity-25"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                  />
-
-                  <path
-                    d="M21 12a9 9 0 00-9-9"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Processing...
-              </span>
-            ) : (
-              actionLabel
-            )}
+            {saving ? "Processing..." : actionLabel}
           </button>
         </div>
       </div>

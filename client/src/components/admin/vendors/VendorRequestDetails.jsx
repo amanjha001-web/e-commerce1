@@ -1,582 +1,550 @@
 import { useState } from "react";
 
+const formatDate = (date) => {
+  if (!date) return "—";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "—";
+
+  return parsedDate.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const getStatusClasses = (status) => {
+  const classes = {
+    pending: "bg-amber-100 text-amber-700",
+    under_review: "bg-blue-100 text-blue-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+
+  return classes[status?.toLowerCase()] || "bg-gray-100 text-gray-700";
+};
+
+const formatStatus = (status = "pending") =>
+  status
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+
+const DetailItem = ({ label, value, breakAll = false }) => (
+  <div className="min-w-0">
+    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+      {label}
+    </p>
+
+    <p
+      className={`mt-1.5 text-sm font-medium text-gray-800 ${
+        breakAll ? "break-all" : "break-words"
+      }`}
+    >
+      {value || "—"}
+    </p>
+  </div>
+);
+
+const Section = ({ title, children }) => (
+  <section className="rounded-xl border border-gray-200 bg-white">
+    <div className="border-b border-gray-100 px-4 py-3 sm:px-5">
+      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+    </div>
+
+    <div className="p-4 sm:p-5">{children}</div>
+  </section>
+);
+
 const VendorRequestDetails = ({
   request,
   open = false,
   loading = false,
+  saving = false,
   onClose,
   onApprove,
   onReject,
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [rejectReason, setRejectReason] = useState("");
-  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [showAccountNumber, setShowAccountNumber] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(false);
 
-  if (!open || !request) return null;
+  if (!open) return null;
 
-  const businessName =
+  const shopName =
+    request?.shopName ||
     request?.businessName ||
     request?.storeName ||
-    request?.vendor?.businessName ||
-    request?.vendor?.storeName ||
-    request?.companyName ||
-    "Unnamed Business";
+    "Vendor Store";
 
   const ownerName =
     request?.user?.fullName ||
     request?.user?.name ||
-    request?.owner?.fullName ||
-    request?.owner?.name ||
-    request?.fullName ||
-    request?.name ||
-    request?.username ||
-    "N/A";
+    request?.user?.username ||
+    "—";
 
-  const email =
-    request?.email || request?.user?.email || request?.owner?.email || "N/A";
+  // Contact email: prefer application email, then registered user email.
+  const contactEmail =
+    request?.email ||
+    request?.contactEmail ||
+    request?.businessEmail ||
+    request?.user?.email ||
+    "—";
 
-  const phone =
-    request?.phone ||
-    request?.mobile ||
-    request?.phoneNumber ||
-    request?.user?.phone ||
-    request?.owner?.phone ||
-    "N/A";
+  const address = request?.address || {};
+  const bankDetails = request?.bankDetails || {};
 
-  const status = String(
-    request?.status || request?.requestStatus || "pending",
-  ).toLowerCase();
+  const documents = Array.isArray(request?.documents) ? request.documents : [];
 
-  const logo =
-    request?.logo ||
-    request?.storeLogo ||
-    request?.vendor?.logo ||
-    request?.user?.avatar ||
-    request?.avatar ||
-    request?.profileImage;
+  const isPending =
+    request?.status === "pending" || request?.status === "under_review";
 
-  const getInitials = () =>
-    businessName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase();
+  const addressParts = [
+    address.addressLine1,
+    address.addressLine2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ].filter(Boolean);
 
-  const formatStatus = (value) =>
-    value.replace(/[_-]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  const busy = loading || saving || submittingAction;
 
-  const formatDate = (date) => {
-    if (!date) return "N/A";
+  const handleApprove = async () => {
+    if (!onApprove || busy) return;
 
-    const parsedDate = new Date(date);
+    setSubmittingAction(true);
 
-    if (Number.isNaN(parsedDate.getTime())) return "N/A";
-
-    return parsedDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const getStatusClasses = () => {
-    switch (status) {
-      case "approved":
-      case "accepted":
-        return "bg-green-100 text-green-700";
-
-      case "pending":
-      case "requested":
-      case "under_review":
-        return "bg-yellow-100 text-yellow-700";
-
-      case "rejected":
-      case "declined":
-      case "cancelled":
-        return "bg-red-100 text-red-700";
-
-      default:
-        return "bg-gray-100 text-gray-700";
+    try {
+      await onApprove(request);
+    } finally {
+      setSubmittingAction(false);
     }
   };
 
-  const isPending =
-    status === "pending" || status === "requested" || status === "under_review";
+  const handleReject = async (event) => {
+    event?.preventDefault();
 
-  const address =
-    request?.address ||
-    request?.businessAddress ||
-    request?.storeAddress ||
-    null;
+    const reason = rejectReason.trim();
 
-  const documents = request?.documents || request?.verificationDocuments || [];
+    if (!reason || !onReject || busy) return;
 
-  const handleReject = () => {
-    onReject?.(request, rejectReason.trim());
+    setSubmittingAction(true);
 
-    setRejectReason("");
-    setShowRejectForm(false);
+    try {
+      await onReject(request, reason);
+      setRejectReason("");
+    } finally {
+      setSubmittingAction(false);
+    }
   };
-
-  const tabs = ["overview", "documents", "review"];
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 z-91  flex items-start justify-center overflow-y-auto bg-black/50 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) {
+          onClose?.();
+        }
+      }}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vendor-request-title"
+        className="m-4 w-full max-w-5xl overflow-hidden rounded-2xl bg-gray-50 shadow-2xl "
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-border px-5 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            {logo ? (
-              <img
-                src={logo}
-                alt={businessName}
-                className="h-12 w-12 shrink-0 rounded-xl object-cover"
-              />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
-                {getInitials()}
-              </div>
-            )}
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-lg font-bold text-indigo-700">
+              {shopName
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase())
+                .join("") || "V"}
+            </div>
 
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-foreground">
-                {businessName}
+              <h2
+                id="vendor-request-title"
+                className="break-words text-lg font-bold text-gray-900 sm:text-xl"
+              >
+                {shopName}
               </h2>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses()}`}
-                >
-                  {formatStatus(status)}
-                </span>
+              <p className="mt-1 break-all text-xs text-gray-500">
+                Request ID: {request?._id || "—"}
+              </p>
 
-                <span className="text-xs text-muted-foreground">
-                  Vendor Application
-                </span>
-              </div>
+              <span
+                className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
+                  request?.status,
+                )}`}
+              >
+                {formatStatus(request?.status)}
+              </span>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="ml-3 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            aria-label="Close"
+            disabled={busy}
+            aria-label="Close vendor request details"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50"
           >
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 6l12 12M18 6L6 18"
-              />
-            </svg>
+            ×
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="overflow-x-auto border-b border-border">
-          <div className="flex min-w-max px-5 sm:px-6">
-            {tabs.map((tab) => (
+        <div className="overflow-x-auto border-b border-gray-200 bg-white px-4 sm:px-6">
+          <div className="flex min-w-max gap-5">
+            {[
+              { id: "overview", label: "Overview" },
+              { id: "documents", label: `Documents (${documents.length})` },
+              { id: "bank", label: "Bank Details" },
+              { id: "review", label: "Review History" },
+            ].map((tab) => (
               <button
-                key={tab}
+                key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`border-b-2 px-4 py-3 text-sm font-medium capitalize transition first:pl-0 ${
-                  activeTab === tab
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                onClick={() => setActiveTab(tab.id)}
+                className={`border-b-2 px-1 py-3 text-sm font-medium ${
+                  activeTab === tab.id
+                    ? "border-indigo-600 text-indigo-700"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >
-                {tab}
+                {tab.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              {/* Applicant Information */}
-              <section>
-                <h3 className="mb-3 text-sm font-semibold text-foreground">
-                  Applicant Information
-                </h3>
-
-                <div className="grid gap-4 rounded-xl border border-border p-4 sm:grid-cols-2">
-                  <InfoItem label="Business Name" value={businessName} />
-
-                  <InfoItem label="Owner Name" value={ownerName} />
-
-                  <InfoItem label="Email" value={email} />
-
-                  <InfoItem label="Phone" value={phone} />
-
-                  <InfoItem
-                    label="Business Type"
-                    value={
-                      request?.businessType ||
-                      request?.type ||
-                      request?.category ||
-                      "N/A"
-                    }
-                  />
-
-                  <InfoItem
-                    label="Category"
-                    value={
-                      request?.category || request?.businessCategory || "N/A"
-                    }
-                  />
-
-                  <InfoItem
-                    label="GST Number"
-                    value={
-                      request?.gstNumber ||
-                      request?.gst ||
-                      request?.taxId ||
-                      "N/A"
-                    }
-                  />
-
-                  <InfoItem
-                    label="PAN Number"
-                    value={request?.panNumber || request?.pan || "N/A"}
-                  />
-
-                  <InfoItem
-                    label="Submitted On"
-                    value={formatDate(
-                      request?.createdAt ||
-                        request?.requestedAt ||
-                        request?.created_at,
-                    )}
-                  />
-
-                  <InfoItem
-                    label="Last Updated"
-                    value={formatDate(
-                      request?.updatedAt || request?.reviewedAt,
-                    )}
-                  />
-                </div>
-              </section>
-
-              {/* Address */}
-              {address && (
-                <section>
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">
-                    Business Address
-                  </h3>
-
-                  <div className="rounded-xl border border-border p-4 text-sm leading-6 text-muted-foreground">
-                    {typeof address === "string" ? (
-                      address
-                    ) : (
-                      <>
-                        {address?.addressLine1 ||
-                          address?.line1 ||
-                          address?.street ||
-                          ""}
-
-                        {(address?.addressLine2 || address?.line2) && <br />}
-
-                        {address?.addressLine2 || address?.line2 || ""}
-
-                        {(address?.city ||
-                          address?.state ||
-                          address?.pincode ||
-                          address?.postalCode) && <br />}
-
-                        {[
-                          address?.city,
-                          address?.state,
-                          address?.pincode || address?.postalCode,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-
-                        {address?.country && (
-                          <>
-                            <br />
-                            {address.country}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {/* Description */}
-              {(request?.description ||
-                request?.about ||
-                request?.businessDescription) && (
-                <section>
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">
-                    Business Description
-                  </h3>
-
-                  <p className="rounded-xl border border-border p-4 text-sm leading-6 text-muted-foreground">
-                    {request.description ||
-                      request.about ||
-                      request.businessDescription}
-                  </p>
-                </section>
-              )}
+        {/* Body */}
+        <div className="max-h-[65vh] space-y-4 overflow-y-auto p-4 sm:p-6">
+          {loading ? (
+            <div className="space-y-4">
+              <div className="h-28 animate-pulse rounded-xl bg-gray-200" />
+              <div className="h-44 animate-pulse rounded-xl bg-gray-200" />
             </div>
-          )}
+          ) : (
+            <>
+              {activeTab === "overview" && (
+                <div className="space-y-4">
+                  <Section title="Applicant Information">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      <DetailItem label="Store Name" value={shopName} />
 
-          {activeTab === "documents" && (
-            <div>
-              <h3 className="mb-4 text-sm font-semibold text-foreground">
-                Verification Documents
-              </h3>
+                      <DetailItem
+                        label="Business Name"
+                        value={request?.businessName}
+                      />
 
-              {documents.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {documents.map((document, index) => {
-                    const documentName =
-                      document?.name ||
-                      document?.title ||
-                      document?.type ||
-                      `Document ${index + 1}`;
+                      <DetailItem label="Owner Name" value={ownerName} />
 
-                    const documentUrl =
-                      document?.url || document?.fileUrl || document?.path;
+                      <DetailItem
+                        label="Contact Email"
+                        value={contactEmail}
+                        breakAll
+                      />
 
-                    return (
-                      <div
-                        key={document?._id || document?.id || index}
-                        className="rounded-xl border border-border p-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            📄
-                          </div>
+                      <DetailItem
+                        label="Registered Account Email"
+                        value={request?.user?.email}
+                        breakAll
+                      />
 
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {documentName}
+                      <DetailItem label="Phone" value={request?.phone} />
+
+                      <DetailItem label="Website" value={request?.website} />
+
+                      <DetailItem
+                        label="Submitted On"
+                        value={formatDate(request?.createdAt)}
+                      />
+
+                      <DetailItem
+                        label="Last Updated"
+                        value={formatDate(request?.updatedAt)}
+                      />
+                    </div>
+                  </Section>
+
+                  <Section title="Business Description">
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
+                      {request?.description ||
+                        "No business description provided."}
+                    </p>
+                  </Section>
+
+                  <Section title="Business Address">
+                    {addressParts.length ? (
+                      <div className="space-y-1 text-sm leading-6 text-gray-700">
+                        {addressParts.map((part, index) => (
+                          <p key={`${part}-${index}`}>{part}</p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        No business address provided.
+                      </p>
+                    )}
+                  </Section>
+                </div>
+              )}
+
+              {activeTab === "documents" && (
+                <Section title="Submitted Documents">
+                  {documents.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-300 px-4 py-10 text-center">
+                      <p className="font-medium text-gray-700">
+                        No documents submitted
+                      </p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        This application contains no uploaded documents.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {documents.map((document, index) => (
+                        <div
+                          key={document?._id || document?.publicId || index}
+                          className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-semibold text-gray-900">
+                              {document?.type || `Document ${index + 1}`}
                             </p>
 
-                            {document?.status && (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {formatStatus(
-                                  String(document.status).toLowerCase(),
-                                )}
-                              </p>
-                            )}
+                            <p className="mt-1 break-all text-xs text-gray-500">
+                              Document Number: {document?.number || "—"}
+                            </p>
                           </div>
 
-                          {documentUrl && (
+                          {document?.url ? (
                             <a
-                              href={documentUrl}
+                              href={document.url}
                               target="_blank"
-                              rel="noreferrer"
-                              className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-primary transition hover:bg-primary/5"
+                              rel="noopener noreferrer"
+                              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
                             >
-                              View
+                              Open Document ↗
                             </a>
+                          ) : (
+                            <span className="text-xs text-gray-400">
+                              No document URL
+                            </span>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <EmptyState message="No verification documents submitted." />
+                      ))}
+                    </div>
+                  )}
+                </Section>
               )}
-            </div>
-          )}
 
-          {activeTab === "review" && (
-            <div className="space-y-5">
-              <section>
-                <h3 className="mb-3 text-sm font-semibold text-foreground">
-                  Application Review
-                </h3>
+              {activeTab === "bank" && (
+                <Section title="Bank & Payout Information">
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <DetailItem
+                      label="Account Holder"
+                      value={bankDetails.accountHolderName}
+                    />
 
-                <div className="rounded-xl border border-border p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-muted-foreground">
-                      Current Status
-                    </span>
+                    <DetailItem
+                      label="Bank Name"
+                      value={bankDetails.bankName}
+                    />
 
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClasses()}`}
-                    >
-                      {formatStatus(status)}
-                    </span>
+                    <DetailItem
+                      label="Branch Name"
+                      value={bankDetails.branchName}
+                    />
+
+                    <DetailItem
+                      label="IFSC Code"
+                      value={bankDetails.ifscCode}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                        Account Number
+                      </p>
+
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <p className="break-all text-sm font-medium text-gray-800">
+                          {bankDetails.accountNumber
+                            ? showAccountNumber
+                              ? bankDetails.accountNumber
+                              : `••••••${String(
+                                  bankDetails.accountNumber,
+                                ).slice(-4)}`
+                            : "—"}
+                        </p>
+
+                        {bankDetails.accountNumber && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowAccountNumber((previous) => !previous)
+                            }
+                            className="text-xs font-semibold text-indigo-700"
+                          >
+                            {showAccountNumber ? "Hide" : "Reveal"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <DetailItem
+                      label="UPI ID"
+                      value={bankDetails.upiId}
+                      breakAll
+                    />
                   </div>
+                </Section>
+              )}
 
-                  {request?.reviewedBy && (
-                    <div className="mt-4 border-t border-border pt-4">
-                      <InfoItem
+              {activeTab === "review" && (
+                <div className="space-y-4">
+                  <Section title="Review Information">
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <DetailItem
+                        label="Current Status"
+                        value={formatStatus(request?.status)}
+                      />
+
+                      <DetailItem
                         label="Reviewed By"
                         value={
-                          request.reviewedBy?.fullName ||
-                          request.reviewedBy?.name ||
-                          request.reviewedBy
+                          request?.reviewedBy?.fullName ||
+                          request?.reviewedBy?.email ||
+                          "Not reviewed yet"
                         }
                       />
-                    </div>
-                  )}
 
-                  {request?.reviewedAt && (
-                    <div className="mt-4">
-                      <InfoItem
-                        label="Reviewed On"
-                        value={formatDate(request.reviewedAt)}
+                      <DetailItem
+                        label="Reviewer Email"
+                        value={request?.reviewedBy?.email}
+                      />
+
+                      <DetailItem
+                        label="Reviewed At"
+                        value={formatDate(request?.reviewedAt)}
                       />
                     </div>
-                  )}
+                  </Section>
 
                   {request?.rejectionReason && (
-                    <div className="mt-4">
-                      <p className="text-xs text-muted-foreground">
-                        Rejection Reason
-                      </p>
-
-                      <p className="mt-1 text-sm text-red-600">
+                    <Section title="Rejection Reason">
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-red-700">
                         {request.rejectionReason}
                       </p>
-                    </div>
+                    </Section>
                   )}
-                </div>
-              </section>
 
-              {isPending && (
-                <section>
-                  <h3 className="mb-3 text-sm font-semibold text-foreground">
-                    Admin Decision
-                  </h3>
+                  {isPending && (
+                    <Section title="Review Application">
+                      <form onSubmit={handleReject} className="space-y-3">
+                        <p className="text-sm leading-6 text-gray-600">
+                          Review the applicant information and documents before
+                          making a decision.
+                        </p>
 
-                  <div className="rounded-xl border border-border p-4">
-                    {!showRejectForm ? (
-                      <div className="flex flex-col gap-3 sm:flex-row">
-                        <button
-                          type="button"
-                          onClick={() => onApprove?.(request)}
-                          disabled={loading}
-                          className="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {loading ? "Processing..." : "Approve Application"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowRejectForm(true)}
-                          disabled={loading}
-                          className="flex-1 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          Reject Application
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
                         <label
-                          htmlFor="rejectReason"
-                          className="mb-2 block text-sm font-medium text-foreground"
+                          htmlFor="vendor-rejection-reason"
+                          className="block text-sm font-medium text-gray-700"
                         >
-                          Rejection Reason
+                          Rejection reason
                         </label>
 
                         <textarea
-                          id="rejectReason"
+                          id="vendor-rejection-reason"
+                          rows={3}
                           value={rejectReason}
                           onChange={(event) =>
                             setRejectReason(event.target.value)
                           }
-                          rows={4}
-                          disabled={loading}
-                          placeholder="Explain why this vendor application is being rejected..."
-                          className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                          placeholder="Explain why this application is being rejected..."
+                          className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                         />
 
-                        <div className="mt-3 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <div className="flex flex-wrap gap-3">
                           <button
                             type="button"
-                            onClick={() => {
-                              setShowRejectForm(false);
-                              setRejectReason("");
-                            }}
-                            disabled={loading}
-                            className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
+                            onClick={handleApprove}
+                            disabled={busy || !onApprove}
+                            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
-                            Cancel
+                            {busy ? "Please wait..." : "Approve Request"}
                           </button>
 
                           <button
-                            type="button"
-                            onClick={handleReject}
-                            disabled={loading || !rejectReason.trim()}
-                            className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            type="submit"
+                            disabled={busy || !onReject || !rejectReason.trim()}
+                            className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                           >
-                            {loading ? "Rejecting..." : "Confirm Rejection"}
+                            {busy ? "Please wait..." : "Reject Request"}
                           </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
+                      </form>
+                    </Section>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="text-xs text-muted-foreground">
-            Request ID:{" "}
-            <span className="font-medium text-foreground">
-              {request?._id || request?.id || "N/A"}
-            </span>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-4 sm:px-6">
+          <p className="break-all text-xs text-gray-400">
+            Request ID: {request?._id || "—"}
+          </p>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-          >
-            Close
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {isPending && activeTab !== "review" && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={busy || !onApprove}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {busy ? "Please wait..." : "Approve"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("review")}
+                  disabled={busy}
+                  className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
-const InfoItem = ({ label, value }) => (
-  <div>
-    <p className="text-xs text-muted-foreground">{label}</p>
-
-    <p className="mt-1 break-words text-sm font-medium text-foreground">
-      {value || "N/A"}
-    </p>
-  </div>
-);
-
-const EmptyState = ({ message }) => (
-  <div className="rounded-xl border border-dashed border-border px-5 py-10 text-center">
-    <div className="text-2xl">📭</div>
-
-    <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-  </div>
-);
 
 export default VendorRequestDetails;
