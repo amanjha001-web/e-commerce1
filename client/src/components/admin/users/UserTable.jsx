@@ -1,4 +1,32 @@
-import { useMemo } from "react";
+const getUserName = (user) =>
+  user?.fullName || user?.name || user?.username || "Unnamed user";
+
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+
+const getRoleLabel = (role) =>
+  (role || "customer")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const formatDate = (date) => {
+  if (!date) return "—";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const UserTable = ({
   users = [],
@@ -8,401 +36,204 @@ const UserTable = ({
   onDeleteUser,
   onToggleStatus,
 }) => {
-  const tableUsers = useMemo(() => users, [users]);
-
-  const getUserName = (user) =>
-    user?.fullName || user?.name || user?.username || "Unknown User";
-
-  const getInitials = (user) => {
-    return getUserName(user)
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word.charAt(0).toUpperCase())
-      .join("");
-  };
-
-  const getStatus = (user) => {
-    return user?.status || (user?.isActive === false ? "inactive" : "active");
-  };
-
-  const getStatusClass = (status) => {
-    const statusMap = {
-      active:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      inactive: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-      blocked: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-      suspended:
-        "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-      pending:
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    };
-
-    return statusMap[status?.toLowerCase()] || "bg-muted text-muted-foreground";
-  };
-
-  const formatStatus = (status) => {
-    if (!status) return "Active";
-
-    return status
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  };
-
-  const formatRole = (role) => {
-    if (!role) return "User";
-
-    return role
-      .toString()
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  };
-
-  const formatDate = (date) => {
-    if (!date) return "-";
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "-";
-    }
-
-    return parsedDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  if (loading) {
+  if (loading && users.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-background shadow-sm">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                {["User", "Email", "Role", "Joined", "Status", "Action"].map(
-                  (heading) => (
-                    <th
-                      key={heading}
-                      className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                      {heading}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-
-            <tbody>
-              {[1, 2, 3, 4, 5].map((row) => (
-                <tr key={row} className="border-b border-border">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
-                      <div>
-                        <div className="h-4 w-28 animate-pulse rounded bg-muted" />
-                        <div className="mt-2 h-3 w-20 animate-pulse rounded bg-muted" />
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="ml-auto h-8 w-24 animate-pulse rounded bg-muted" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="space-y-4 p-5 md:hidden">
-          {[1, 2, 3, 4, 5].map((row) => (
-            <div key={row} className="rounded-xl border border-border p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 animate-pulse rounded-full bg-muted" />
-
-                <div className="flex-1">
-                  <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-                  <div className="mt-2 h-3 w-40 animate-pulse rounded bg-muted" />
-                </div>
-              </div>
-
-              <div className="mt-4 h-8 w-full animate-pulse rounded bg-muted" />
-            </div>
-          ))}
-        </div>
+      <div className="rounded-xl border border-gray-200 p-10 text-center text-gray-500 dark:border-gray-800">
+        Loading users...
       </div>
     );
   }
 
-  if (!tableUsers.length) {
+  if (!loading && users.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-background px-6 py-16 text-center shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
-          👥
-        </div>
-
-        <h3 className="mt-4 text-base font-semibold text-foreground">
+      <div className="rounded-xl border border-gray-200 p-10 text-center dark:border-gray-800">
+        <p className="font-semibold text-gray-800 dark:text-white">
           No users found
-        </h3>
+        </p>
 
-        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-          There are no users matching the current criteria.
+        <p className="mt-1 text-sm text-gray-500">
+          Try changing your search or filters.
         </p>
       </div>
     );
   }
 
+  // User avatar, name, username and verification status
+  const renderUser = (user) => {
+    const name = getUserName(user);
+    const avatarUrl =
+      user?.avatar?.url || user?.profileImage || user?.image || "";
+
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={name}
+            className="h-10 w-10 shrink-0 rounded-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            {getInitials(name)}
+          </div>
+        )}
+
+        <div className="min-w-0">
+          <p className="truncate font-medium text-gray-900 dark:text-white">
+            {name}
+          </p>
+
+          <p className="truncate text-xs text-gray-500">
+            @{user?.username || "—"}
+          </p>
+
+          {user?.isVerified && (
+            <span className="text-xs font-medium text-green-600">Verified</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Actions: isBlocked is defined in this scope.
+  const renderActions = (user) => {
+    const isBlocked = Boolean(user?.isBlocked);
+
+    return (
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onViewUser?.(user)}
+          className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          View
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onEditUser?.(user)}
+          className="rounded-md border border-blue-200 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300"
+        >
+          Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onToggleStatus?.(user)}
+          className={`rounded-md border px-2.5 py-1.5 text-xs font-medium ${
+            isBlocked
+              ? "border-green-200 text-green-700 hover:bg-green-50"
+              : "border-orange-200 text-orange-700 hover:bg-orange-50"
+          }`}
+        >
+          {isBlocked ? "Unblock" : "Block"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onDeleteUser?.(user)}
+          className="rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+        >
+          Delete
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-background shadow-sm">
-      {/* Desktop Table */}
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+      {loading && (
+        <div className="border-b border-gray-200 px-4 py-2 text-xs text-gray-500 dark:border-gray-800">
+          Refreshing users...
+        </div>
+      )}
+
+      {/* Desktop table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-6 py-4 font-medium">User</th>
-
-              <th className="px-6 py-4 font-medium">Email</th>
-
-              <th className="px-6 py-4 font-medium">Role</th>
-
-              <th className="px-6 py-4 font-medium">Joined</th>
-
-              <th className="px-6 py-4 font-medium">Status</th>
-
-              <th className="px-6 py-4 text-right font-medium">Actions</th>
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-gray-900">
+            <tr>
+              <th className="px-4 py-3">User</th>
+              <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Joined</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
 
-          <tbody>
-            {tableUsers.map((user, index) => {
-              const status = getStatus(user);
-              const userId = user?._id || user?.id || index;
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            {users.map((user) => (
+              <tr key={user._id} className="align-middle">
+                <td className="px-4 py-4">{renderUser(user)}</td>
 
-              return (
-                <tr
-                  key={userId}
-                  className="border-b border-border last:border-0 transition hover:bg-muted/30"
-                >
-                  {/* User */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      {user?.avatar || user?.profileImage || user?.image ? (
-                        <img
-                          src={user.avatar || user.profileImage || user.image}
-                          alt={getUserName(user)}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {getInitials(user)}
-                        </div>
-                      )}
+                <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
+                  {user?.email || "—"}
+                </td>
 
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">
-                          {getUserName(user)}
-                        </p>
+                <td className="px-4 py-4">
+                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs dark:bg-gray-800">
+                    {getRoleLabel(user?.role)}
+                  </span>
+                </td>
 
-                        {user?.username && (
-                          <p className="truncate text-xs text-muted-foreground">
-                            @{user.username}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
+                <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
+                  {formatDate(user?.createdAt)}
+                </td>
 
-                  {/* Email */}
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-muted-foreground">
-                      {user?.email || "-"}
-                    </span>
-                  </td>
+                <td className="px-4 py-4">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      user?.isBlocked
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    {user?.isBlocked ? "Blocked" : "Active"}
+                  </span>
+                </td>
 
-                  {/* Role */}
-                  <td className="px-6 py-4">
-                    <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-                      {formatRole(user?.role)}
-                    </span>
-                  </td>
-
-                  {/* Joined */}
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {formatDate(user?.createdAt || user?.joinedAt)}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClass(
-                        status,
-                      )}`}
-                    >
-                      {formatStatus(status)}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onViewUser?.(user)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
-                      >
-                        View
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onEditUser?.(user)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onToggleStatus?.(user)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
-                      >
-                        {status?.toLowerCase() === "active"
-                          ? "Block"
-                          : "Activate"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onDeleteUser?.(user)}
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                <td className="px-4 py-4">{renderActions(user)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="divide-y divide-border md:hidden">
-        {tableUsers.map((user, index) => {
-          const status = getStatus(user);
-          const userId = user?._id || user?.id || index;
+      {/* Mobile cards */}
+      <div className="grid gap-3 p-3 md:hidden">
+        {users.map((user) => (
+          <div
+            key={user._id}
+            className="rounded-lg border border-gray-200 p-3 dark:border-gray-800"
+          >
+            {renderUser(user)}
 
-          const avatar = user?.avatar || user?.profileImage || user?.image;
+            <div className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+              <p className="break-all">{user?.email || "—"}</p>
 
-          return (
-            <div key={userId} className="p-5">
-              <div className="flex items-center gap-3">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={getUserName(user)}
-                    className="h-11 w-11 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                    {getInitials(user)}
-                  </div>
-                )}
+              <p>Role: {getRoleLabel(user?.role)}</p>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-foreground">
-                    {getUserName(user)}
-                  </p>
+              <p>Joined: {formatDate(user?.createdAt)}</p>
 
-                  <p className="truncate text-sm text-muted-foreground">
-                    {user?.email || "No email"}
-                  </p>
-                </div>
-
+              <p>
+                Status:{" "}
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClass(
-                    status,
-                  )}`}
+                  className={
+                    user?.isBlocked ? "text-red-600" : "text-green-600"
+                  }
                 >
-                  {formatStatus(status)}
+                  {user?.isBlocked ? "Blocked" : "Active"}
                 </span>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">Role</p>
-
-                  <p className="mt-1 font-medium text-foreground">
-                    {formatRole(user?.role)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground">Joined</p>
-
-                  <p className="mt-1 font-medium text-foreground">
-                    {formatDate(user?.createdAt || user?.joinedAt)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onViewUser?.(user)}
-                  className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-                >
-                  View
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onEditUser?.(user)}
-                  className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-                >
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onToggleStatus?.(user)}
-                  className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-                >
-                  {status?.toLowerCase() === "active" ? "Block" : "Activate"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onDeleteUser?.(user)}
-                  className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
-                >
-                  Delete
-                </button>
-              </div>
+              </p>
             </div>
-          );
-        })}
+
+            <div className="mt-3">{renderActions(user)}</div>
+          </div>
+        ))}
       </div>
     </div>
   );

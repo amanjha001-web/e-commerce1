@@ -198,4 +198,8 @@ supportTicketSchema.index({
   createdAt: -1,
 });
 
-export default mongoose.model("SupportTicket", supportTicketSchema);
+const SupportTicket =
+  mongoose.models.SupportTicket ||
+  mongoose.model("SupportTicket", supportTicketSchema);
+
+export default SupportTicket;

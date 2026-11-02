@@ -94,7 +94,7 @@ export { default as Notification } from "./Notification.model.js";
 /*                              Support                                       */
 
 
-export { default as SupportTicket } from "./SupportTicket.model.js";
+export { default as SupportTicket } from "./supportTicket.model.js";
 
 export { default as Report } from "./Report.model.js";
 

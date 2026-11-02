@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -7,6 +8,10 @@ import VendorStatusToggle from "../../components/admin/vendors/VendorStatusToggl
 
 import {
   fetchAdminVendors,
+  fetchAdminVendorById,
+  updateAdminVendor,
+  deleteAdminVendor,
+  toggleAdminVendorStatus,
   setVendorFilters,
   setSelectedVendor,
   clearSelectedVendor,
@@ -20,31 +25,28 @@ const Vendors = () => {
     selectedVendor = null,
     filters = { status: "", search: "" },
     loading = false,
+    detailsLoading = false,
     saving = false,
+    deleting = false,
     error = null,
   } = useSelector((state) => state.adminVendors);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [initialEdit, setInitialEdit] = useState(false);
+
   const [statusVendor, setStatusVendor] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
 
-  // Fetch vendors from the backend.
   useEffect(() => {
     dispatch(fetchAdminVendors());
   }, [dispatch]);
 
-  // Filter vendors using Redux filter state.
   const filteredVendors = useMemo(() => {
     return vendors.filter((vendor) => {
       const status = filters?.status || "";
 
-      if (status === "active" && !vendor.isActive) {
-        return false;
-      }
-
-      if (status === "inactive" && vendor.isActive) {
-        return false;
-      }
+      if (status === "active" && !vendor.isActive) return false;
+      if (status === "inactive" && vendor.isActive) return false;
 
       const search = (filters?.search || "").trim().toLowerCase();
 
@@ -64,53 +66,113 @@ const Vendors = () => {
           .join(" ")
           .toLowerCase();
 
-        if (!searchableText.includes(search)) {
-          return false;
-        }
+        if (!searchableText.includes(search)) return false;
       }
 
       return true;
     });
   }, [vendors, filters]);
 
-  // Update Redux filters.
   const handleFilterChange = (status) => {
     dispatch(setVendorFilters({ status }));
   };
 
   const handleSearchChange = (event) => {
-    dispatch(
-      setVendorFilters({
-        search: event.target.value,
-      }),
-    );
+    dispatch(setVendorFilters({ search: event.target.value }));
   };
 
-  // Open vendor details.
-  const handleViewVendor = (vendor) => {
+  const handleOpenVendor = async (vendor, edit = false) => {
+    const vendorId = vendor?._id || vendor?.id;
+
+    if (!vendorId) {
+      console.error("Vendor ID missing:", vendor);
+      return;
+    }
+
     dispatch(setSelectedVendor(vendor));
+    setInitialEdit(edit);
     setDetailsOpen(true);
+
+    try {
+      const result = await dispatch(fetchAdminVendorById(vendorId));
+
+      if (fetchAdminVendorById.rejected.match(result)) {
+        console.error(
+          "Failed to fetch vendor details:",
+          result.payload || result.error,
+        );
+      }
+    } catch (error) {
+      console.error("Vendor details error:", error);
+    }
+  };
+
+  const handleViewVendor = (vendor) => {
+    return handleOpenVendor(vendor, false);
+  };
+
+  const handleEditVendor = (vendor) => {
+    return handleOpenVendor(vendor, true);
+  };
+
+  const handleUpdateVendor = async (vendorId, vendorData) => {
+    try {
+      await dispatch(
+        updateAdminVendor({ vendorId, vendorData }),
+      ).unwrap();
+
+      setInitialEdit(false);
+      return true;
+    } catch (error) {
+      console.error("Failed to update vendor:", error);
+      return false;
+    }
   };
 
   const handleCloseDetails = () => {
-    if (loading) return;
+    if (detailsLoading || saving) return;
 
     setDetailsOpen(false);
+    setInitialEdit(false);
     dispatch(clearSelectedVendor());
   };
 
-  // Edit action placeholder until the edit flow is connected.
-  const handleEditVendor = (vendor) => {
-    console.log("Edit vendor:", vendor?._id);
-  };
-
-  // Delete action placeholder until the admin delete API is confirmed.
   const handleDeleteVendor = async (vendor) => {
-    console.log("Delete vendor:", vendor?._id);
+    const vendorId = vendor?._id || vendor?.id;
+
+    if (!vendorId || deleting) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${
+        vendor.shopName || "this vendor"
+      }"?`,
+    );
+
+    if (!confirmed) return;
+
+    const result = await dispatch(deleteAdminVendor(vendorId));
+
+    if (deleteAdminVendor.fulfilled.match(result)) {
+      if (
+        (selectedVendor?._id || selectedVendor?.id) === vendorId
+      ) {
+        setDetailsOpen(false);
+        setInitialEdit(false);
+        dispatch(clearSelectedVendor());
+      }
+
+      if (
+        (statusVendor?._id || statusVendor?.id) === vendorId
+      ) {
+        setStatusOpen(false);
+        setStatusVendor(null);
+      }
+    }
   };
 
-  // Open status confirmation modal.
   const handleStatusClick = (vendor) => {
+    if (!vendor?._id && !vendor?.id) return;
+
     setStatusVendor(vendor);
     setStatusOpen(true);
   };
@@ -122,12 +184,39 @@ const Vendors = () => {
     setStatusVendor(null);
   };
 
-  // Connect this handler to the real status-update thunk.
   const handleToggleStatus = async (vendor, status) => {
-    console.log("Update vendor status:", vendor?._id, status);
+    const vendorId = vendor?._id || vendor?.id;
 
-    // Do not close the modal until the API update succeeds.
-    // Add the actual status-update thunk here.
+    if (!vendorId || saving) return;
+
+    const isActive =
+      typeof status === "boolean"
+        ? status
+        : typeof status?.isActive === "boolean"
+          ? status.isActive
+          : typeof status?.active === "boolean"
+            ? status.active
+            : undefined;
+
+    if (typeof isActive !== "boolean") {
+      console.error(
+        "VendorStatusToggle must pass the target boolean status to onConfirm.",
+      );
+      return;
+    }
+
+    const result = await dispatch(
+      toggleAdminVendorStatus({
+        vendorId,
+        isActive,
+      }),
+    );
+
+    if (toggleAdminVendorStatus.fulfilled.match(result)) {
+      setStatusOpen(false);
+      setStatusVendor(null);
+      dispatch(fetchAdminVendors());
+    }
   };
 
   const handleRefresh = () => {
@@ -138,7 +227,6 @@ const Vendors = () => {
     <div className="min-h-screen bg-background text-foreground">
       <main className="min-w-0 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
-          {/* Page Header */}
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -160,7 +248,6 @@ const Vendors = () => {
             </button>
           </div>
 
-          {/* Error State */}
           {error && (
             <div
               role="alert"
@@ -179,7 +266,6 @@ const Vendors = () => {
             </div>
           )}
 
-          {/* Filters */}
           <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-2">
@@ -188,7 +274,8 @@ const Vendors = () => {
                   { label: "Active", value: "active" },
                   { label: "Inactive", value: "inactive" },
                 ].map((item) => {
-                  const isActive = (filters?.status || "") === item.value;
+                  const isActive =
+                    (filters?.status || "") === item.value;
 
                   return (
                     <button
@@ -222,7 +309,6 @@ const Vendors = () => {
             </div>
           </div>
 
-          {/* Vendor Count */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm text-muted-foreground">
@@ -231,13 +317,17 @@ const Vendors = () => {
                   : "Total Vendors"}
               </p>
 
-              <p className="text-2xl font-semibold">{filteredVendors.length}</p>
+              <p className="text-2xl font-semibold">
+                {filteredVendors.length}
+              </p>
             </div>
 
             {filters?.search && (
               <button
                 type="button"
-                onClick={() => dispatch(setVendorFilters({ search: "" }))}
+                onClick={() =>
+                  dispatch(setVendorFilters({ search: "" }))
+                }
                 className="text-sm font-medium text-primary hover:underline"
               >
                 Clear search
@@ -245,34 +335,33 @@ const Vendors = () => {
             )}
           </div>
 
-          {/* Vendor Table */}
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             <VendorTable
               vendors={filteredVendors}
               loading={loading}
-              onView={handleViewVendor}
-              onEdit={handleEditVendor}
-              onDelete={handleDeleteVendor}
+              onViewVendor={handleViewVendor}
+              onEditVendor={handleEditVendor}
+              onDeleteVendor={handleDeleteVendor}
               onToggleStatus={handleStatusClick}
             />
           </div>
         </div>
       </main>
 
-      {/* Vendor Details Modal */}
       {detailsOpen && selectedVendor && (
         <VendorDetails
           key={selectedVendor._id || selectedVendor.id}
           vendor={selectedVendor}
           open={detailsOpen}
-          loading={loading}
+          loading={detailsLoading}
+          saving={saving}
+          initialEdit={initialEdit}
           onClose={handleCloseDetails}
-          onEdit={handleEditVendor}
-          onToggleStatus={handleStatusClick}
+          onUpdate={handleUpdateVendor}
+          onStatusChange={handleStatusClick}
         />
       )}
 
-      {/* Vendor Status Modal */}
       {statusOpen && statusVendor && (
         <VendorStatusToggle
           key={statusVendor._id || statusVendor.id}

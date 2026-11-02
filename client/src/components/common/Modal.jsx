@@ -59,7 +59,7 @@ const Modal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-99 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
       onMouseDown={handleOverlayClick}
       role="dialog"
       aria-modal="true"

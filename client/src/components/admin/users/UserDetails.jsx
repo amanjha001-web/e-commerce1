@@ -1,521 +1,287 @@
 
 import { useState } from "react";
 
+import Modal from "../../common/Modal";
+
+const getInitialForm = (user) => ({
+  fullName: user?.fullName || "",
+  username: user?.username || "",
+  email: user?.email || "",
+  phone: user?.phone || "",
+  role: user?.role || "customer",
+});
+
+const formatDateTime = (value) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-IN");
+};
+
 const UserDetails = ({
   user = null,
   open = false,
   loading = false,
+  saving = false,
+  editMode = false,
   onClose,
   onEdit,
+  onSave,
   onToggleStatus,
 }) => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [form, setForm] = useState(() => getInitialForm(user));
 
-  if (!open || !user) return null;
+  const updateField = (event) => {
+    const { name, value } = event.target;
 
-  const userName =
-    user.fullName || user.name || user.username || "Unknown User";
-
-  const email = user.email || "-";
-
-  const role = user.role
-    ? user.role
-        .toString()
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase())
-    : "User";
-
-  const status =
-    user.status || (user.isActive === false ? "inactive" : "active");
-
-  const avatar = user.avatar || user.profileImage || user.image || null;
-
-  const getInitials = () => {
-    return userName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((word) => word.charAt(0).toUpperCase())
-      .join("");
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
   };
 
-  const formatDate = (date) => {
-    if (!date) return "-";
+  const handleSubmit = (event) => {
+    event.preventDefault();
 
-    const parsedDate = new Date(date);
+    if (!user?._id || saving) return;
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "-";
-    }
-
-    return parsedDate.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    onSave?.(user, form);
   };
 
-  const formatDateTime = (date) => {
-    if (!date) return "-";
+  const name =
+    user?.fullName || user?.username || user?.email || "User details";
 
-    const parsedDate = new Date(date);
+  const avatarUrl =
+    user?.avatar?.url || user?.profileImage || user?.image || "";
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "-";
-    }
+  const fieldClass =
+    "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white";
 
-    return parsedDate.toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const readOnlyField = (label, value) => (
+    <div key={label}>
+      <p className="text-xs text-gray-500">{label}</p>
 
-  const getStatusClass = () => {
-    const statusMap = {
-      active:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-
-      inactive:
-        "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-
-      blocked:
-        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-
-      suspended:
-        "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-
-      pending:
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-    };
-
-    return (
-      statusMap[status?.toLowerCase()] ||
-      "bg-muted text-muted-foreground"
-    );
-  };
-
-  const formatStatus = () => {
-    return status
-      .toString()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-  };
-
-  const handleBackdropClick = (event) => {
-    if (event.target === event.currentTarget) {
-      onClose?.();
-    }
-  };
+      <p className="mt-1 break-words text-sm text-gray-900 dark:text-gray-100">
+        {value || "—"}
+      </p>
+    </div>
+  );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-      onMouseDown={handleBackdropClick}
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title={editMode ? "Edit user" : "User details"}
+      size="lg"
+      closeOnOverlay={!saving}
+      closeOnEscape={!saving}
+      className="dark:bg-gray-950"
     >
-      <div
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="user-details-title"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
-          <div>
-            <h2
-              id="user-details-title"
-              className="text-lg font-semibold text-foreground"
-            >
-              User Details
-            </h2>
+      {loading ? (
+        <div className="py-12 text-center text-sm text-gray-500">
+          Loading user details...
+        </div>
+      ) : !user ? (
+        <div className="py-10 text-center text-sm text-gray-500">
+          User details are unavailable.
+        </div>
+      ) : (
+        <>
+          {/* User header */}
+          <div className="flex min-w-0 items-center gap-3">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="h-12 w-12 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                {name.charAt(0).toUpperCase()}
+              </div>
+            )}
 
-            <p className="mt-1 text-xs text-muted-foreground">
-              View account information and activity
-            </p>
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold text-gray-900 dark:text-white">
+                {name}
+              </h3>
+
+              <p className="truncate text-sm text-gray-500">
+                {user.email || "—"}
+              </p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
+          {/* Status badges */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs capitalize dark:bg-gray-800 dark:text-gray-200">
+              {(user.role || "customer").replaceAll("_", " ")}
+            </span>
 
-        {/* Body */}
-        <div className="overflow-y-auto">
-          {/* Profile */}
-          <div className="border-b border-border px-5 py-6 sm:px-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={userName}
-                    className="h-16 w-16 rounded-full border border-border object-cover"
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                user.isBlocked
+                  ? "bg-red-100 text-red-700"
+                  : "bg-green-100 text-green-700"
+              }`}
+            >
+              {user.isBlocked ? "Blocked" : "Active"}
+            </span>
+
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                user.isVerified
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {user.isVerified ? "Verified" : "Not verified"}
+            </span>
+          </div>
+
+          {editMode ? (
+            /* Edit form */
+            <form onSubmit={handleSubmit} className="mt-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="text-sm text-gray-700 dark:text-gray-200">
+                  Full name
+                  <input
+                    name="fullName"
+                    type="text"
+                    value={form.fullName}
+                    onChange={updateField}
+                    className={fieldClass}
+                    required
                   />
-                ) : (
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
-                    {getInitials()}
-                  </div>
-                )}
+                </label>
 
-                <div className="min-w-0">
-                  <h3 className="truncate text-lg font-semibold text-foreground">
-                    {userName}
-                  </h3>
+                <label className="text-sm text-gray-700 dark:text-gray-200">
+                  Username
+                  <input
+                    name="username"
+                    type="text"
+                    value={form.username}
+                    onChange={updateField}
+                    className={fieldClass}
+                    required
+                  />
+                </label>
 
-                  <p className="truncate text-sm text-muted-foreground">
-                    {email}
-                  </p>
+                <label className="text-sm text-gray-700 dark:text-gray-200">
+                  Email
+                  <input
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={updateField}
+                    className={fieldClass}
+                    required
+                  />
+                </label>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
-                      {role}
-                    </span>
+                <label className="text-sm text-gray-700 dark:text-gray-200">
+                  Phone
+                  <input
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={updateField}
+                    className={fieldClass}
+                  />
+                </label>
 
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusClass()}`}
-                    >
-                      {formatStatus()}
-                    </span>
-                  </div>
-                </div>
+                <label className="text-sm text-gray-700 dark:text-gray-200 sm:col-span-2">
+                  Role
+                  <select
+                    name="role"
+                    value={form.role}
+                    onChange={updateField}
+                    className={fieldClass}
+                  >
+                    <option value="customer">Customer</option>
+                    <option value="vendor">Vendor</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </label>
               </div>
 
-              <div className="flex gap-2">
+              <p className="mt-3 text-xs text-gray-500">
+                Backend permissions determine which fields and role changes
+                are allowed.
+              </p>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
                 <button
                   type="button"
-                  onClick={() => onEdit?.(user)}
-                  disabled={loading}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
+                  onClick={onClose}
+                  disabled={saving}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:text-gray-200"
                 >
-                  Edit
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* Read-only details */
+            <>
+              <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {readOnlyField("Full name", user.fullName)}
+                {readOnlyField("Username", user.username)}
+                {readOnlyField("Email", user.email)}
+                {readOnlyField("Phone", user.phone)}
+                {readOnlyField("User ID", user._id)}
+                {readOnlyField("Role", user.role)}
+                {readOnlyField("Created at", formatDateTime(user.createdAt))}
+                {readOnlyField(
+                  "Last updated",
+                  formatDateTime(user.updatedAt)
+                )}
+                {readOnlyField("Last login", formatDateTime(user.lastLogin))}
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                >
+                  Close
                 </button>
 
                 <button
                   type="button"
                   onClick={() => onToggleStatus?.(user)}
-                  disabled={loading}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted disabled:opacity-60"
+                  disabled={saving}
+                  className="rounded-lg border border-orange-200 px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 disabled:opacity-50"
                 >
-                  {status?.toLowerCase() === "active"
-                    ? "Block"
-                    : "Activate"}
+                  {user.isBlocked ? "Unblock user" : "Block user"}
                 </button>
-              </div>
-            </div>
-          </div>
 
-          {/* Tabs */}
-          <div className="border-b border-border px-5 sm:px-6">
-            <div className="flex gap-6 overflow-x-auto">
-              {[
-                {
-                  id: "overview",
-                  label: "Overview",
-                },
-                {
-                  id: "activity",
-                  label: "Activity",
-                },
-                {
-                  id: "orders",
-                  label: "Orders",
-                },
-              ].map((tab) => (
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative whitespace-nowrap py-3 text-sm font-medium transition ${
-                    activeTab === tab.id
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  onClick={() => onEdit?.(user)}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
-                  {tab.label}
-
-                  {activeTab === tab.id && (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />
-                  )}
+                  Edit user
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-5 sm:p-6">
-            {/* Overview */}
-            {activeTab === "overview" && (
-              <div className="space-y-6">
-                {/* Account Information */}
-                <section>
-                  <h3 className="mb-4 text-sm font-semibold text-foreground">
-                    Account Information
-                  </h3>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Full Name
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {user.fullName || user.name || "-"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Username
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {user.username ? `@${user.username}` : "-"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Email
-                      </p>
-
-                      <p className="mt-1 break-all text-sm font-medium text-foreground">
-                        {email}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Phone
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {user.phone || user.phoneNumber || "-"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Role
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {role}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        User ID
-                      </p>
-
-                      <p className="mt-1 break-all text-sm font-medium text-foreground">
-                        {user._id || user.id || "-"}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Account Dates */}
-                <section>
-                  <h3 className="mb-4 text-sm font-semibold text-foreground">
-                    Account Dates
-                  </h3>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Joined
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDate(user.createdAt)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Last Updated
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDate(user.updatedAt)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-border p-4">
-                      <p className="text-xs text-muted-foreground">
-                        Last Login
-                      </p>
-
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {formatDateTime(
-                          user.lastLoginAt || user.lastLogin,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-
-                {/* Address */}
-                {(user.address || user.addresses?.length) && (
-                  <section>
-                    <h3 className="mb-4 text-sm font-semibold text-foreground">
-                      Address
-                    </h3>
-
-                    <div className="rounded-xl border border-border p-4 text-sm text-foreground">
-                      {typeof user.address === "string" ? (
-                        user.address
-                      ) : (
-                        <div className="space-y-1">
-                          <p>
-                            {user.address?.street ||
-                              user.address?.addressLine1 ||
-                              ""}
-                          </p>
-
-                          <p>
-                            {user.address?.city || ""}
-                            {user.address?.state
-                              ? `, ${user.address.state}`
-                              : ""}
-                          </p>
-
-                          <p>
-                            {user.address?.postalCode ||
-                              user.address?.zipCode ||
-                              ""}
-                          </p>
-
-                          <p>{user.address?.country || ""}</p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                )}
               </div>
-            )}
-
-            {/* Activity */}
-            {activeTab === "activity" && (
-              <div className="space-y-3">
-                {(user.activity || []).length ? (
-                  user.activity.map((item, index) => (
-                    <div
-                      key={item?._id || index}
-                      className="rounded-xl border border-border p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {item?.title ||
-                              item?.action ||
-                              "User activity"}
-                          </p>
-
-                          {item?.description && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-
-                        <span className="whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDateTime(
-                            item?.createdAt || item?.date,
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-border px-6 py-12 text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      No activity available
-                    </p>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      User activity will appear here when available.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Orders */}
-            {activeTab === "orders" && (
-              <div className="space-y-3">
-                {(user.orders || []).length ? (
-                  user.orders.map((order, index) => (
-                    <div
-                      key={order?._id || index}
-                      className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          #
-                          {order?.orderNumber ||
-                            order?.orderId ||
-                            order?._id ||
-                            index + 1}
-                        </p>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {formatDate(order?.createdAt)}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">
-                          ₹
-                          {Number(
-                            order?.totalAmount ||
-                              order?.total ||
-                              0,
-                          ).toLocaleString("en-IN")}
-                        </p>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {order?.status || "Unknown"}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-border px-6 py-12 text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      No orders available
-                    </p>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Orders placed by this user will appear here.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end border-t border-border px-5 py-4 sm:px-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+            </>
+          )}
+        </>
+      )}
+    </Modal>
   );
 };
 

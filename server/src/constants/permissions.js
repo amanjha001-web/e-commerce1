@@ -65,6 +65,9 @@ export const PERMISSIONS = Object.freeze({
   PAYMENT_READ: "payment:read",
   PAYMENT_PROCESS: "payment:process",
   PAYMENT_REFUND: "payment:refund",
+  PAYMENT_RECONCILE: "payment:reconcile",
+  PAYOUT_READ: "payout:read",
+  PAYOUT_UPDATE: "payout:update",
 
   // Review Permissions
 
@@ -86,8 +89,45 @@ export const PERMISSIONS = Object.freeze({
   DASHBOARD_VIEW: "dashboard:view",
   ANALYTICS_VIEW: "analytics:view",
 
+  // Categories permission
+  CATEGORY_READ: "category:read",
+  CATEGORY_CREATE: "category:create",
+  CATEGORY_UPDATE: "category:update",
+  CATEGORY_DELETE: "category:delete",
+
   // System Permissions
 
   SETTINGS_MANAGE: "settings:manage",
   LOGS_VIEW: "logs:view",
+
+  SETTINGS_READ: "settings:read",
+  SETTINGS_UPDATE: "settings:update",
+
+  // Tax Permissions
+
+  TAX_CREATE: "tax:create",
+  TAX_READ: "tax:read",
+  TAX_UPDATE: "tax:update",
+  TAX_DELETE: "tax:delete",
+  TAX_STATUS_UPDATE: "tax:status_update",
+
+  // Shipping Zone Permissions
+
+  SHIPPING_ZONE_CREATE: "shipping_zone:create",
+  SHIPPING_ZONE_READ: "shipping_zone:read",
+  SHIPPING_ZONE_UPDATE: "shipping_zone:update",
+  SHIPPING_ZONE_DELETE: "shipping_zone:delete",
+  SHIPPING_ZONE_STATUS_UPDATE: "shipping_zone:status_update",
+
+  // Support Ticket Permissions
+
+  SUPPORT_TICKET_CREATE: "support_ticket:create",
+  SUPPORT_TICKET_READ: "support_ticket:read",
+  SUPPORT_TICKET_UPDATE: "support_ticket:update",
+  SUPPORT_TICKET_ASSIGN: "support_ticket:assign",
+  SUPPORT_TICKET_REPLY: "support_ticket:reply",
+  SUPPORT_TICKET_NOTE: "support_ticket:note",
+  SUPPORT_TICKET_CLOSE: "support_ticket:close",
+  SUPPORT_TICKET_REOPEN: "support_ticket:reopen",
+  SUPPORT_TICKET_HISTORY: "support_ticket:history",
 });

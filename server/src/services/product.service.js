@@ -1,10 +1,12 @@
 import slugify from "slugify";
+import mongoose from "mongoose";
 
 import ApiError from "../utils/ApiError.js";
 
 import productRepository from "../repositories/product.repository.js";
 import brandRepository from "../repositories/brand.repository.js";
 import categoryRepository from "../repositories/category.repository.js";
+import vendorRepository from "../repositories/vendor.repository.js";
 
 import {
   uploadOnCloudinary,
@@ -96,23 +98,91 @@ const removeImages =
 
 /*                              Create Product                                */
 
-const createProduct = async (productData, files, user) => {
-  const { name, category, brand, price, discountPrice, stock } = productData;
 
-  if (!name || !category || !brand) {
+const createProduct = async (productData, files, user) => {
+  if (!user?._id || !["admin", "vendor"].includes(user.role)) {
+    throw new ApiError(403, "You are not authorized to create products");
+  }
+
+  const {
+    name,
+    shortDescription,
+    description,
+    category,
+    brand,
+    price,
+    stock,
+    sku,
+    tags,
+    specifications,
+    featured,
+    flashSale,
+    bestSeller,
+    trending,
+    newArrival,
+    seoTitle,
+    seoDescription,
+    vendorId,
+  } = productData;
+
+  if (
+    typeof name !== "string" ||
+    !name.trim() ||
+    typeof shortDescription !== "string" ||
+    !shortDescription.trim() ||
+    typeof description !== "string" ||
+    !description.trim() ||
+    !category ||
+    !brand ||
+    price === undefined ||
+    price === null ||
+    price === "" ||
+    stock === undefined ||
+    stock === null ||
+    stock === ""
+  ) {
     throw new ApiError(400, "Required fields are missing");
   }
 
-  if (Number(price) <= 0) {
-    throw new ApiError(400, "Invalid product price");
+  const numericPrice = Number(price);
+  const numericStock = Number(stock);
+
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+    throw new ApiError(400, "Product price must be greater than zero");
   }
 
-  if (Number(stock) < 0) {
-    throw new ApiError(400, "Invalid stock quantity");
+  if (!Number.isFinite(numericStock) || numericStock < 0) {
+    throw new ApiError(400, "Stock must be a non-negative number");
   }
 
-  if (discountPrice && Number(discountPrice) > Number(price)) {
-    throw new ApiError(400, "Discount price cannot exceed actual price");
+  // Vendor identity is resolved by the backend.
+  let vendorProfile;
+
+  if (user.role === "vendor") {
+    vendorProfile = await vendorRepository.getVendorByUserId(user._id);
+  } else {
+    // Admin sends Vendor._id from the vendors collection.
+    if (!vendorId || !mongoose.isValidObjectId(vendorId)) {
+      throw new ApiError(400, "A valid vendorId is required");
+    }
+
+    vendorProfile = await vendorRepository.getVendorById(vendorId);
+  }
+
+  if (!vendorProfile || !vendorProfile.user) {
+    throw new ApiError(404, "Vendor profile not found");
+  }
+
+  if (vendorProfile.user.role !== "vendor") {
+    throw new ApiError(400, "Selected profile does not belong to a vendor");
+  }
+
+  if (vendorProfile.deletedAt) {
+    throw new ApiError(400, "Vendor profile has been deleted");
+  }
+
+  if (!vendorProfile.isApproved || !vendorProfile.isActive) {
+    throw new ApiError(400, "Vendor must be approved and active");
   }
 
   const existingCategory = await categoryRepository.getCategoryById(category);
@@ -127,64 +197,69 @@ const createProduct = async (productData, files, user) => {
     throw new ApiError(404, "Brand not found");
   }
 
-  if (productData.sku) {
-    const existingSku = await productRepository.getProductBySku(
-      productData.sku,
-    );
+  if (sku?.trim()) {
+    const existingSku = await productRepository.getProductBySku(sku.trim());
 
     if (existingSku) {
       throw new ApiError(409, "Product with this SKU already exists");
     }
   }
 
-  const slug = await generateSlug(name);
-  let thumbnail = {
-    url: "",
-    publicId: "",
-  };
+  const slug = await generateSlug(name.trim());
 
+  let thumbnail = { url: "", publicId: "" };
   let images = [];
 
   try {
-    /*               Upload Thumbnail               */
-
-    if (files?.thumbnail && files.thumbnail.length > 0) {
+    if (files?.thumbnail?.length) {
       thumbnail = await uploadThumbnail(files.thumbnail[0]);
     }
 
-    /*                        Upload Images                     */
-
-    if (files?.images && files.images.length > 0) {
-      images = await uploadImages(files.images, name);
+    if (files?.images?.length) {
+      images = await uploadImages(files.images, name.trim());
     }
 
-    /*                        Create Product                        */
-
-    const product = await productRepository.createProduct({
-      ...productData,
-
-      vendor: user._id,
-
+    const productToCreate = {
+      name: name.trim(),
+      shortDescription: shortDescription.trim(),
+      description: description.trim(),
+      category,
+      brand,
+      price: numericPrice,
+      stock: numericStock,
+      vendor: vendorProfile.user._id,
       slug,
-
       thumbnail,
-
       images,
-    });
+      ...(sku?.trim() ? { sku: sku.trim() } : {}),
+      ...(tags !== undefined ? { tags } : {}),
+      ...(specifications !== undefined ? { specifications } : {}),
+      ...(featured !== undefined ? { featured } : {}),
+      ...(flashSale !== undefined ? { flashSale } : {}),
+      ...(bestSeller !== undefined ? { bestSeller } : {}),
+      ...(trending !== undefined ? { trending } : {}),
+      ...(newArrival !== undefined ? { newArrival } : {}),
+      ...(seoTitle !== undefined ? { seoTitle } : {}),
+      ...(seoDescription !== undefined ? { seoDescription } : {}),
 
-    return product;
+      // Client cannot publish a product during creation.
+      status: "draft",
+      isActive: true,
+      deletedAt: null,
+    };
+
+    return await productRepository.createProduct(productToCreate);
   } catch (error) {
-    /*                        Rollback Upload                        */
-
     if (thumbnail.publicId) {
-      await deleteFromCloudinary(thumbnail.publicId);
+      await deleteFromCloudinary(thumbnail.publicId).catch(() => {});
     }
 
-    await removeImages(images);
+    await removeImages(images).catch(() => {});
 
     throw error;
   }
 };
+
 
 /*                            Get Product By Id                               */
 

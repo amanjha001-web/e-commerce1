@@ -12,6 +12,7 @@ import vendorReducer from "./slices/vendorSlice";
 import adminDashboardReducer from "./slices/adminDashboardSlice";
 import adminVendorsReducer from "./slices/adminVendorsSlice";
 import vendorRequestReducer from "./slices/vendorRequestSlice"
+import adminUsersReducer from "./slices/adminUsersSlice"
 
 const store = configureStore({
   reducer: {
@@ -27,6 +28,7 @@ const store = configureStore({
     adminDashboard: adminDashboardReducer,
     vendorRequests: vendorRequestReducer,
     adminVendors: adminVendorsReducer,
+    adminUsers: adminUsersReducer,
   },
 
   middleware: (getDefaultMiddleware) =>
