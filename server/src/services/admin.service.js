@@ -17,7 +17,7 @@ import InventoryMovement from "../models/InventoryMovement.model.js";
 import Setting from "../models/Setting.model.js";
 import SettingHistory from "../models/SettingHistory.model.js";
 import ShippingZone from "../models/ShippingZone.model.js";
-import SupportTicket from "../models/supportTicket.model.js";
+import SupportTicket from "../models/SupportTicket.model.js";
 import Tax from "../models/Tax.model.js";
 import {
   uploadOnCloudinary,
