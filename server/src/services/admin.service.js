@@ -378,15 +378,33 @@ export const getAllUsersbyAdmin = async (query = {}) => {
   }
 
   if (query.status === "active") {
-    filter.isActive = true;
-  } else if (query.status === "inactive") {
-    filter.isActive = false;
+    filter.isBlocked = false;
+  } else if (query.status === "blocked") {
+    filter.isBlocked = true;
+  }
+
+  // Build sort option
+  let sortOption = { createdAt: -1 };
+  if (query.sortBy) {
+    const sortValue = String(query.sortBy).toLowerCase();
+    const isAscending = sortValue.includes("asc");
+    const isDescending = sortValue.includes("desc");
+    
+    if (sortValue.includes("name")) {
+      sortOption = { fullName: isAscending ? 1 : -1 };
+    } else if (sortValue.includes("email")) {
+      sortOption = { email: isAscending ? 1 : -1 };
+    } else if (sortValue === "newest") {
+      sortOption = { createdAt: -1 };
+    } else if (sortValue === "oldest") {
+      sortOption = { createdAt: 1 };
+    }
   }
 
   const [users, totalUsers] = await Promise.all([
     User.find(filter)
       .select("-password -refreshToken -resetPasswordToken")
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -485,8 +503,8 @@ export const deleteUserByAdmin = async (userId, currentAdminId) => {
     throw error;
   }
 
-  // Protect privileged accounts from deletion through user management.
-  if (["admin", "super_admin"].includes(user.role)) {
+  // Protect admin accounts from deletion through user management.
+  if (user.role === "admin") {
     const error = new Error(
       "Admin accounts cannot be deleted through user management",
     );
@@ -497,6 +515,28 @@ export const deleteUserByAdmin = async (userId, currentAdminId) => {
   await User.findByIdAndDelete(userId);
 
   return { deletedUserId: userId };
+};
+
+// Toggle user status (block/unblock)
+export const toggleUserStatus = async (userId) => {
+  if (!mongoose.isValidObjectId(userId)) {
+    const error = new Error("Invalid user ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const user = await User.findById(userId).select("isBlocked");
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  user.isBlocked = !user.isBlocked;
+  await user.save();
+
+  return { user: { _id: user._id, isBlocked: user.isBlocked } };
 };
 
 
@@ -5070,10 +5110,10 @@ export default {
   // Users
   getAllUsers,
   getUserById,
-  updateUserStatus,
   getAllUsersbyAdmin,
   updateUserByAdmin,
   deleteUserByAdmin,
+  toggleUserStatus,
 
   // Vendors
   getAllVendors,

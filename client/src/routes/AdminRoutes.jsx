@@ -11,10 +11,10 @@ import VendorRequestsContainer from "../pages/admin/VendorRequestsContainer";
 import Products from "../pages/admin/Products";
 import Categories from "../pages/admin/Categories";
 import Brands from "../pages/admin/Brands";
-import Banners from "../pages/admin/Banners";
+import BannersContainer from "../pages/admin/BannersContainer";
 import Orders from "../pages/admin/Orders";
-import Payments from "../pages/admin/Payments";
-import Coupons from "../pages/admin/Coupons";
+import PaymentsContainer from "../pages/admin/PaymentsContainer";
+import CouponsContainer from "../pages/admin/CouponsContainer";
 import Reports from "../pages/admin/Reports";
 import Support from "../pages/admin/Support";
 import Notifications from "../pages/admin/Notifications";
@@ -41,10 +41,10 @@ const AdminRoutes = () => {
           <Route path="products" element={<Products />} />
           <Route path="categories" element={<Categories />} />
           <Route path="brands" element={<Brands />} />
-          <Route path="banners" element={<Banners />} />
+          <Route path="banners" element={<BannersContainer />} />
           <Route path="orders" element={<Orders />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="coupons" element={<Coupons />} />
+          <Route path="payments" element={<PaymentsContainer />} />
+          <Route path="coupons" element={<CouponsContainer />} />
           <Route path="reports" element={<Reports />} />
           <Route path="support" element={<Support />} />
           <Route path="notifications" element={<Notifications />} />

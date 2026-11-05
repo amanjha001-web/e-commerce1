@@ -9,10 +9,18 @@ import notificationReducer from "./slices/notificationSlice";
 import uiReducer from "./slices/uiSlice";
 import vendorDashboardReducer from "./slices/vendorDashboardSlice";
 import vendorReducer from "./slices/vendorSlice";
-import adminDashboardReducer from "./slices/adminDashboardSlice";
-import adminVendorsReducer from "./slices/adminVendorsSlice";
-import vendorRequestReducer from "./slices/vendorRequestSlice"
-import adminUsersReducer from "./slices/adminUsersSlice"
+import vendorRequestReducer from "./slices/vendorRequestSlice";
+
+// Admin slices - located in Admin subdirectory
+import adminDashboardReducer from "./slices/Admin/adminDashboardSlice";
+import adminOrdersReducer from "./slices/Admin/adminOrdersSlice";
+import adminUsersReducer from "./slices/Admin/adminUsersSlice";
+import adminVendorsReducer from "./slices/Admin/adminVendorsSlice";
+import adminBannersReducer from "./slices/Admin/adminBannersSlice";
+import adminCouponsReducer from "./slices/Admin/adminCouponsSlice";
+import adminPaymentsReducer from "./slices/Admin/adminPaymentsSlice";
+import adminTaxesReducer from "./slices/Admin/adminTaxesSlice";
+import adminShippingReducer from "./slices/Admin/adminShippingSlice";
 
 const store = configureStore({
   reducer: {
@@ -26,9 +34,15 @@ const store = configureStore({
     vendorDashboard: vendorDashboardReducer,
     vendor: vendorReducer,
     adminDashboard: adminDashboardReducer,
+    adminOrders: adminOrdersReducer,
     vendorRequests: vendorRequestReducer,
     adminVendors: adminVendorsReducer,
     adminUsers: adminUsersReducer,
+    adminBanners: adminBannersReducer,
+    adminCoupons: adminCouponsReducer,
+    adminPayments: adminPaymentsReducer,
+    adminTaxes: adminTaxesReducer,
+    adminShipping: adminShippingReducer,
   },
 
   middleware: (getDefaultMiddleware) =>

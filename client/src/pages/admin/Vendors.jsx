@@ -15,7 +15,7 @@ import {
   setVendorFilters,
   setSelectedVendor,
   clearSelectedVendor,
-} from "../../store/slices/adminVendorsSlice";
+} from "../../store/slices/Admin/adminVendorsSlice";
 
 const Vendors = () => {
   const dispatch = useDispatch();

@@ -116,6 +116,15 @@ export const deleteUserByAdmin = asyncHandler(async (req, res) => {
   );
 });
 
+// Toggle user status (block/unblock)
+export const toggleUserStatusbyAdmin = asyncHandler(async (req, res) => {
+  const result = await adminService.toggleUserStatus(req.params.id);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "User status updated successfully")
+  );
+});
+
 /* ======================== Vendor Management ======================== */
 
 // Get all vendors
@@ -1198,6 +1207,7 @@ export default {
   updateUserStatusbyAdmin,
   updateUserByAdmin,
   deleteUserByAdmin,
+  toggleUserStatusbyAdmin,
 
   // Vendors
   getAllVendorsbyAdmin,

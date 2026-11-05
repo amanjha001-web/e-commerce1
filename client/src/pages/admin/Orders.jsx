@@ -1,39 +1,65 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import adminService from "../../services/admin.service";
 
 import OrderFilters from "../../components/admin/orders/OrderFilters";
 import OrderTable from "../../components/admin/orders/OrderTable";
 import OrderDetails from "../../components/admin/orders/OrderDetails";
 import OrderStatus from "../../components/admin/orders/OrderStatus";
 
-const Orders = ({
-  orders = [],
-  totalOrders = 0,
-  loading = false,
-  saving = false,
-  filters = {},
+const Orders = () => {
+  const [filters, setFilters] = useState({
+    status: "",
+    paymentStatus: "",
+    page: 1,
+    limit: 20,
+  });
 
-  onFilterChange,
-  onViewOrder,
-  onUpdateOrderStatus,
-  onCancelOrder,
-  onDeleteOrder,
-}) => {
+  const [orders, setOrders] = useState([]);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-
   const [statusOrder, setStatusOrder] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await adminService.getOrders(filters);
+      const data = response?.data ?? response;
+      setOrders(data?.orders || []);
+      setTotalOrders(data?.pagination?.total || data?.orders?.length || 0);
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    fetchOrders();
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [filters]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newFilters,
+      page: newFilters.page || 1,
+    }));
+  };
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setDetailsOpen(true);
-
-    onViewOrder?.(order);
   };
 
   const handleCloseDetails = () => {
     if (loading) return;
-
     setDetailsOpen(false);
     setSelectedOrder(null);
   };
@@ -45,30 +71,59 @@ const Orders = ({
 
   const handleCloseStatus = () => {
     if (saving) return;
-
     setStatusOpen(false);
     setStatusOrder(null);
   };
 
   const handleUpdateStatus = async (order, status) => {
-    if (!onUpdateOrderStatus || saving) return;
-
-    await onUpdateOrderStatus(order, status);
-
-    setStatusOpen(false);
-    setStatusOrder(null);
+    if (!status || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await adminService.updateOrderStatus(order._id, status);
+      fetchOrders();
+      if (selectedOrder?._id === order._id) {
+        setOrders((prev) =>
+          prev.map((o) => (o._id === order._id ? { ...o, status } : o))
+        );
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Failed to update status");
+    } finally {
+      setSaving(false);
+      setStatusOpen(false);
+      setStatusOrder(null);
+    }
   };
 
   const handleCancelOrder = async (order) => {
-    if (!onCancelOrder || saving) return;
-
-    await onCancelOrder(order);
+    if (!window.confirm(`Cancel order #${order._id}?`)) return;
+    setSaving(true);
+    try {
+      await adminService.cancelOrder(order._id, "Customer requested cancellation");
+      fetchOrders();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Failed to cancel order");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDeleteOrder = async (order) => {
-    if (!onDeleteOrder || saving) return;
-
-    await onDeleteOrder(order);
+    if (!window.confirm(`Delete order #${order._id}? This cannot be undone.`)) return;
+    setSaving(true);
+    try {
+      await adminService.deleteProduct(order._id);
+      if (selectedOrder?._id === order._id) {
+        setDetailsOpen(false);
+        setSelectedOrder(null);
+      }
+      fetchOrders();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Failed to delete order");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -86,9 +141,16 @@ const Orders = ({
             </p>
           </div>
 
+          {/* Error Alert */}
+          {error && !loading && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Filters */}
           <div className="mb-6">
-            <OrderFilters filters={filters} onChange={onFilterChange} />
+            <OrderFilters filters={filters} onChange={handleFilterChange} />
           </div>
 
           {/* Order Count */}

@@ -15,7 +15,7 @@ import {
   clearSelectedUser,
   clearAdminUsersError,
   setAdminUsersPage,
-} from "../../store/slices/adminUsersSlice";
+} from "../../store/slices/Admin/adminUsersSlice";
 
 const initialFilters = {
   search: "",

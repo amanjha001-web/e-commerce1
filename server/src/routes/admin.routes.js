@@ -157,6 +157,24 @@ router.delete(
   adminController.deleteUserByAdmin
 );
 
+// Toggle user status (block/unblock)
+router.patch(
+  "/users/:id/toggle-status",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.USER_UPDATE),
+  adminController.toggleUserStatusbyAdmin
+);
+
+// Also allow status update via PUT for compatibility
+router.put(
+  "/users/:id/status",
+  authMiddleware,
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+  permissionMiddleware(PERMISSIONS.USER_UPDATE),
+  adminController.toggleUserStatusbyAdmin
+);
+
 
 /*                           Vendor Management                                */
 

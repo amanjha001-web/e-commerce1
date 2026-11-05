@@ -204,7 +204,6 @@ const UserDetails = ({
                     <option value="customer">Customer</option>
                     <option value="vendor">Vendor</option>
                     <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
                   </select>
                 </label>
               </div>

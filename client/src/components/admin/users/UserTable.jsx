@@ -28,6 +28,22 @@ const formatDate = (date) => {
   });
 };
 
+const formatDateTime = (date) => {
+  if (!date) return "—";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const UserTable = ({
   users = [],
   loading = false,
@@ -160,6 +176,7 @@ const UserTable = ({
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Role</th>
               <th className="px-4 py-3">Joined</th>
+              <th className="px-4 py-3">Last Login</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
@@ -182,6 +199,10 @@ const UserTable = ({
 
                 <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
                   {formatDate(user?.createdAt)}
+                </td>
+
+                <td className="px-4 py-4 text-gray-600 dark:text-gray-300">
+                  {formatDateTime(user?.lastLogin)}
                 </td>
 
                 <td className="px-4 py-4">
@@ -218,6 +239,8 @@ const UserTable = ({
               <p>Role: {getRoleLabel(user?.role)}</p>
 
               <p>Joined: {formatDate(user?.createdAt)}</p>
+
+              <p>Last Login: {formatDateTime(user?.lastLogin)}</p>
 
               <p>
                 Status:{" "}
