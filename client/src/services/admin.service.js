@@ -96,6 +96,11 @@ const adminService = {
     return response.data;
   },
 
+  getPendingProducts: async (params = {}) => {
+    const response = await api.get("/admin/products/pending", { params });
+    return response.data;
+  },
+
   // ==================== Vendors ====================
   getVendors: async (params = {}) => {
     const response = await api.get("/admin/vendors", { params });

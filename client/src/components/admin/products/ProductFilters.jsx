@@ -6,7 +6,7 @@ const DEFAULT_FILTERS = {
   category: "all",
   vendor: "all",
   stock: "all",
-  sort: "newest",
+  sortBy: "newest",
 };
 
 const ProductFilters = ({
@@ -21,12 +21,7 @@ const ProductFilters = ({
   };
 
   const handleChange = (key, value) => {
-    const updatedFilters = {
-      ...currentFilters,
-      [key]: value,
-    };
-
-    onFilterChange?.(key, value, updatedFilters);
+    onFilterChange?.({ [key]: value });
   };
 
   const handleSearch = (event) => {
@@ -43,7 +38,7 @@ const ProductFilters = ({
     currentFilters.category !== "all" ||
     currentFilters.vendor !== "all" ||
     currentFilters.stock !== "all" ||
-    currentFilters.sort !== "newest";
+    currentFilters.sortBy !== "newest";
 
   return (
     <div className="rounded-2xl border border-border bg-background p-4 sm:p-5">
@@ -98,7 +93,6 @@ const ProductFilters = ({
             type="search"
             value={currentFilters.search}
             onChange={handleSearch}
-            disabled={loading}
             placeholder="Search by product name, SKU..."
             className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           />
@@ -123,13 +117,14 @@ const ProductFilters = ({
             disabled={loading}
             className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <option value="all">All Status</option>
+            <option value="all">All Statuses</option>
             <option value="active">Active</option>
-            <option value="published">Published</option>
             <option value="draft">Draft</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="published">Published</option>
+            <option value="rejected">Rejected</option>
             <option value="inactive">Inactive</option>
             <option value="blocked">Blocked</option>
-            <option value="pending">Pending</option>
           </select>
         </div>
 
@@ -219,8 +214,8 @@ const ProductFilters = ({
 
           <select
             id="product-sort"
-            value={currentFilters.sort}
-            onChange={(event) => handleChange("sort", event.target.value)}
+            value={currentFilters.sortBy}
+            onChange={(event) => handleChange("sortBy", event.target.value)}
             disabled={loading}
             className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >

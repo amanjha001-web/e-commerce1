@@ -40,6 +40,8 @@ const Users = () => {
   const [filters, setFilters] = useState(initialFilters);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  // Local state for user being viewed (avoids race condition with Redux state)
+  const [viewingUser, setViewingUser] = useState(null);
   const [statusUser, setStatusUser] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -116,7 +118,28 @@ const Users = () => {
   };
 
   const handleViewUser = (user) => {
-    openUserDetails(user, false);
+    setActionError("");
+    setEditMode(false);
+    setViewingUser(user); // Set user immediately from clicked row
+    
+    // Open modal and fetch fresh data in background
+    setDetailsOpen(true);
+    
+    dispatch(fetchAdminUserById(user._id))
+      .unwrap()
+      .then((freshUser) => {
+        // Update from API response when available
+        if (freshUser) {
+          setViewingUser(freshUser);
+        }
+      })
+      .catch((errorMessage) => {
+        setActionError(
+          typeof errorMessage === "string"
+            ? errorMessage
+            : "Unable to load user details.",
+        );
+      });
   };
 
   const handleEditUser = (user) => {
@@ -126,6 +149,7 @@ const Users = () => {
   const handleCloseDetails = () => {
     setDetailsOpen(false);
     setEditMode(false);
+    setViewingUser(null);
     dispatch(clearSelectedUser());
   };
 
@@ -331,7 +355,7 @@ const Users = () => {
       </div>
 
       <UserDetails
-        user={selectedUser}
+        user={viewingUser || selectedUser}
         open={detailsOpen}
         loading={detailsLoading}
         saving={saving}

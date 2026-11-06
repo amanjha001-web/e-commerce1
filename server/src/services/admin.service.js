@@ -29,8 +29,6 @@ import razorpay from "../config/razorpay.js";
 
 import ApiError from "../utils/ApiError.js";
 
-import { PRODUCT_STATUS } from "../constants/index.js";
-
 /* ======================== Dashboard Statistics ======================== */
 
 //Dashboard stats
@@ -1001,12 +999,40 @@ export const getAllProducts = async (query = {}) => {
     filter.vendor = query.vendor;
   }
 
+  // Build sort option
+  let sortOption = { createdAt: -1 };
+  if (query.sortBy) {
+    const sortValue = String(query.sortBy).toLowerCase();
+    const isAscending = sortValue.includes("asc");
+
+    if (sortValue.includes("price")) {
+      sortOption = { price: isAscending ? 1 : -1 };
+    } else if (sortValue.includes("stock") || sortValue.includes("quantity")) {
+      sortOption = { stock: isAscending ? 1 : -1 };
+    } else if (sortValue.includes("name")) {
+      sortOption = { name: isAscending ? 1 : -1 };
+    } else if (sortValue === "oldest") {
+      sortOption = { createdAt: 1 };
+    }
+  }
+
+  // Stock status filter
+  if (["in_stock", "low_stock", "out_of_stock"].includes(query.stockStatus)) {
+    if (query.stockStatus === "in_stock") {
+      filter.stock = { $gt: 0 };
+    } else if (query.stockStatus === "low_stock") {
+      filter.stock = { $gt: 0, $lte: 10 };
+    } else if (query.stockStatus === "out_of_stock") {
+      filter.stock = { $eq: 0 };
+    }
+  }
+
   const [products, total] = await Promise.all([
     Product.find(filter)
       .populate("category", "name")
       .populate("brand", "name")
       .populate("vendor", "fullName email")
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -1167,7 +1193,7 @@ export const deleteProductByAdmin = async (productId) => {
 const approveProduct = async (productId) => {
   const product = await Product.findByIdAndUpdate(
     productId,
-    { status: PRODUCT_STATUS.ACTIVE },
+    { status: PRODUCT_STATUS.PUBLISHED, isActive: true },
     { new: true, runValidators: true },
   );
 

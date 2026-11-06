@@ -7,6 +7,8 @@ const ProductTable = ({
   onEditProduct,
   onDeleteProduct,
   onToggleStatus,
+  onApproveProduct,
+  onRejectProduct,
 }) => {
   const getProductName = (product) =>
     product?.name ||
@@ -652,6 +654,26 @@ const ProductTable = ({
                 >
                   Delete
                 </button>
+
+                {onApproveProduct && (
+                  <button
+                    type="button"
+                    onClick={() => onApproveProduct?.(product)}
+                    className="rounded-lg border border-border px-2 py-2 text-xs font-medium text-green-600 transition hover:border-green-600 hover:bg-green-50"
+                  >
+                    Approve
+                  </button>
+                )}
+
+                {onRejectProduct && (
+                  <button
+                    type="button"
+                    onClick={() => onRejectProduct?.(product)}
+                    className="rounded-lg border border-border px-2 py-2 text-xs font-medium text-red-500 transition hover:border-red-500 hover:bg-red-50"
+                  >
+                    Reject
+                  </button>
+                )}
               </div>
             </div>
           );
