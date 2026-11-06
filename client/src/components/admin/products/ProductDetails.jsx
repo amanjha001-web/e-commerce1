@@ -35,10 +35,13 @@ const ProductDetails = ({
     "N/A";
 
   const getVendorName = () =>
-    product?.vendor?.businessName ||
-    product?.vendor?.storeName ||
-    product?.vendor?.name ||
+    product?.vendor?.fullName ||
     product?.vendorName ||
+    "N/A";
+
+  const getShopName = () =>
+    product?.vendor?.shopName ||
+    product?.storeName ||
     "N/A";
 
   const getVendorEmail = () =>
@@ -144,7 +147,8 @@ const ProductDetails = ({
     ["activity", "Activity"],
   ];
 
-  const isActiveStatus = status === "active" || status === "published";
+  // Button shows "Deactivate" if product is active (can be deactivated), "Activate" if inactive
+  const isActiveStatus = product?.isActive !== false;
 
   return (
     <div
@@ -286,11 +290,21 @@ const ProductDetails = ({
 
                         <div>
                           <p className="text-xs text-muted-foreground">
-                            Vendor
+                            Owner Name
                           </p>
 
-                          <p className="mt-1 truncate text-sm font-medium text-foreground">
+                          <p className="mt-1 text-sm font-medium text-foreground">
                             {getVendorName()}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Shop Name
+                          </p>
+
+                          <p className="mt-1 text-sm font-medium text-foreground">
+                            {getShopName()}
                           </p>
                         </div>
 

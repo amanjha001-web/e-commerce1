@@ -270,20 +270,7 @@ const Products = () => {
       const updatedIsActive = status === "active";
       await adminService.updateProductStatus(product._id, updatedIsActive);
       
-      // Update local products state immediately for UI feedback
-      setProducts((prev) =>
-        prev.map((p) => (p._id === product._id ? { ...p, isActive: updatedIsActive } : p))
-      );
-      
-      // Also update selectedProduct if it's the same product
-      if (selectedProduct?._id === product._id) {
-        setSelectedProduct((prev) => ({
-          ...prev,
-          isActive: updatedIsActive,
-        }));
-      }
-      
-      // Refresh from server to ensure data consistency
+      // Refresh from server to get the updated product
       fetchProducts();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to update status");

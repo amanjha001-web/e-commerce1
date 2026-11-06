@@ -1029,14 +1029,84 @@ export const getAllProducts = async (query = {}) => {
   }
 
   const [products, total] = await Promise.all([
-    Product.find(filter)
-      .populate("category", "name")
-      .populate("brand", "name")
-      .populate("vendor", "fullName email")
-      .sort(sortOption)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean(),
+    Product.aggregate([
+      { $match: filter },
+      { $sort: sortOption },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+          pipeline: [{ $limit: 1 }],
+        },
+      },
+      {
+        $lookup: {
+          from: "brands",
+          localField: "brand",
+          foreignField: "_id",
+          as: "brand",
+          pipeline: [{ $limit: 1 }],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "vendor",
+          foreignField: "_id",
+          as: "vendorUser",
+          pipeline: [{ $limit: 1 }],
+        },
+      },
+      {
+        $lookup: {
+          from: "vendors",
+          localField: "vendor",
+          foreignField: "user",
+          as: "vendor",
+          pipeline: [{ $limit: 1 }],
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          shortDescription: 1,
+          description: 1,
+          price: 1,
+          sellingPrice: 1,
+          salePrice: 1,
+          discountPrice: 1,
+          mrp: 1,
+          discount: 1,
+          stock: 1,
+          sku: 1,
+          images: 1,
+          thumbnail: 1,
+          featured: 1,
+          flashSale: 1,
+          bestSeller: 1,
+          trending: 1,
+          newArrival: 1,
+          isActive: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          category: { $arrayElemAt: ["$category", 0] },
+          brand: { $arrayElemAt: ["$brand", 0] },
+          vendor: {
+            fullName: { $arrayElemAt: ["$vendorUser.fullName", 0] },
+            email: { $arrayElemAt: ["$vendorUser.email", 0] },
+            shopName: { $arrayElemAt: ["$vendor.shopName", 0] },
+            shopSlug: { $arrayElemAt: ["$vendor.shopSlug", 0] },
+          },
+        },
+      },
+    ]),
 
     Product.countDocuments(filter),
   ]);

@@ -465,8 +465,7 @@ const ProductTable = ({
           const stock = Number(getStock(product) || 0);
 
           return (
-            <div
-              key={product?._id || product?.id}
+            <div key={`mobile-${product?._id || product?.id}`}
               className="rounded-xl border border-border p-4"
             >
               {/* Product Header */}
