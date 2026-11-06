@@ -60,7 +60,7 @@ const getLowStockProducts = asyncHandler(async (req, res) => {
 
 // Get all user
 const getAllUsersbyAdmin = asyncHandler(async (req, res) => {
-  const users = await adminService.getAllUsers(req.query);
+  const users = await adminService.getAllUsersbyAdmin(req.query);
 
   return res
     .status(200)
