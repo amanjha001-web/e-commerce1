@@ -1097,8 +1097,6 @@ export const updateProductByAdmin = async (productId, data = {}) => {
     "bestSeller",
     "trending",
     "newArrival",
-    "isActive",
-    "status",
     "seoTitle",
     "seoDescription",
   ];
@@ -1219,6 +1217,44 @@ const rejectProduct = async (productId, reason) => {
   if (!product) {
     throw new ApiError(404, "Product not found");
   }
+
+  return product;
+};
+
+// Update product activation status (Enable/Disable)
+// Only allowed for products with status: "published" (approved products)
+const updateProductStatus = async (productId, isActive) => {
+  if (!mongoose.isValidObjectId(productId)) {
+    throw new ApiError(400, "Invalid product ID");
+  }
+
+  if (typeof isActive !== "boolean") {
+    throw new ApiError(400, "isActive must be a boolean value");
+  }
+
+  // Find the product and check if status allows toggle
+  const product = await Product.findOne({
+    _id: productId,
+    deletedAt: null,
+  });
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // Only allow toggle for published products (approved and ready for sale)
+  // Prevent enabling draft, pending_approval, rejected, archived products
+  if (product.status !== PRODUCT_STATUS.PUBLISHED && product.status !== "active") {
+    throw new ApiError(
+      400,
+      `Cannot ${isActive ? "activate" : "deactivate"} product with status: ${product.status}. Only published products can be enabled/disabled.`
+    );
+  }
+
+  // Update only the isActive field, preserve status
+  product.isActive = isActive;
+
+  await product.save();
 
   return product;
 };
@@ -5174,6 +5210,7 @@ export default {
   deleteProductByAdmin,
   approveProduct,
   rejectProduct,
+  updateProductStatus,
 
   // Orders
   getAllOrders,

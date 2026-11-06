@@ -310,6 +310,23 @@ export const rejectProduct = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, product, "Product rejected successfully"));
 });
 
+// update product status (Enable/Disable)
+export const updateProductStatus = asyncHandler(async (req, res) => {
+  const { isActive } = req.body;
+
+  if (typeof isActive !== "boolean") {
+    return res
+      .status(400)
+      .json(new ApiError(400, "isActive must be a boolean value"));
+  }
+
+  const product = await adminService.updateProductStatus(req.params.id, isActive);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, product, "Product status updated successfully"));
+});
+
 /* ======================== Order Management ======================== */
 
 // 1. All orders
@@ -1229,6 +1246,7 @@ export default {
   deleteProductByAdmin,
   approveProduct,
   rejectProduct,
+  updateProductStatus,
 
   // Orders
   getAllOrders,

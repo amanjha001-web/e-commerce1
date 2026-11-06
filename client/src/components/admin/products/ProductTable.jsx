@@ -420,23 +420,25 @@ const ProductTable = ({
                         Edit
                       </button>
 
-                      {/* Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => onToggleStatus?.(product)}
-                        title={
-                          status === "active"
-                            ? "Deactivate product"
-                            : "Activate product"
-                        }
-                        className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
-                          status === "active"
-                            ? "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                            : "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
-                        }`}
-                      >
-                        {status === "active" ? "Disable" : "Enable"}
-                      </button>
+                      {/* Toggle - only visible for published/active products that can be enabled/disabled */}
+                      {(product?.status === "published" || product?.status === "active") && (
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus?.(product)}
+                          title={
+                            product?.isActive === false
+                              ? "Activate product"
+                              : "Deactivate product"
+                          }
+                          className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
+                            product?.isActive === false
+                              ? "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
+                              : "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                          }`}
+                        >
+                          {product?.isActive === false ? "Enable" : "Disable"}
+                        </button>
+                      )}
 
                       {/* Delete */}
                       <button
@@ -565,17 +567,20 @@ const ProductTable = ({
                   Edit
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => onToggleStatus?.(product)}
-                  className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
-                    status === "active"
-                      ? "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
-                      : "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
-                  }`}
-                >
-                  {status === "active" ? "Disable" : "Enable"}
-                </button>
+                {/* Toggle - only visible for published/active products that can be enabled/disabled */}
+                {(product?.status === "published" || product?.status === "active") && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleStatus?.(product)}
+                    className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
+                      product?.isActive === false
+                        ? "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
+                        : "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    }`}
+                  >
+                    {product?.isActive === false ? "Enable" : "Disable"}
+                  </button>
+                )}
 
                 <button
                   type="button"

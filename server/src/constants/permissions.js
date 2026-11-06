@@ -36,6 +36,7 @@ export const PERMISSIONS = Object.freeze({
   PRODUCT_DELETE: "product:delete",
   PRODUCT_APPROVE: "product:approve",
   PRODUCT_REJECT: "product:reject",
+  PRODUCT_STATUS_UPDATE: "product:status_update",
 
   // Category Permissions
 

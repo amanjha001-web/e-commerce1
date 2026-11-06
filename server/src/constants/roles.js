@@ -14,4 +14,6 @@ export const ROLES = Object.freeze({
   VENDOR: "vendor",
 
   ADMIN: "admin",
+
+  SUPER_ADMIN: "super_admin",
 });

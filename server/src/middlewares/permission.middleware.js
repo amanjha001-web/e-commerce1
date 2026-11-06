@@ -11,6 +11,8 @@ const ROLE_PERMISSIONS = {
   ],
 
   admin: Object.values(PERMISSIONS),
+
+  super_admin: Object.values(PERMISSIONS),
 };
 
 const permissionMiddleware = (...permissions) => {

@@ -347,6 +347,19 @@ router.patch(
   adminController.rejectProduct,
 );
 
+// update product status (Enable/Disable)
+router.patch(
+  "/products/:id/status",
+
+  authMiddleware,
+
+  roleMiddleware(ROLES.ADMIN, ROLES.SUPER_ADMIN),
+
+  permissionMiddleware(PERMISSIONS.PRODUCT_STATUS_UPDATE),
+
+  adminController.updateProductStatus,
+);
+
 /*                           Order Management                                 */
 
 // Order Management

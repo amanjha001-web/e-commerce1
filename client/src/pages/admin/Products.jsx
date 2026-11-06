@@ -268,7 +268,7 @@ const Products = () => {
     setSaving(true);
     try {
       const updatedIsActive = status === "active";
-      await adminService.updateProduct(product._id, { isActive: updatedIsActive });
+      await adminService.updateProductStatus(product._id, updatedIsActive);
       
       // Update local products state immediately for UI feedback
       setProducts((prev) =>

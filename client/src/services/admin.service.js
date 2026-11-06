@@ -305,6 +305,11 @@ const adminService = {
     return response.data;
   },
 
+  updateProductStatus: async (productId, isActive) => {
+    const response = await api.patch(`/admin/products/${productId}/status`, { isActive });
+    return response.data;
+  },
+
   getAdminProducts: async (params = {}) => {
     const response = await api.get("/admin/products", { params });
     return response.data;
