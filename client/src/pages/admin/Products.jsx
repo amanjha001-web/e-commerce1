@@ -267,13 +267,24 @@ const Products = () => {
     if (!status || saving) return;
     setSaving(true);
     try {
-      await adminService.updateProduct(product._id, { isActive: status });
-      fetchProducts();
+      const updatedIsActive = status === "active";
+      await adminService.updateProduct(product._id, { isActive: updatedIsActive });
+      
+      // Update local products state immediately for UI feedback
+      setProducts((prev) =>
+        prev.map((p) => (p._id === product._id ? { ...p, isActive: updatedIsActive } : p))
+      );
+      
+      // Also update selectedProduct if it's the same product
       if (selectedProduct?._id === product._id) {
-        setProducts((prev) =>
-          prev.map((p) => (p._id === product._id ? { ...p, isActive: status } : p))
-        );
+        setSelectedProduct((prev) => ({
+          ...prev,
+          isActive: updatedIsActive,
+        }));
       }
+      
+      // Refresh from server to ensure data consistency
+      fetchProducts();
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || "Failed to update status");
     } finally {

@@ -36,12 +36,21 @@ const ProductTable = ({
     product?.stock ?? product?.quantity ?? product?.inventory ?? 0;
 
   const getStatus = (product) => {
-    if (product?.status) {
-      return String(product.status).toLowerCase();
-    }
-
+    // Prioritize isActive over status for accurate display
     if (product?.isActive === false) {
       return "inactive";
+    }
+
+    if (product?.isActive === true || product?.isActive === undefined) {
+      if (product?.status) {
+        return String(product.status).toLowerCase();
+      }
+      return "active";
+    }
+
+    // Fallback to status if isActive is set but not explicitly true/false
+    if (product?.status) {
+      return String(product.status).toLowerCase();
     }
 
     return "active";
@@ -397,52 +406,18 @@ const ProductTable = ({
                       <button
                         type="button"
                         onClick={() => onViewProduct?.(product)}
-                        title="View product"
-                        className="rounded-lg border border-border p-2 text-muted-foreground transition hover:border-primary hover:text-primary"
+                        className="rounded-lg border border-border px-2 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
-                          />
-
-                          <circle cx="12" cy="12" r="2.5" />
-                        </svg>
+                        View
                       </button>
 
                       {/* Edit */}
                       <button
                         type="button"
                         onClick={() => onEditProduct?.(product)}
-                        title="Edit product"
-                        className="rounded-lg border border-border p-2 text-muted-foreground transition hover:border-primary hover:text-primary"
+                        className="rounded-lg border border-border px-2 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 20h9"
-                          />
-
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M16.5 3.5a2.121 2.121 0 013 3L8 18l-4 1 1-4 11.5-11.5z"
-                          />
-                        </svg>
+                        Edit
                       </button>
 
                       {/* Toggle */}
@@ -454,67 +429,22 @@ const ProductTable = ({
                             ? "Deactivate product"
                             : "Activate product"
                         }
-                        className={`rounded-lg border border-border p-2 transition ${
+                        className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
                           status === "active"
-                            ? "text-red-500 hover:border-red-500 hover:text-red-600"
-                            : "text-green-600 hover:border-green-500 hover:text-green-600"
+                            ? "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                            : "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
                         }`}
                       >
-                        {status === "active" ? (
-                          <svg
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-
-                            <path strokeLinecap="round" d="M9 9l6 6m0-6l-6 6" />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        )}
+                        {status === "active" ? "Disable" : "Enable"}
                       </button>
 
                       {/* Delete */}
                       <button
                         type="button"
                         onClick={() => onDeleteProduct?.(product)}
-                        title="Delete product"
-                        className="rounded-lg border border-border p-2 text-red-500 transition hover:border-red-500 hover:bg-red-50"
+                        className="rounded-lg border border-border px-2 py-2 text-xs font-medium text-red-500 transition hover:border-red-500 hover:bg-red-50"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M3 6h18"
-                          />
-
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M8 6V4h8v2m-9 0l1 14h8l1-14M10 11v5m4-5v5"
-                          />
-                        </svg>
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -640,8 +570,8 @@ const ProductTable = ({
                   onClick={() => onToggleStatus?.(product)}
                   className={`rounded-lg border border-border px-2 py-2 text-xs font-medium transition ${
                     status === "active"
-                      ? "text-red-500 hover:border-red-500"
-                      : "text-green-600 hover:border-green-500"
+                      ? "text-red-500 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                      : "text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 hover:text-green-600"
                   }`}
                 >
                   {status === "active" ? "Disable" : "Enable"}
@@ -655,7 +585,7 @@ const ProductTable = ({
                   Delete
                 </button>
 
-                {onApproveProduct && (
+                {product?.status === "pending_approval" && onApproveProduct && (
                   <button
                     type="button"
                     onClick={() => onApproveProduct?.(product)}
@@ -665,7 +595,7 @@ const ProductTable = ({
                   </button>
                 )}
 
-                {onRejectProduct && (
+                {product?.status === "pending_approval" && onRejectProduct && (
                   <button
                     type="button"
                     onClick={() => onRejectProduct?.(product)}

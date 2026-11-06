@@ -14,16 +14,12 @@ const ProductStatusToggle = ({
   const productName =
     product?.name || product?.productName || product?.title || "this product";
 
-  const currentStatus = product?.status
-    ? String(product.status).toLowerCase()
-    : product?.isActive === false
-      ? "inactive"
-      : "active";
+  // Prioritize isActive over status for accurate display
+  const isActive = product?.isActive === true || product?.isActive === undefined;
 
-  const isActive =
-    currentStatus === "active" ||
-    currentStatus === "published" ||
-    currentStatus === "approved";
+  const currentStatus = isActive
+    ? (product?.status ? String(product.status).toLowerCase() : "active")
+    : (product?.status ? String(product.status).toLowerCase() : "inactive");
 
   const nextStatus = isActive ? "inactive" : "active";
 

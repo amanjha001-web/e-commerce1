@@ -15,6 +15,8 @@ export const PRODUCT_STATUS = Object.freeze({
 
   PENDING_APPROVAL: "pending_approval",
 
+  PUBLISHED: "published",
+
   // Active Product States
 
   ACTIVE: "active",

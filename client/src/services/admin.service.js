@@ -91,8 +91,33 @@ const adminService = {
   },
 
   // ==================== Products ====================
+  getProducts: async (params = {}) => {
+    const response = await api.get("/admin/products", { params });
+    return response.data;
+  },
+
+  getProductById: async (productId) => {
+    const response = await api.get(`/admin/products/${productId}`);
+    return response.data;
+  },
+
+  updateProduct: async (productId, productData) => {
+    const response = await api.patch(`/admin/products/${productId}`, productData);
+    return response.data;
+  },
+
   deleteProduct: async (productId) => {
     const response = await api.delete(`/admin/products/${productId}`);
+    return response.data;
+  },
+
+  approveProduct: async (productId) => {
+    const response = await api.patch(`/admin/products/${productId}/approve`);
+    return response.data;
+  },
+
+  rejectProduct: async (productId, reason) => {
+    const response = await api.patch(`/admin/products/${productId}/reject`, { reason });
     return response.data;
   },
 
