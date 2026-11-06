@@ -1,25 +1,65 @@
 @import "tailwindcss";
 
 :root {
+  /* Light Theme - Black and White */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
 
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 0 0% 18%;
+  --primary-foreground: 0 0% 100%;
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 215 16.3% 46.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  --border: 0 0% 92.2%;
+  --input: 0 0% 93.3%;
+
+  --accent: 0 0% 30%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --success: 142 76.3% 44.7%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 45 100% 50%;
+  --warning-foreground: 0 0% 100%;
+
+  --radius: 8px;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
+  /* Dark Theme - Black and White */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 93%;
 
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
+  --primary: 0 0% 91%;
+  --primary-foreground: 0 0% 0%;
 
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 215 16.3% 70%;
+
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 93%;
+
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+
+  --accent: 0 0% 87%;
+  --accent-foreground: 0 0% 0%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 0%;
+
+  --success: 142 76.3% 55%;
+  --success-foreground: 0 0% 0%;
+
+  --warning: 45 100% 60%;
+  --warning-foreground: 0 0% 0%;
 }
 
 @theme inline {
@@ -31,4 +71,18 @@
 
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
 }

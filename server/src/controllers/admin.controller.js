@@ -290,7 +290,7 @@ export const deleteProductByAdmin = asyncHandler(async (req, res) => {
 });
 
 // approve products
-const approveProduct = asyncHandler(async (req, res) => {
+export const approveProduct = asyncHandler(async (req, res) => {
   const product = await adminService.approveProduct(req.params.id);
 
   return res
@@ -299,7 +299,7 @@ const approveProduct = asyncHandler(async (req, res) => {
 });
 
 // reject products
-const rejectProduct = asyncHandler(async (req, res) => {
+export const rejectProduct = asyncHandler(async (req, res) => {
   const product = await adminService.rejectProduct(
     req.params.id,
     req.body.reason,

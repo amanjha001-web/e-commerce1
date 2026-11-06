@@ -268,14 +268,26 @@ const getLowStockProducts = async (threshold = 10, limit = 10) => {
 const getAllUsers = async (query = {}) => {
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
-  const { status, search } = query;
+  const { role, status, search } = query;
 
   const filter = {};
 
-  if (status) {
-    filter.status = status;
+  // Role filtering - CUSTOMER, VENDOR, ADMIN
+  if (role) {
+    const VALID_ROLES = ["customer", "vendor", "admin"];
+    if (VALID_ROLES.includes(role)) {
+      filter.role = role;
+    }
   }
 
+  // Status filtering - map active/blocked to isBlocked
+  if (status === "active") {
+    filter.isBlocked = false;
+  } else if (status === "blocked") {
+    filter.isBlocked = true;
+  }
+
+  // Search functionality
   if (search?.trim()) {
     const searchRegex = {
       $regex: search.trim(),
@@ -291,7 +303,7 @@ const getAllUsers = async (query = {}) => {
 
   const [users, total] = await Promise.all([
     User.find(filter)
-      .select("-password -refreshToken")
+      .select("-password -refreshToken -resetPasswordToken")
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 }),

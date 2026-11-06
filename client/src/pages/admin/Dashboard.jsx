@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
+import ThemeContext from "../../context/ThemeContext";
 import { fetchAdminDashboard, fetchAdminDashboardAnalytics } from "../../store/slices/Admin/adminDashboardSlice";
 import { fetchAdminUsers } from "../../store/slices/Admin/adminUsersSlice";
 
@@ -99,6 +100,9 @@ const AdminDashboard = () => {
   // Sync local period with Redux state
   const currentPeriod = period || localPeriod;
 
+  // Theme context
+  const { isDark, toggleTheme } = useContext(ThemeContext);
+
   const handlePeriodChange = (value) => {
     setLocalPeriod(value);
   };
@@ -113,8 +117,58 @@ const AdminDashboard = () => {
     dispatch(fetchAdminDashboard());
   };
 
+  // Theme toggle button
+  const ThemeToggle = () => (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? (
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 3v1m0 16h.01m19-9h-1M6.464 16.95l-.707-.707M4.22 12.894l-.707-.707M12 5v.01M12 19v.01M5.757 5.757l-.707-.707M16.243 16.243l-.707-.707M12 3a9 9 0 100 18 9 9 0 000-18z"
+          />
+        </svg>
+      ) : (
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+          />
+        </svg>
+      )}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-muted/30">
+      {/* Header with Theme Toggle */}
+      <header className="mb-6 flex justify-between items-center px-4 sm:px-6 lg:px-8">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your store</p>
+        </div>
+        <ThemeToggle />
+      </header>
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
           {error && (
