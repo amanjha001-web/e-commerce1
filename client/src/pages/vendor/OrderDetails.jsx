@@ -42,7 +42,7 @@ const OrderDetails = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <Loader />
       </div>
     );
@@ -50,7 +50,7 @@ const OrderDetails = ({
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-[var(--bg)]">
         <VendorSidebar
           activeItem="orders"
           collapsed={false}
@@ -76,7 +76,7 @@ const OrderDetails = ({
 
           <main className="p-4 sm:p-6 lg:p-8">
             <div className="mx-auto max-w-7xl">
-              <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+              <div className="panel p-8 text-center">
                 <EmptyState
                   title="Order not found"
                   description="The order you're looking for could not be found."
@@ -85,6 +85,7 @@ const OrderDetails = ({
                 <div className="mt-6">
                   <Button
                     onClick={() => handleNavigate("orders")}
+                    className="primarybtn"
                   >
                     Back to Orders
                   </Button>
@@ -127,7 +128,7 @@ const OrderDetails = ({
     "pending";
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-[var(--bg)]">
       <VendorSidebar
         activeItem="orders"
         collapsed={false}
@@ -170,18 +171,16 @@ const OrderDetails = ({
             />
 
             {/* Order Header */}
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+            <section className="panel">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">
-                    Order
-                  </p>
+                  <div className="eyebrow">Order Summary</div>
 
-                  <h1 className="mt-1 text-2xl font-bold text-foreground">
+                  <h1 className="mt-1 text-2xl font-black text-[var(--text)] dark:text-foreground">
                     #{orderId}
                   </h1>
 
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                     Placed on{" "}
                     {order?.createdAt
                       ? new Date(
@@ -200,6 +199,7 @@ const OrderDetails = ({
                     onClick={() =>
                       onTrackOrder?.(order)
                     }
+                    className="outlinebtn"
                   >
                     Track Order
                   </Button>
@@ -208,18 +208,18 @@ const OrderDetails = ({
             </section>
 
             {/* Status Management */}
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+            <section className="panel">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Update Order Status
                 </h2>
 
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                   Update the order as it moves through fulfillment.
                 </p>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 {[
                   "pending",
                   "confirmed",
@@ -236,10 +236,10 @@ const OrderDetails = ({
                       handleStatusChange(item)
                     }
                     className={[
-                      "rounded-xl border px-4 py-2 text-sm font-medium capitalize transition",
+                      "rounded-xl border px-3.5 py-1.5 text-xs font-bold capitalize transition cursor-pointer",
                       status === item
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted",
+                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-xs"
+                        : "border-[var(--line)] bg-white text-[var(--text)] hover:bg-[var(--soft)]",
                     ].join(" ")}
                   >
                     {item}
@@ -252,17 +252,17 @@ const OrderDetails = ({
             <div className="grid gap-6 xl:grid-cols-3">
               <div className="space-y-6 xl:col-span-2">
                 {/* Customer */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h2 className="text-lg font-semibold text-foreground">
+                <section className="panel">
+                  <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                     Customer Information
                   </h2>
 
-                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <div className="mt-4 grid gap-5 sm:grid-cols-2">
                     <div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs font-bold text-[var(--muted)]">
                         Name
                       </p>
-                      <p className="mt-1 font-medium text-foreground">
+                      <p className="mt-1 font-bold text-[var(--text)] dark:text-foreground">
                         {customer?.fullName ||
                           customer?.name ||
                           "—"}
@@ -270,19 +270,19 @@ const OrderDetails = ({
                     </div>
 
                     <div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs font-bold text-[var(--muted)]">
                         Email
                       </p>
-                      <p className="mt-1 break-all font-medium text-foreground">
+                      <p className="mt-1 break-all font-bold text-[var(--text)] dark:text-foreground">
                         {customer?.email || "—"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs font-bold text-[var(--muted)]">
                         Phone
                       </p>
-                      <p className="mt-1 font-medium text-foreground">
+                      <p className="mt-1 font-bold text-[var(--text)] dark:text-foreground">
                         {customer?.phone || "—"}
                       </p>
                     </div>
@@ -290,13 +290,13 @@ const OrderDetails = ({
                 </section>
 
                 {/* Items */}
-                <section className="rounded-2xl border border-border bg-card shadow-sm">
-                  <div className="border-b border-border p-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-foreground">
+                <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
+                  <div className="border-b border-[var(--line)] p-5 bg-[#fcf9fa] dark:bg-card">
+                    <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                       Order Items
                     </h2>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                       {items.length} item
                       {items.length === 1 ? "" : "s"} in this order.
                     </p>
@@ -310,7 +310,7 @@ const OrderDetails = ({
                       />
                     </div>
                   ) : (
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-[var(--line)]">
                       {items.map((item, index) => (
                         <div
                           key={
@@ -328,12 +328,12 @@ const OrderDetails = ({
                 </section>
 
                 {/* Timeline */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h2 className="text-lg font-semibold text-foreground">
+                <section className="panel">
+                  <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                     Order Timeline
                   </h2>
 
-                  <div className="mt-6">
+                  <div className="mt-5">
                     <OrderTimeline
                       order={order}
                       status={status}
@@ -344,8 +344,8 @@ const OrderDetails = ({
 
               <div className="space-y-6">
                 {/* Summary */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h2 className="mb-5 text-lg font-semibold text-foreground">
+                <section className="panel">
+                  <h2 className="mb-4 text-base font-black text-[var(--text)] dark:text-foreground">
                     Order Summary
                   </h2>
 
@@ -353,13 +353,13 @@ const OrderDetails = ({
                 </section>
 
                 {/* Shipping */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h2 className="text-lg font-semibold text-foreground">
+                <section className="panel">
+                  <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                     Shipping Address
                   </h2>
 
-                  <div className="mt-4 text-sm leading-6 text-muted-foreground">
-                    <p className="font-medium text-foreground">
+                  <div className="mt-4 text-xs font-medium leading-5 text-[var(--text)] dark:text-foreground">
+                    <p className="font-bold text-[var(--primary)]">
                       {shippingAddress?.fullName ||
                         customer?.fullName ||
                         customer?.name ||
@@ -395,7 +395,7 @@ const OrderDetails = ({
                     </p>
 
                     {shippingAddress?.phone && (
-                      <p className="mt-2">
+                      <p className="mt-2 text-[var(--muted)]">
                         Phone: {shippingAddress.phone}
                       </p>
                     )}
@@ -403,17 +403,17 @@ const OrderDetails = ({
                 </section>
 
                 {/* Payment */}
-                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                  <h2 className="text-lg font-semibold text-foreground">
+                <section className="panel">
+                  <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                     Payment Information
                   </h2>
 
-                  <div className="mt-4 space-y-3 text-sm">
+                  <div className="mt-4 space-y-3 text-xs">
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">
+                      <span className="font-bold text-[var(--muted)]">
                         Method
                       </span>
-                      <span className="font-medium capitalize text-foreground">
+                      <span className="font-bold capitalize text-[var(--text)] dark:text-foreground">
                         {payment?.method ||
                           order?.paymentMethod ||
                           "—"}
@@ -421,10 +421,10 @@ const OrderDetails = ({
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">
+                      <span className="font-bold text-[var(--muted)]">
                         Status
                       </span>
-                      <span className="font-medium capitalize text-foreground">
+                      <span className="font-bold capitalize text-[var(--primary)]">
                         {payment?.status ||
                           order?.paymentStatus ||
                           "—"}
@@ -433,11 +433,11 @@ const OrderDetails = ({
 
                     {payment?.transactionId && (
                       <div className="flex items-start justify-between gap-4">
-                        <span className="text-muted-foreground">
+                        <span className="font-bold text-[var(--muted)]">
                           Transaction
                         </span>
 
-                        <span className="max-w-[180px] break-all text-right font-medium text-foreground">
+                        <span className="max-w-[180px] break-all text-right font-bold text-[var(--text)] dark:text-foreground">
                           {payment.transactionId}
                         </span>
                       </div>
@@ -449,12 +449,12 @@ const OrderDetails = ({
                 {!["cancelled", "delivered"].includes(
                   String(status).toLowerCase()
                 ) && (
-                  <section className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5 sm:p-6">
-                    <h2 className="text-lg font-semibold text-foreground">
+                  <section className="panel border-[#f3cbd0] bg-[#fff0f1]/50">
+                    <h2 className="text-base font-black text-[var(--red)]">
                       Cancel Order
                     </h2>
 
-                    <p className="mt-2 text-sm text-muted-foreground">
+                    <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                       Cancel this order if you cannot fulfill it.
                     </p>
 
@@ -465,6 +465,7 @@ const OrderDetails = ({
                         onClick={() =>
                           onCancelOrder?.(order)
                         }
+                        className="dangerbtn"
                       >
                         Cancel Order
                       </Button>

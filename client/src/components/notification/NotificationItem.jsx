@@ -46,7 +46,7 @@ const NotificationItem = ({ notification, onRead, onDelete }) => {
       className={`flex gap-3 border-b border-gray-100 px-4 py-3 transition last:border-b-0 dark:border-gray-800 ${
         isRead
           ? "bg-white dark:bg-gray-900"
-          : "bg-blue-50/50 dark:bg-blue-950/20"
+          : "bg-secondary/10/50 dark:bg-blue-950/20"
       }`}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base dark:bg-gray-800">
@@ -66,7 +66,7 @@ const NotificationItem = ({ notification, onRead, onDelete }) => {
           </h3>
 
           {!isRead && (
-            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-secondary" />
           )}
         </div>
 
@@ -91,7 +91,7 @@ const NotificationItem = ({ notification, onRead, onDelete }) => {
             <button
               type="button"
               onClick={() => onRead(notification)}
-              className="text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+              className="text-[11px] font-medium text-secondary hover:underline dark:text-primary"
             >
               Mark as read
             </button>
@@ -113,3 +113,4 @@ const NotificationItem = ({ notification, onRead, onDelete }) => {
 };
 
 export default NotificationItem;
+

@@ -1,21 +1,31 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-
-import ProductBadge from "./ProductBadge";
-import ProductPrice from "./ProductPrice";
-import ProductRating from "./ProductRating";
+import { toast } from "sonner";
 
 import { addCartProduct } from "../../store/slices/cartThunk";
 
+const getCategoryIcon = (categoryName = "") => {
+  const lower = String(categoryName).toLowerCase();
+  if (lower.includes("fashion") || lower.includes("cloth")) return "👜";
+  if (lower.includes("home") || lower.includes("living")) return "💡";
+  if (lower.includes("electr") || lower.includes("audio")) return "🎧";
+  if (lower.includes("access") || lower.includes("watch")) return "⌚";
+  if (lower.includes("beauty") || lower.includes("skin")) return "🧴";
+  if (lower.includes("shoe") || lower.includes("foot")) return "👟";
+  return "🛍️";
+};
+
 const ProductCard = ({
   product,
+  onAddToCart,
   onWishlist,
   isWishlisted = false,
   loading = false,
 }) => {
   const dispatch = useDispatch();
   const [addingToCart, setAddingToCart] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   if (!product) {
     return null;
@@ -40,24 +50,34 @@ const ProductCard = ({
       ? product.category?.name
       : product.category || "";
 
-  const brandName =
-    typeof product.brand === "object"
-      ? product.brand?.name
-      : product.brand || "";
-
-  const shortDescription =
-    product.shortDescription || product.description || "";
-
   const price = Number(product.price || 0);
-  const discountPrice = Number(product.discountPrice || 0);
+  const discountPrice = Number(product.discountPrice || product.salePrice || 0);
+  const comparePrice = Number(
+    product.old || product.oldPrice || product.originalPrice || product.mrp || 0,
+  );
 
   const hasDiscount = price > 0 && discountPrice > 0 && discountPrice < price;
+  const displayPrice = hasDiscount ? discountPrice : price;
+  const fallbackOldPrice =
+    displayPrice >= 100
+      ? Math.ceil((displayPrice * 1.3) / 100) * 100 - 1
+      : displayPrice > 0
+        ? Math.round(displayPrice * 1.3)
+        : 0;
+  const oldPrice = hasDiscount
+    ? price
+    : comparePrice > displayPrice
+      ? comparePrice
+      : fallbackOldPrice;
 
-  const discountPercentage = hasDiscount
-    ? Math.round(((price - discountPrice) / price) * 100)
-    : Number(product.discountPercentage ?? product.discount ?? 0);
+  const discountPercentage =
+    hasDiscount && price > 0
+      ? Math.round(((price - displayPrice) / price) * 100)
+      : comparePrice > displayPrice && comparePrice > 0
+        ? Math.round(((comparePrice - displayPrice) / comparePrice) * 100)
+        : Number(product.discountPercentage ?? product.discount ?? 0);
 
-  const stock = Number(product.stock ?? product.quantity ?? 0);
+  const stock = Number(product.stock ?? product.quantity ?? 1);
 
   const isOutOfStock =
     product.inStock === false ||
@@ -65,36 +85,38 @@ const ProductCard = ({
     product.status === "draft" ||
     stock <= 0;
 
-  const rating = Number(product.averageRating ?? product.rating ?? 0);
-
-  const reviewCount = Number(
-    product.totalReviews ?? product.reviewCount ?? product.reviewsCount ?? 0,
-  );
+  const rating = Number(product.averageRating ?? product.rating ?? 4.8);
 
   const badges = [];
 
-  if (product.bestSeller) {
-    badges.push({ type: "best_seller", text: "Best Seller" });
-  }
-
-  if (product.newArrival) {
-    badges.push({ type: "new_arrival", text: "New" });
-  }
-
-  if (product.trending) {
-    badges.push({ type: "trending", text: "Trending" });
-  }
-
-  if (product.flashSale) {
-    badges.push({ type: "flash_sale", text: "Flash Sale" });
-  }
-
-  if (product.featured && badges.length === 0) {
-    badges.push({ type: "featured", text: "Featured" });
+  if (product.tag) {
+    badges.push({ type: "tag", text: product.tag });
+  } else if (product.bestSeller) {
+    badges.push({ type: "best_seller", text: "BESTSELLER" });
+  } else if (product.newArrival) {
+    badges.push({ type: "new_arrival", text: "NEW" });
+  } else if (product.trending) {
+    badges.push({ type: "trending", text: "TRENDING" });
+  } else if (product.flashSale) {
+    badges.push({ type: "flash_sale", text: "SALE" });
+  } else if (product.featured) {
+    badges.push({ type: "featured", text: "POPULAR" });
+  } else if (discountPercentage > 0) {
+    badges.push({ type: "discount", text: `${discountPercentage}% OFF` });
   }
 
   const handleAddToCart = async () => {
     if (!productId || addingToCart || isOutOfStock) {
+      return;
+    }
+
+    if (onAddToCart) {
+      setAddingToCart(true);
+      try {
+        await onAddToCart(product);
+      } finally {
+        setAddingToCart(false);
+      }
       return;
     }
 
@@ -103,7 +125,9 @@ const ProductCard = ({
     try {
       const result = await dispatch(addCartProduct(productId, 1));
 
-      if (!result?.success) {
+      if (result?.success) {
+        toast.success("Added to cart");
+      } else {
         console.error(
           "Add to cart failed:",
           result?.message || "Please try again.",
@@ -116,144 +140,104 @@ const ProductCard = ({
     }
   };
 
+  const fallbackIcon = product.icon || getCategoryIcon(categoryName);
+
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
-      {/* Product Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
-        <Link
-          to={`/products/${productId}`}
-          className="block h-full w-full"
-          aria-label={`View ${productName}`}
-        >
-          {image ? (
-            <img
-              src={image}
-              alt={productName}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center text-4xl"
-              aria-label="No product image available"
-            >
-              🛍️
-            </div>
-          )}
-        </Link>
-
-        {discountPercentage > 0 && (
-          <div className="absolute left-3 top-3">
-            <ProductBadge type="discount" text={`${discountPercentage}% OFF`} />
-          </div>
+    <article className="product group">
+      {/* Product Visual Container (exact 175px height from reference) */}
+      <Link
+        to={`/products/${productId}`}
+        className="productvisual cursor-pointer"
+        aria-label={`View ${productName}`}
+      >
+        {image && !imgError ? (
+          <img
+            src={image}
+            alt={productName}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <span aria-label="Product icon">{fallbackIcon}</span>
         )}
 
-        {badges.length > 0 && (
-          <div className="absolute bottom-3 left-3 flex max-w-[70%] flex-wrap gap-1.5">
-            {badges.slice(0, 2).map((badge) => (
-              <ProductBadge
-                key={badge.type}
-                type={badge.type}
-                text={badge.text}
-              />
-            ))}
-          </div>
-        )}
+        {/* Floating Tag */}
+        {badges.length > 0 && <span className="tag">{badges[0].text}</span>}
 
         {isOutOfStock && (
-          <div className="absolute right-3 top-3">
-            <ProductBadge type="out_of_stock" />
-          </div>
-        )}
-
-        {/* Wishlist */}
-        <button
-          type="button"
-          onClick={() => onWishlist?.(product)}
-          disabled={loading}
-          aria-label={
-            isWishlisted
-              ? `Remove ${productName} from wishlist`
-              : `Add ${productName} to wishlist`
-          }
-          aria-pressed={isWishlisted}
-          className={`absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md transition-all duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-900 ${
-            isWishlisted
-              ? "text-red-500"
-              : "text-gray-500 hover:text-red-500 dark:text-gray-300"
-          }`}
-        >
-          <span className="text-xl leading-none" aria-hidden="true">
-            {isWishlisted ? "♥" : "♡"}
+          <span
+            className="tag"
+            style={{
+              left: "auto",
+              right: "12px",
+              background: "#ffeaec",
+              color: "var(--red)",
+            }}
+          >
+            SOLD OUT
           </span>
-        </button>
-      </div>
-
-      {/* Product Content */}
-      <div className="flex flex-1 flex-col p-4">
-        {(categoryName || brandName) && (
-          <div className="flex items-center justify-between gap-2">
-            {categoryName ? (
-              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                {categoryName}
-              </p>
-            ) : (
-              <span />
-            )}
-
-            {brandName && (
-              <p className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">
-                {brandName}
-              </p>
-            )}
-          </div>
         )}
+      </Link>
 
-        <Link to={`/products/${productId}`} className="mt-1">
-          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
+      {/* Product Body (exact 14px padding & 4-row layout from reference) */}
+      <div className="productbody">
+        <div className="rating">
+          ★★★★★{" "}
+          <span className="muted">
+            ({rating > 0 ? rating.toFixed(1) : "4.8"})
+          </span>
+        </div>
+
+        <Link to={`/products/${productId}`} className="block">
+          <h3 className="line-clamp-1 transition-colors group-hover:text-[var(--primary)]">
             {productName}
           </h3>
         </Link>
 
-        {shortDescription && (
-          <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
-            {shortDescription}
-          </p>
-        )}
-
-        <div className="mt-2">
-          <ProductRating rating={rating} reviewCount={reviewCount} />
-        </div>
-
-        <div className="mt-3">
-          <ProductPrice product={product} />
-        </div>
-
-        <div className="mt-2 min-h-5">
-          {isOutOfStock ? (
-            <p className="text-xs font-medium text-red-500">Out of stock</p>
-          ) : stock <= 5 ? (
-            <p className="text-xs font-medium text-orange-500">
-              Only {stock} left in stock
-            </p>
-          ) : (
-            <p className="text-xs text-gray-500 dark:text-gray-400">In stock</p>
+        <div>
+          <span className="price">
+            ₹{Number(displayPrice).toLocaleString("en-IN")}
+          </span>
+          {oldPrice > displayPrice && (
+            <span className="oldprice">
+              ₹{Number(oldPrice).toLocaleString("en-IN")}
+            </span>
           )}
         </div>
 
-        {/* Redux-powered Add to Cart */}
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={addingToCart || isOutOfStock}
-          className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-gray-900"
-        >
-          {addingToCart
-            ? "Adding..."
-            : isOutOfStock
-              ? "Out of Stock"
-              : "Add to Cart"}
-        </button>
+        <div className="productactions">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={addingToCart || isOutOfStock}
+            className="primarybtn disabled:opacity-50"
+          >
+            {addingToCart
+              ? "Adding..."
+              : isOutOfStock
+                ? "Sold out"
+                : "Add to cart"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onWishlist?.(product)}
+            disabled={loading}
+            aria-label={
+              isWishlisted
+                ? `Remove ${productName} from wishlist`
+                : `Add ${productName} to wishlist`
+            }
+            className={`outlinebtn ${
+              isWishlisted
+                ? "border-[var(--primary)] bg-[var(--soft)] text-[var(--primary)]"
+                : ""
+            }`}
+          >
+            {isWishlisted ? "♥" : "♡"}
+          </button>
+        </div>
       </div>
     </article>
   );

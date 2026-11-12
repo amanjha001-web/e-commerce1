@@ -1,220 +1,182 @@
-
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import OrderTable from "../../components/vendor/OrderTable";
-
-import Input from "../../components/common/Input";
-import Select from "../../components/common/Select";
-import Button from "../../components/common/Button";
-import EmptyState from "../../components/common/EmptyState";
-import Loader from "../../components/common/Loader";
-
-const STATUS_OPTIONS = [
-  { label: "All Orders", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Confirmed", value: "confirmed" },
-  { label: "Processing", value: "processing" },
-  { label: "Shipped", value: "shipped" },
-  { label: "Delivered", value: "delivered" },
-  { label: "Cancelled", value: "cancelled" },
+const INITIAL_DEMO_ORDERS = [
+  { id: "#SS-10482", customer: "Riya Sharma", date: "11 Nov 2026", amount: 4298, status: "Processing" },
+  { id: "#SS-10481", customer: "Arjun Verma", date: "10 Nov 2026", amount: 1899, status: "Shipped" },
+  { id: "#SS-10480", customer: "Neha Singh", date: "09 Nov 2026", amount: 3499, status: "Delivered" },
+  { id: "#SS-10479", customer: "Kabir Das", date: "08 Nov 2026", amount: 1299, status: "Pending" },
 ];
 
-const getOrderStatus = (order) =>
-  String(
-    order?.status || order?.orderStatus || "pending"
-  ).toLowerCase();
+const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-const getOrderNumber = (order) =>
-  order?.orderNumber || order?.orderId || order?._id || "";
+const statusClass = (s) =>
+  s === "Delivered" || s === "Active" || s === "Resolved" || s === "Published"
+    ? "green"
+    : s === "Pending" || s === "Processing" || s === "Open"
+      ? "amber"
+      : s === "Blocked" || s === "Cancelled" || s === "Rejected"
+        ? "red"
+        : "";
 
-const getCustomerName = (order) =>
-  order?.customer?.fullName ||
-  order?.customer?.name ||
-  order?.user?.fullName ||
-  order?.user?.name ||
-  "";
-
-const getCustomerEmail = (order) =>
-  order?.customer?.email || order?.user?.email || "";
-
-const Orders = ({
-  orders = [],
-  loading = false,
-  actionLoading = false,
-
-  onViewOrder,
-  onUpdateStatus,
-  onCancelOrder,
-  onNavigate,
-}) => {
+const Orders = ({ orders: propOrders = [] }) => {
+  const [demoOrders, setDemoOrders] = useState(INITIAL_DEMO_ORDERS);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [updatingOrder, setUpdatingOrder] = useState(null);
+  const [newStatus, setNewStatus] = useState("Processing");
 
-  const filteredOrders = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+  const rows = useMemo(() => {
+    const source = propOrders.length > 0 ? propOrders : demoOrders;
+    return source.map((o, i) => ({
+      id:
+        o.id ||
+        o.orderNumber ||
+        (o._id ? `#SS-${String(o._id).slice(-5).toUpperCase()}` : `#SS-${10482 - i}`),
+      customer:
+        o.customer?.fullName ||
+        o.user?.fullName ||
+        (typeof o.customer === "string" ? o.customer : "Customer"),
+      date: o.date || "11 Nov 2026",
+      amount: o.amount ?? o.totalAmount ?? 0,
+      status: o.status || o.orderStatus || "Processing",
+    }));
+  }, [propOrders, demoOrders]);
 
-    return orders.filter((order) => {
-      const orderNumber = String(
-        getOrderNumber(order)
-      ).toLowerCase();
-
-      const customerName = String(
-        getCustomerName(order)
-      ).toLowerCase();
-
-      const customerEmail = String(
-        getCustomerEmail(order)
-      ).toLowerCase();
-
-      const orderStatus = getOrderStatus(order);
-
-      const matchesSearch =
-        !keyword ||
-        orderNumber.includes(keyword) ||
-        customerName.includes(keyword) ||
-        customerEmail.includes(keyword);
-
-      const matchesStatus =
-        status === "all" || orderStatus === status;
-
-      return matchesSearch && matchesStatus;
+  const filtered = useMemo(() => {
+    return rows.filter((o) => {
+      if (statusFilter !== "All statuses" && o.status !== statusFilter) {
+        return false;
+      }
+      if (search.trim()) {
+        const text = `${o.id} ${o.customer} ${o.date} ${o.status}`.toLowerCase();
+        if (!text.includes(search.trim().toLowerCase())) return false;
+      }
+      return true;
     });
-  }, [orders, search, status]);
-
-  const statusCount = (value) =>
-    orders.filter(
-      (order) => getOrderStatus(order) === value
-    ).length;
-
-  const hasFilters =
-    Boolean(search.trim()) || status !== "all";
+  }, [rows, search, statusFilter]);
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <main className="p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          {/* Page Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
-                Store Orders
-              </h1>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                View, track and manage customer orders.
-              </p>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => onNavigate?.("dashboard")}
-            >
-              Back to Dashboard
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Total Orders
-              </p>
-              <p className="mt-2 text-2xl font-bold text-foreground">
-                {orders.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Pending
-              </p>
-              <p className="mt-2 text-2xl font-bold text-warning">
-                {statusCount("pending")}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Processing
-              </p>
-              <p className="mt-2 text-2xl font-bold text-primary">
-                {statusCount("processing")}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Delivered
-              </p>
-              <p className="mt-2 text-2xl font-bold text-success">
-                {statusCount("delivered")}
-              </p>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-            <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-              <Input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search order number or customer..."
-              />
-
-              <Select
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value)
-                }
-                options={STATUS_OPTIONS}
-              />
-            </div>
-          </div>
-
-          {/* Orders Table */}
-          <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-foreground">
-                Orders List
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {filteredOrders.length} order
-                {filteredOrders.length === 1 ? "" : "s"} found.
-              </p>
-            </div>
-
-            {loading ? (
-              <div className="flex min-h-[300px] items-center justify-center">
-                <Loader />
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="p-8">
-                <EmptyState
-                  title="No orders found"
-                  description={
-                    hasFilters
-                      ? "Try changing your search or status filter."
-                      : "Orders from your customers will appear here."
-                  }
-                />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <OrderTable
-                  orders={filteredOrders}
-                  onViewOrder={onViewOrder}
-                  onUpdateStatus={onUpdateStatus}
-                  onCancelOrder={onCancelOrder}
-                  actionLoading={actionLoading}
-                />
-              </div>
-            )}
-          </section>
+    <div>
+      <div className="pagehead">
+        <div>
+          <div className="eyebrow">Seller centre</div>
+          <h1>Orders</h1>
         </div>
-      </main>
+      </div>
+
+      <div className="panel">
+        <div className="toolbar">
+          <input
+            className="field"
+            placeholder="Search orders..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            className="field"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option>All statuses</option>
+            <option>Processing</option>
+            <option>Shipped</option>
+            <option>Delivered</option>
+          </select>
+        </div>
+
+        <div id="vendorOrderTable" className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.id}</td>
+                  <td>{o.customer}</td>
+                  <td>{o.date}</td>
+                  <td>{money(o.amount)}</td>
+                  <td>
+                    <span className={`status ${statusClass(o.status)}`}>
+                      {o.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btnsm"
+                      onClick={() => {
+                        setUpdatingOrder(o);
+                        setNewStatus(o.status);
+                      }}
+                    >
+                      Update
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {updatingOrder && (
+        <div
+          className="modalback"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setUpdatingOrder(null);
+          }}
+        >
+          <div className="modal">
+            <div className="modalhead">
+              <h2>Update fulfilment</h2>
+              <button
+                type="button"
+                className="iconbtn"
+                onClick={() => setUpdatingOrder(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <label>New status</label>
+            <select
+              className="field full"
+              style={{ marginTop: "6px" }}
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              <option>Processing</option>
+              <option>Shipped</option>
+              <option>Delivered</option>
+              <option>Cancelled</option>
+            </select>
+            <button
+              type="button"
+              className="primarybtn"
+              style={{ marginTop: "12px" }}
+              onClick={() => {
+                setDemoOrders((prev) =>
+                  prev.map((x) =>
+                    x.id === updatingOrder.id ? { ...x, status: newStatus } : x,
+                  ),
+                );
+                setUpdatingOrder(null);
+                toast.success("Order updated");
+              }}
+            >
+              Save status
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

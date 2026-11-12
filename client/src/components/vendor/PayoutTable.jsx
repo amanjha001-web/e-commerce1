@@ -5,14 +5,14 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
     const normalized = String(status).toLowerCase();
 
     if (["paid", "completed", "success", "successful"].includes(normalized)) {
-      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      return "status-badge green";
     }
 
     if (["failed", "cancelled", "canceled", "rejected"].includes(normalized)) {
-      return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+      return "status-badge red";
     }
 
-    return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+    return "status-badge amber";
   };
 
   const getStatus = (payout) =>
@@ -33,7 +33,7 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
       label: "Payout ID",
       sortable: false,
       render: (payout) => (
-        <span className="font-semibold text-gray-900 dark:text-white">
+        <span className="text-xs font-black text-[var(--text)] dark:text-foreground">
           #{String(getPayoutId(payout)).slice(-8)}
         </span>
       ),
@@ -42,7 +42,7 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
       key: "amount",
       label: "Amount",
       render: (payout) => (
-        <span className="font-semibold text-gray-900 dark:text-white">
+        <span className="text-xs font-black text-[var(--primary)]">
           ₹{getAmount(payout).toLocaleString("en-IN")}
         </span>
       ),
@@ -52,7 +52,7 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
       label: "Method",
       sortable: false,
       render: (payout) => (
-        <span className="capitalize">
+        <span className="text-xs font-medium capitalize text-[var(--muted)]">
           {String(getPaymentMethod(payout)).replace(/_/g, " ")}
         </span>
       ),
@@ -65,11 +65,15 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
 
         if (!date) return "—";
 
-        return new Date(date).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
+        return (
+          <span className="text-xs font-medium text-[var(--muted)]">
+            {new Date(date).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        );
       },
     },
     {
@@ -80,11 +84,7 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
         const status = getStatus(payout);
 
         return (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusClass(
-              status,
-            )}`}
-          >
+          <span className={getStatusClass(status)}>
             {String(status).replace(/_/g, " ")}
           </span>
         );
@@ -96,12 +96,12 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
     const status = String(getStatus(payout)).toLowerCase();
 
     return (
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1.5">
         {onView && (
           <button
             type="button"
             onClick={() => onView(payout)}
-            className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            className="btnsm primary"
           >
             View
           </button>
@@ -111,7 +111,7 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
           <button
             type="button"
             onClick={() => onRetry(payout)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="btnsm"
           >
             Retry
           </button>
@@ -132,3 +132,5 @@ const PayoutTable = ({ payouts = [], loading = false, onView, onRetry }) => {
 };
 
 export default PayoutTable;
+
+

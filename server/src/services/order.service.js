@@ -388,8 +388,21 @@ const getOrderById = async (orderId, user) => {
   }
 
   const orderUserId = order.user?._id || order.user;
+  const userRole = String(user?.role || "").toLowerCase();
+  const userIdStr = (user?._id || user)?.toString();
 
-  if (user.role !== "admin" && orderUserId.toString() !== user._id.toString()) {
+  const isVendorOrder =
+    userRole === "vendor" &&
+    Array.isArray(order.items) &&
+    order.items.some(
+      (item) => (item.vendor?._id || item.vendor)?.toString() === userIdStr,
+    );
+
+  if (
+    !["admin", "super_admin"].includes(userRole) &&
+    !isVendorOrder &&
+    orderUserId.toString() !== userIdStr
+  ) {
     throw new ApiError(403, "You are not authorized to access this order");
   }
 
@@ -444,7 +457,7 @@ const getAllOrders = async (query = {}) => {
 
 /*                            Cancel Order                                  */
 
-const cancelOrder = async (orderId, user) => {
+const cancelOrder = async (orderId, user, reason = "") => {
   const session = await mongoose.startSession();
 
   try {
@@ -457,10 +470,12 @@ const cancelOrder = async (orderId, user) => {
     }
 
     const orderUserId = order.user?._id || order.user;
+    const userRole = String(user?.role || "").toLowerCase();
+    const userIdStr = (user?._id || user)?.toString();
 
     if (
-      user.role !== "admin" &&
-      orderUserId.toString() !== user._id.toString()
+      !["admin", "super_admin"].includes(userRole) &&
+      orderUserId.toString() !== userIdStr
     ) {
       throw new ApiError(403, "You are not authorized to cancel this order");
     }
@@ -488,15 +503,20 @@ const cancelOrder = async (orderId, user) => {
       );
     }
 
+    const cancelNote = reason?.trim()
+      ? `Order cancelled: ${reason.trim()}`
+      : "Order cancelled";
+
     const updatedOrder = await orderRepository.updateOrder(
       orderId,
       {
         orderStatus: "Cancelled",
         cancelledAt: new Date(),
+        ...(reason?.trim() ? { cancelReason: reason.trim() } : {}),
         $push: {
           statusHistory: {
             status: "Cancelled",
-            note: "Order cancelled",
+            note: cancelNote,
             updatedAt: new Date(),
           },
         },
@@ -720,11 +740,28 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
 
 /*                            Return Order                                  */
 
-const returnOrder = async (orderId, reason) => {
+const returnOrder = async (orderId, userOrReason, maybeReason = "") => {
   const order = await orderRepository.getOrderById(orderId);
 
   if (!order) {
     throw new ApiError(404, "Order not found");
+  }
+
+  let reason = "";
+  if (typeof userOrReason === "string") {
+    reason = userOrReason;
+  } else if (userOrReason && typeof userOrReason === "object") {
+    const orderUserId = order.user?._id || order.user;
+    const userRole = String(userOrReason.role || "").toLowerCase();
+    const userIdStr = (userOrReason._id || userOrReason)?.toString();
+
+    if (
+      !["admin", "super_admin"].includes(userRole) &&
+      orderUserId.toString() !== userIdStr
+    ) {
+      throw new ApiError(403, "You are not authorized to return this order");
+    }
+    reason = maybeReason || "";
   }
 
   if (order.orderStatus !== "Delivered") {
@@ -735,7 +772,36 @@ const returnOrder = async (orderId, reason) => {
     returnStatus: "Requested",
     returnReason: reason,
     returnRequestedAt: new Date(),
+    $push: {
+      statusHistory: {
+        status: "Return Requested",
+        note: reason ? `Return requested: ${reason}` : "Return requested",
+        updatedAt: new Date(),
+      },
+    },
   });
+};
+
+/*                            Track Order                                   */
+
+const trackOrder = async (orderId, user) => {
+  const order = await getOrderById(orderId, user);
+
+  return {
+    orderId: order._id,
+    orderNumber: order.orderNumber,
+    orderStatus: order.orderStatus,
+    paymentStatus: order.paymentStatus,
+    trackingNumber: order.trackingNumber || "",
+    courierPartner: order.courierPartner || "",
+    expectedDeliveryDate: order.expectedDeliveryDate || null,
+    shippedAt: order.shippedAt || null,
+    deliveredAt: order.deliveredAt || null,
+    cancelledAt: order.cancelledAt || null,
+    returnedAt: order.returnedAt || null,
+    statusHistory: order.statusHistory || [],
+    shippingAddress: order.shippingAddress,
+  };
 };
 
 /*                               Export                                     */
@@ -750,4 +816,5 @@ export default {
   updateOrderStatus,
   updatePaymentStatus,
   returnOrder,
+  trackOrder,
 };

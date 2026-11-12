@@ -19,7 +19,7 @@ const ProductBadge = ({ type, text, className = "" }) => {
     featured: {
       label: "Featured",
       className:
-        "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+        "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
     },
     bestseller: {
       label: "Bestseller",
@@ -34,7 +34,7 @@ const ProductBadge = ({ type, text, className = "" }) => {
     limited: {
       label: "Limited",
       className:
-        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+        "bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground",
     },
   };
 

@@ -37,10 +37,10 @@ const ProductTable = ({
     const normalized = String(status).toLowerCase();
 
     if (["active", "published"].includes(normalized)) {
-      return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      return "status-badge green";
     }
 
-    return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
+    return "status-badge";
   };
 
   const columns = [
@@ -59,21 +59,21 @@ const ProductTable = ({
               <img
                 src={image}
                 alt={name}
-                className="h-12 w-12 rounded-lg object-cover"
+                className="h-11 w-11 rounded-xl object-cover border border-[var(--line)]"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-lg dark:bg-gray-800">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--soft)] border border-[var(--line)] text-base">
                 📦
               </div>
             )}
 
             <div className="min-w-0">
-              <p className="max-w-[220px] truncate font-medium text-gray-900 dark:text-white">
+              <p className="max-w-[220px] truncate text-xs font-bold text-[var(--text)] dark:text-foreground">
                 {name}
               </p>
 
               {product?.sku && (
-                <p className="mt-1 text-xs text-gray-400">SKU: {product.sku}</p>
+                <p className="mt-0.5 text-[11px] font-medium text-[var(--muted)]">SKU: {product.sku}</p>
               )}
             </div>
           </div>
@@ -84,14 +84,17 @@ const ProductTable = ({
       key: "category",
       label: "Category",
       sortable: false,
-      render: (product) =>
-        product?.category?.name || product?.categoryName || "—",
+      render: (product) => (
+        <span className="text-xs font-medium text-[var(--muted)]">
+          {product?.category?.name || product?.categoryName || "—"}
+        </span>
+      ),
     },
     {
       key: "price",
       label: "Price",
       render: (product) => (
-        <span className="font-semibold">
+        <span className="text-xs font-black text-[var(--primary)]">
           ₹{getPrice(product).toLocaleString("en-IN")}
         </span>
       ),
@@ -106,10 +109,10 @@ const ProductTable = ({
           <span
             className={
               stock <= 0
-                ? "font-semibold text-red-600"
+                ? "text-xs font-black text-[var(--red)]"
                 : stock <= 10
-                  ? "font-semibold text-yellow-600"
-                  : "font-semibold text-gray-700 dark:text-gray-300"
+                  ? "text-xs font-black text-[var(--amber)]"
+                  : "text-xs font-bold text-[var(--text)]"
             }
           >
             {stock.toLocaleString("en-IN")}
@@ -125,11 +128,7 @@ const ProductTable = ({
         const status = getStatus(product);
 
         return (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${getStatusClass(
-              status,
-            )}`}
-          >
+          <span className={getStatusClass(status)}>
             {String(status).replace(/_/g, " ")}
           </span>
         );
@@ -141,12 +140,12 @@ const ProductTable = ({
     const status = String(getStatus(product)).toLowerCase();
 
     return (
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1.5">
         {onView && (
           <button
             type="button"
             onClick={() => onView(product)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="btnsm"
           >
             View
           </button>
@@ -156,7 +155,7 @@ const ProductTable = ({
           <button
             type="button"
             onClick={() => onEdit(product)}
-            className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            className="btnsm primary"
           >
             Edit
           </button>
@@ -166,7 +165,7 @@ const ProductTable = ({
           <button
             type="button"
             onClick={() => onToggleStatus(product)}
-            className="rounded-lg border border-yellow-200 px-3 py-1.5 text-xs font-medium text-yellow-600 transition hover:bg-yellow-50 dark:border-yellow-900 dark:text-yellow-400 dark:hover:bg-yellow-900/20"
+            className="btnsm"
           >
             {status === "active" ? "Disable" : "Enable"}
           </button>
@@ -176,7 +175,7 @@ const ProductTable = ({
           <button
             type="button"
             onClick={() => onDelete(product)}
-            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+            className="btnsm text-[var(--red)] border-[#f3cbd0] hover:bg-[#fff0f1]"
           >
             Delete
           </button>
@@ -199,3 +198,5 @@ const ProductTable = ({
 };
 
 export default ProductTable;
+
+

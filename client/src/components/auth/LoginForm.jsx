@@ -56,21 +56,21 @@ const LoginForm = ({
   };
 
   const inputClass = (field) =>
-    `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
+    `mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition dark:bg-card dark:text-foreground ${
       errors[field]
-        ? "border-red-500"
-        : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
+        ? "border-[var(--red)] focus:border-[var(--red)] focus:ring-2 focus:ring-[#c0394b]/20"
+        : "border-[var(--line)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15"
     }`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Email */}
       <div>
         <label
           htmlFor="login-email"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
         >
-          Email Address
+          Email address
         </label>
 
         <input
@@ -79,13 +79,13 @@ const LoginForm = ({
           name="email"
           value={form.email}
           onChange={handleChange}
-          placeholder="Enter your email"
+          placeholder="you@example.com"
           autoComplete="email"
           className={inputClass("email")}
         />
 
         {errors.email && (
-          <p className="mt-1 text-xs text-red-500">{errors.email}</p>
+          <p className="mt-1 text-xs text-[var(--red)]">{errors.email}</p>
         )}
       </div>
 
@@ -94,7 +94,7 @@ const LoginForm = ({
         <div className="flex items-center justify-between">
           <label
             htmlFor="login-password"
-            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
           >
             Password
           </label>
@@ -103,9 +103,9 @@ const LoginForm = ({
             <button
               type="button"
               onClick={onForgotPassword}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              className="text-xs font-semibold text-[var(--primary)] hover:underline"
             >
-              Forgot Password?
+              Forgot password?
             </button>
           )}
         </div>
@@ -122,7 +122,7 @@ const LoginForm = ({
         />
 
         {errors.password && (
-          <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+          <p className="mt-1 text-xs text-[var(--red)]">{errors.password}</p>
         )}
       </div>
 
@@ -130,21 +130,21 @@ const LoginForm = ({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="primarybtn w-full !py-3 !text-sm !rounded-xl"
       >
-        {loading ? "Signing in..." : "Sign In"}
+        {loading ? "Signing in..." : "Sign in →"}
       </button>
 
       {/* Register */}
       {onRegister && (
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-          Don't have an account?{" "}
+        <p className="text-center text-xs text-[var(--muted)]">
+          New to ShopSphere?{" "}
           <button
             type="button"
             onClick={onRegister}
-            className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="font-bold text-[var(--primary)] hover:underline"
           >
-            Create Account
+            Create an account
           </button>
         </p>
       )}

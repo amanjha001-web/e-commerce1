@@ -120,7 +120,7 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
             <button
               type="button"
               onClick={() => onReturn(order)}
-              className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+              className="rounded-lg bg-secondary px-3 py-2 text-xs font-semibold text-white hover:bg-primary"
             >
               Return
             </button>
@@ -132,3 +132,4 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
 };
 
 export default OrderCard;
+

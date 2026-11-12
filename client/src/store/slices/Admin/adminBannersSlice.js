@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import bannersService from "../../../services/banners.service";
 
-// Fetch all banners
+// Fetch all banners (GET /banners)
 export const fetchBanners = createAsyncThunk(
   "adminBanners/fetchBanners",
   async (params = {}, { rejectWithValue }) => {
@@ -10,16 +10,18 @@ export const fetchBanners = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to fetch banners");
       }
-      return response.data || response;
+      return response?.data ?? response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to fetch banners"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch banners",
       );
     }
-  }
+  },
 );
 
-// Fetch single banner
+// Fetch single banner (GET /banners/:bannerId)
 export const fetchBannerById = createAsyncThunk(
   "adminBanners/fetchBannerById",
   async (bannerId, { rejectWithValue }) => {
@@ -28,16 +30,18 @@ export const fetchBannerById = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to fetch banner");
       }
-      return response.data?.banner || response;
+      return response?.data?.banner ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to fetch banner"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch banner",
       );
     }
-  }
+  },
 );
 
-// Create banner
+// Create banner (POST /banners)
 export const createBanner = createAsyncThunk(
   "adminBanners/createBanner",
   async (bannerData, { rejectWithValue }) => {
@@ -46,16 +50,18 @@ export const createBanner = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to create banner");
       }
-      return response.data?.banner || response;
+      return response?.data?.banner ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to create banner"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create banner",
       );
     }
-  }
+  },
 );
 
-// Update banner
+// Update banner (PATCH /banners/:bannerId)
 export const updateBanner = createAsyncThunk(
   "adminBanners/updateBanner",
   async ({ bannerId, bannerData }, { rejectWithValue }) => {
@@ -64,16 +70,18 @@ export const updateBanner = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to update banner");
       }
-      return response.data?.banner || response;
+      return response?.data?.banner ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to update banner"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update banner",
       );
     }
-  }
+  },
 );
 
-// Delete banner
+// Delete banner (DELETE /banners/:bannerId)
 export const deleteBanner = createAsyncThunk(
   "adminBanners/deleteBanner",
   async (bannerId, { rejectWithValue }) => {
@@ -85,40 +93,59 @@ export const deleteBanner = createAsyncThunk(
       return bannerId;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to delete banner"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to delete banner",
       );
     }
-  }
+  },
 );
 
-// Toggle banner status
+// Toggle banner status (PATCH /banners/:bannerId with status: ACTIVE | INACTIVE)
 export const toggleBannerStatus = createAsyncThunk(
   "adminBanners/toggleBannerStatus",
-  async (bannerId, { rejectWithValue }) => {
+  async (arg, { getState, rejectWithValue }) => {
     try {
-      const response = await bannersService.update(bannerId, { status: null });
-      if (response?.success === false) {
-        return rejectWithValue(response.message || "Failed to toggle banner status");
+      const bannerId = typeof arg === "object" ? arg.bannerId : arg;
+      let nextStatus = typeof arg === "object" ? arg.status : undefined;
+
+      if (!nextStatus) {
+        const existing = getState()?.adminBanners?.banners?.find(
+          (b) => (b._id || b.id) === bannerId,
+        );
+        const current = String(existing?.status || "ACTIVE").toUpperCase();
+        nextStatus = current === "ACTIVE" ? "INACTIVE" : "ACTIVE";
       }
-      return response.data?.banner || response;
+
+      const response = await bannersService.update(bannerId, {
+        status: nextStatus,
+      });
+      if (response?.success === false) {
+        return rejectWithValue(
+          response.message || "Failed to toggle banner status",
+        );
+      }
+      return response?.data?.banner ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to toggle banner status"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to toggle banner status",
       );
     }
-  }
+  },
 );
 
-// Initial State
 const initialState = {
   banners: [],
+  selectedBanner: null,
+  pagination: {},
   stats: null,
   loading: false,
   actionLoading: false,
   error: null,
 };
 
-// Banners Slice
 const adminBannersSlice = createSlice({
   name: "adminBanners",
   initialState,
@@ -137,7 +164,13 @@ const adminBannersSlice = createSlice({
       .addCase(fetchBanners.fulfilled, (state, action) => {
         state.loading = false;
         const payload = action.payload;
-        state.banners = payload?.banners || payload || [];
+        state.banners = Array.isArray(payload?.banners)
+          ? payload.banners
+          : Array.isArray(payload?.docs)
+            ? payload.docs
+            : Array.isArray(payload)
+              ? payload
+              : [];
         state.pagination = payload?.pagination || {};
       })
       .addCase(fetchBanners.rejected, (state, action) => {
@@ -146,7 +179,7 @@ const adminBannersSlice = createSlice({
       })
       .addCase(toggleBannerStatus.fulfilled, (state, action) => {
         const index = state.banners.findIndex(
-          (b) => b._id === action.payload._id
+          (b) => (b._id || b.id) === (action.payload?._id || action.payload?.id),
         );
         if (index !== -1) {
           state.banners[index] = action.payload;
@@ -156,8 +189,9 @@ const adminBannersSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchBannerById.fulfilled, (state) => {
+      .addCase(fetchBannerById.fulfilled, (state, action) => {
         state.loading = false;
+        state.selectedBanner = action.payload;
       })
       .addCase(fetchBannerById.rejected, (state, action) => {
         state.loading = false;
@@ -169,7 +203,9 @@ const adminBannersSlice = createSlice({
       })
       .addCase(createBanner.fulfilled, (state, action) => {
         state.actionLoading = false;
-        state.banners.unshift(action.payload);
+        if (action.payload) {
+          state.banners.unshift(action.payload);
+        }
       })
       .addCase(createBanner.rejected, (state, action) => {
         state.actionLoading = false;
@@ -182,7 +218,7 @@ const adminBannersSlice = createSlice({
       .addCase(updateBanner.fulfilled, (state, action) => {
         state.actionLoading = false;
         const index = state.banners.findIndex(
-          (b) => b._id === action.payload._id
+          (b) => (b._id || b.id) === (action.payload?._id || action.payload?.id),
         );
         if (index !== -1) {
           state.banners[index] = action.payload;
@@ -198,7 +234,9 @@ const adminBannersSlice = createSlice({
       })
       .addCase(deleteBanner.fulfilled, (state, action) => {
         state.actionLoading = false;
-        state.banners = state.banners.filter((b) => b._id !== action.payload);
+        state.banners = state.banners.filter(
+          (b) => (b._id || b.id) !== action.payload,
+        );
       })
       .addCase(deleteBanner.rejected, (state, action) => {
         state.actionLoading = false;

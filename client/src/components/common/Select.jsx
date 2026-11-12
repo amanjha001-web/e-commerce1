@@ -30,11 +30,10 @@ const Select = forwardRef(
         {label && (
           <label
             htmlFor={selectId}
-            className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+            className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
           >
             {label}
-
-            {required && <span className="ml-1 text-red-500">*</span>}
+            {required && <span className="ml-1 text-[var(--red)]">*</span>}
           </label>
         )}
 
@@ -52,31 +51,33 @@ const Select = forwardRef(
           aria-describedby={
             error || helperText ? `${selectId}-message` : undefined
           }
-          className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-800 ${
+          className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition disabled:cursor-not-allowed disabled:bg-gray-100 dark:bg-card dark:text-foreground ${
             error
-              ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-              : "border-gray-300"
+              ? "border-[var(--red)] focus:border-[var(--red)] focus:ring-2 focus:ring-[#c0394b]/20"
+              : "border-[var(--line)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15"
           } ${selectClassName}`}
           {...props}
         >
-          <option value="">{placeholder}</option>
+          {placeholder && <option value="">{placeholder}</option>}
 
-          {options.map((option) => (
-            <option
-              key={option.value}
-              value={option.value}
-              disabled={option.disabled}
-            >
-              {option.label}
-            </option>
-          ))}
+          {options.map((option) => {
+            const isObject = typeof option === "object" && option !== null;
+            const optValue = isObject ? option.value : option;
+            const optLabel = isObject ? option.label : option;
+
+            return (
+              <option key={String(optValue)} value={optValue}>
+                {optLabel}
+              </option>
+            );
+          })}
         </select>
 
         {(error || helperText) && (
           <p
             id={`${selectId}-message`}
             className={`mt-1 text-xs ${
-              error ? "text-red-500" : "text-gray-500 dark:text-gray-400"
+              error ? "text-[var(--red)]" : "text-[var(--muted)]"
             }`}
           >
             {error || helperText}

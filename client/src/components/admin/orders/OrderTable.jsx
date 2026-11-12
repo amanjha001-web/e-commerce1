@@ -82,7 +82,7 @@ const OrderTable = ({
       case "confirmed":
       case "processing":
       case "shipped":
-        return "bg-blue-100 text-blue-700";
+        return "bg-primary text-primary-foreground";
 
       case "pending":
       case "placed":
@@ -94,7 +94,7 @@ const OrderTable = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       default:
         return "bg-gray-100 text-gray-700";
@@ -117,7 +117,7 @@ const OrderTable = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       default:
         return "bg-gray-100 text-gray-700";
@@ -126,7 +126,7 @@ const OrderTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white">
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1100px]">
             <thead>
@@ -199,7 +199,7 @@ const OrderTable = ({
 
   if (!orders.length) {
     return (
-      <div className="rounded-2xl border border-border bg-background px-6 py-14 text-center">
+      <div className="rounded-2xl border border-border bg-white px-6 py-14 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
           🛍️
         </div>
@@ -216,7 +216,7 @@ const OrderTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white">
       {/* Desktop */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1100px]">

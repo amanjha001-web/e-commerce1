@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 const TopBar = ({
-  message = "Welcome to ShopSphere",
+  message = "LUXURY FINDS, EVERYDAY PRICES · FREE SHIPPING ON ORDERS ABOVE ₹999",
   leftContent,
   rightContent,
   showMessage = true,
@@ -9,31 +9,31 @@ const TopBar = ({
 }) => {
   return (
     <div
-      className={`w-full border-b border-gray-200 bg-gray-50 text-sm dark:border-gray-800 dark:bg-gray-950 ${className}`}
+      className={`w-full bg-[var(--deep)] text-white text-xs font-medium tracking-wide ${className}`}
     >
-      <div className="mx-auto flex min-h-9 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-8 max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-7">
         <div className="flex min-w-0 items-center">
           {leftContent ||
             (showMessage && (
-              <p className="truncate text-gray-600 dark:text-gray-400">
+              <p className="truncate text-white/90">
                 {message}
               </p>
             ))}
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="flex shrink-0 items-center gap-5 text-[11px] text-white/80">
           {rightContent || (
             <>
               <Link
                 to="/support"
-                className="hidden text-gray-600 transition hover:text-blue-600 sm:inline dark:text-gray-400 dark:hover:text-blue-400"
+                className="hidden transition hover:text-white sm:inline"
               >
                 Help & Support
               </Link>
 
               <Link
                 to="/orders"
-                className="text-gray-600 transition hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                className="transition hover:text-white"
               >
                 Track Order
               </Link>

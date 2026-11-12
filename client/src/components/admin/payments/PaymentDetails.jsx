@@ -155,7 +155,7 @@ const PaymentDetails = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       case "partially_refunded":
         return "bg-indigo-100 text-indigo-700";
@@ -207,7 +207,7 @@ const PaymentDetails = ({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0">
@@ -545,7 +545,7 @@ const PaymentDetails = ({
                       <span className="absolute left-[7px] top-5 h-full w-px bg-border" />
                     )}
 
-                    <span className="relative mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-primary bg-background" />
+                    <span className="relative mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-primary bg-white" />
 
                     <div className="min-w-0 pb-1">
                       <p className="text-sm font-medium text-foreground">

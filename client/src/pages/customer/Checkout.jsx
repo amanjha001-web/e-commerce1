@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from "react";
 
 import CheckoutSteps from "../../components/checkout/CheckoutSteps";
@@ -43,7 +42,7 @@ const Checkout = ({
           item?.price ??
             item?.product?.salePrice ??
             item?.product?.price ??
-            0
+            0,
         ) || 0;
 
       return total + price * (Number(item?.quantity) || 0);
@@ -52,14 +51,14 @@ const Checkout = ({
 
   const discount = Number(cart?.discount || 0);
   const shipping = Number(
-    cart?.shippingCharge ?? cart?.shipping ?? 0
+    cart?.shippingCharge ?? cart?.shipping ?? 0,
   );
   const tax = Number(cart?.tax || 0);
 
   const total = Number(
     cart?.totalAmount ??
       cart?.total ??
-      subtotal - discount + shipping + tax
+      subtotal - discount + shipping + tax,
   );
 
   const handleAddressSelect = (address) => {
@@ -88,7 +87,7 @@ const Checkout = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-[var(--bg)] text-[var(--text)]">
         <Loader />
       </div>
     );
@@ -96,160 +95,150 @@ const Checkout = ({
 
   if (paymentStatus) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        <PaymentStatus
-          status={paymentStatus}
-          onNavigate={onNavigate}
-        />
+      <main className="page">
+        <div className="mx-auto max-w-4xl">
+          <PaymentStatus
+            status={paymentStatus}
+            onContinueShopping={() => onNavigate?.("/products")}
+            onViewOrders={() => onNavigate?.("/orders")}
+          />
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8">
-        <p className="text-sm font-medium text-primary">
-          Secure Checkout
-        </p>
-
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-          Checkout
-        </h1>
-      </div>
-
-      {/* Steps */}
-      <div className="mb-8">
-        <CheckoutSteps currentStep={step} />
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600">
-          {error}
+    <main className="page">
+      <div>
+        {/* Header */}
+        <div className="mb-6">
+          <div className="eyebrow">Almost yours</div>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[var(--text)]">
+            Checkout
+          </h1>
         </div>
-      )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        {/* Main */}
-        <div className="space-y-6">
-          {/* Address */}
-          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  1. Delivery Address
-                </h2>
+        {/* Steps */}
+        <div className="mb-6">
+          <CheckoutSteps currentStep={step} />
+        </div>
 
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Select where you want your order delivered.
-                </p>
-              </div>
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-[#f3cbd0] bg-[#fff0f1] px-4 py-3 text-xs font-bold text-[var(--red)]">
+            {error}
+          </div>
+        )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddressForm((value) => !value)}
-              >
-                {showAddressForm ? "Cancel" : "+ Add New"}
-              </Button>
-            </div>
+        <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
+          {/* Main Content */}
+          <div className="space-y-5">
+            {/* 1. Address Section */}
+            <section className="panel">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--text)] dark:text-foreground">
+                    1. Delivery address
+                  </h2>
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
+                    Select where you want your order delivered.
+                  </p>
+                </div>
 
-            {showAddressForm ? (
-              <AddAddress
-                loading={placingOrder}
-                onSubmit={handleAddAddress}
-                onCancel={() => setShowAddressForm(false)}
-              />
-            ) : addresses.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No saved addresses available.
-                </p>
-
-                <Button
-                  className="mt-4"
-                  onClick={() => setShowAddressForm(true)}
+                <button
+                  type="button"
+                  onClick={() => setShowAddressForm((val) => !val)}
+                  className="btnsm"
                 >
-                  Add Address
-                </Button>
+                  {showAddressForm ? "Cancel" : "+ Add address"}
+                </button>
               </div>
-            ) : (
-              <AddressSelector
-                addresses={addresses}
-                selectedAddress={selectedAddress}
-                onSelect={handleAddressSelect}
-              />
-            )}
-          </section>
 
-          {/* Payment */}
-          <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold">
-                2. Payment Method
+              {showAddressForm ? (
+                <AddAddress
+                  loading={placingOrder}
+                  onSubmit={handleAddAddress}
+                  onCancel={() => setShowAddressForm(false)}
+                />
+              ) : addresses.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--soft)] p-8 text-center">
+                  <p className="text-xs text-[var(--muted)]">
+                    No saved addresses found.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressForm(true)}
+                    className="primarybtn mt-3 !py-2 !px-4 !text-xs"
+                  >
+                    + Add delivery address
+                  </button>
+                </div>
+              ) : (
+                <AddressSelector
+                  addresses={addresses}
+                  selectedAddress={selectedAddress}
+                  onSelect={handleAddressSelect}
+                />
+              )}
+            </section>
+
+            {/* 2. Payment Method */}
+            <section className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card dark:border-line">
+              <div className="mb-5">
+                <h2 className="text-lg font-bold text-[var(--text)] dark:text-foreground">
+                  2. Payment method
+                </h2>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                  Choose cash on delivery, UPI, or cards.
+                </p>
+              </div>
+
+              <PaymentMethod
+                value={selectedPaymentMethod}
+                onChange={handlePaymentSelect}
+                loading={paymentLoading}
+              />
+            </section>
+          </div>
+
+          {/* Order Total Sidebar */}
+          <aside className="lg:sticky lg:top-24 lg:h-fit">
+            <div className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card dark:border-line">
+              <h2 className="mb-5 text-lg font-bold text-[var(--text)] dark:text-foreground">
+                Order summary
               </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choose your preferred payment method.
+              <OrderSummary
+                cart={cart}
+                items={items}
+                subtotal={subtotal}
+                discount={discount}
+                shipping={shipping}
+                tax={tax}
+                total={total}
+              />
+
+              <button
+                type="button"
+                onClick={handlePlaceOrder}
+                disabled={
+                  placingOrder ||
+                  !selectedAddress ||
+                  !selectedPaymentMethod ||
+                  !items.length
+                }
+                className="primarybtn mt-6 w-full !py-3 !text-sm !rounded-xl"
+              >
+                {placingOrder ? "Placing order..." : "Place order →"}
+              </button>
+
+              <p className="mt-3 text-center text-[11px] text-[var(--muted)] leading-relaxed">
+                ✓ Secure checkout · 100% money-back guarantee
               </p>
             </div>
-
-            <PaymentMethod
-              value={selectedPaymentMethod}
-              onChange={handlePaymentSelect}
-              loading={paymentLoading}
-            />
-          </section>
+          </aside>
         </div>
-
-        {/* Summary */}
-        <aside className="lg:sticky lg:top-24 lg:h-fit">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="mb-5 text-lg font-semibold">
-              Order Summary
-            </h2>
-
-            <OrderSummary
-              cart={cart}
-              items={items}
-              subtotal={subtotal}
-              discount={discount}
-              shipping={shipping}
-              tax={tax}
-              total={total}
-            />
-
-            <Button
-              className="mt-6 w-full"
-              onClick={handlePlaceOrder}
-              disabled={
-                placingOrder ||
-                !selectedAddress ||
-                !selectedPaymentMethod ||
-                !items.length
-              }
-            >
-              {placingOrder
-                ? "Placing Order..."
-                : `Place Order • ₹${total.toFixed(2)}`}
-            </Button>
-
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              By placing your order, you agree to our terms and
-              conditions.
-            </p>
-          </div>
-        </aside>
       </div>
-
-      {/* Back */}
-      <button
-        type="button"
-        onClick={() => onNavigate?.("/cart")}
-        className="mt-8 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Back to Cart
-      </button>
     </main>
   );
 };

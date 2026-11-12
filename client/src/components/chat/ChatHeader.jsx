@@ -39,7 +39,7 @@ const ChatHeader = ({ conversation = null, onBack, onClose }) => {
               className="h-10 w-10 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
               {name.charAt(0).toUpperCase()}
             </div>
           )}

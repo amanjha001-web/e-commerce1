@@ -1,4 +1,3 @@
-
 import OrderItem from "../../components/order/OrderItem";
 import OrderStatus from "../../components/order/OrderStatus";
 import OrderSummary from "../../components/order/OrderSummary";
@@ -23,7 +22,7 @@ const OrderDetails = ({
 }) => {
   if (loading) {
     return (
-      <main className="mx-auto flex min-h-[60vh] max-w-6xl items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
+      <main className="mx-auto flex min-h-[60vh] max-w-6xl items-center justify-center bg-background px-4 py-10 text-foreground transition-colors duration-300 sm:px-6 lg:px-8">
         <Loader />
       </main>
     );
@@ -31,7 +30,7 @@ const OrderDetails = ({
 
   if (!order) {
     return (
-      <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="mx-auto min-h-screen max-w-6xl bg-background px-4 py-10 text-foreground transition-colors duration-300 sm:px-6 lg:px-8">
         <EmptyState
           title="Order not found"
           description="The order you're looking for does not exist or is no longer available."
@@ -61,36 +60,27 @@ const OrderDetails = ({
   const items = order?.items || order?.orderItems || [];
 
   const shippingAddress =
-    order?.shippingAddress ||
-    order?.address ||
-    order?.deliveryAddress ||
-    null;
+    order?.shippingAddress || order?.address || order?.deliveryAddress || null;
 
-  const paymentMethod =
-    order?.paymentMethod ||
-    order?.payment?.method ||
-    "N/A";
+  const paymentMethod = order?.paymentMethod || order?.payment?.method || "N/A";
 
-  const paymentStatus =
-    order?.paymentStatus ||
-    order?.payment?.status ||
-    "N/A";
+  const paymentStatus = order?.paymentStatus || order?.payment?.status || "N/A";
 
-  const status =
-    order?.status ||
-    order?.orderStatus ||
-    "pending";
+  const status = order?.status || order?.orderStatus || "pending";
 
-  const canCancel =
-    !["cancelled", "delivered", "returned", "completed"].includes(
-      String(status).toLowerCase()
-    );
+  const canCancel = ![
+    "cancelled",
+    "delivered",
+    "returned",
+    "completed",
+  ].includes(String(status).toLowerCase());
 
-  const canReturn =
-    ["delivered", "completed"].includes(String(status).toLowerCase());
+  const canReturn = ["delivered", "completed"].includes(
+    String(status).toLowerCase(),
+  );
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto min-h-screen max-w-6xl bg-background px-4 py-8 text-foreground transition-colors duration-300 sm:px-6 lg:px-8">
       <Breadcrumb
         items={[
           {
@@ -111,7 +101,7 @@ const OrderDetails = ({
       <div className="mt-6 flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Order Details
             </h1>
 
@@ -141,10 +131,7 @@ const OrderDetails = ({
             </Button>
           )}
 
-          <Button
-            variant="outline"
-            onClick={() => onNavigate?.("/orders")}
-          >
+          <Button variant="outline" onClick={() => onNavigate?.("/orders")}>
             Back to Orders
           </Button>
         </div>
@@ -158,7 +145,8 @@ const OrderDetails = ({
             <div className="border-b border-border px-5 py-4 sm:px-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-semibold">Order Items</h2>
+                  <h2 className="font-semibold text-foreground">Order Items</h2>
+
                   <p className="mt-1 text-sm text-muted-foreground">
                     {items.length} {items.length === 1 ? "item" : "items"}
                   </p>
@@ -186,11 +174,9 @@ const OrderDetails = ({
           </section>
 
           {/* Timeline */}
-          {(order?.timeline ||
-            order?.statusHistory ||
-            order?.history) && (
+          {(order?.timeline || order?.statusHistory || order?.history) && (
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="font-semibold">Order Timeline</h2>
+              <h2 className="font-semibold text-foreground">Order Timeline</h2>
 
               <div className="mt-5">
                 <OrderTimeline
@@ -206,33 +192,31 @@ const OrderDetails = ({
           )}
 
           {/* Tracking */}
-          {order?.tracking ||
-            order?.trackingInfo ||
-            order?.shipment ? (
-              <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                <h2 className="font-semibold">Shipment Tracking</h2>
+          {order?.tracking || order?.trackingInfo || order?.shipment ? (
+            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <h2 className="font-semibold text-foreground">
+                Shipment Tracking
+              </h2>
 
-                <div className="mt-5">
-                  <TrackOrder
-                    order={order}
-                    tracking={
-                      order?.tracking ||
-                      order?.trackingInfo ||
-                      order?.shipment
-                    }
-                    onTrack={onTrackOrder}
-                  />
-                </div>
-              </section>
-            ) : null}
+              <div className="mt-5">
+                <TrackOrder
+                  order={order}
+                  tracking={
+                    order?.tracking || order?.trackingInfo || order?.shipment
+                  }
+                  onTrack={onTrackOrder}
+                />
+              </div>
+            </section>
+          ) : null}
 
           {/* Shipping Address */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <h2 className="font-semibold">Shipping Address</h2>
+            <h2 className="font-semibold text-foreground">Shipping Address</h2>
 
             {shippingAddress ? (
-              <div className="mt-4 rounded-xl bg-muted/50 p-4 text-sm">
-                <p className="font-medium">
+              <div className="mt-4 rounded-xl border border-border bg-muted/50 p-4 text-sm">
+                <p className="font-medium text-foreground">
                   {shippingAddress?.fullName ||
                     shippingAddress?.name ||
                     "Customer"}
@@ -269,23 +253,27 @@ const OrderDetails = ({
 
           {/* Payment Information */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <h2 className="font-semibold">Payment Information</h2>
+            <h2 className="font-semibold text-foreground">
+              Payment Information
+            </h2>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl bg-muted/50 p-4">
+              <div className="rounded-xl border border-border bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Payment Method
                 </p>
-                <p className="mt-1 font-medium capitalize">
+
+                <p className="mt-1 font-medium capitalize text-foreground">
                   {String(paymentMethod).replace(/_/g, " ")}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-muted/50 p-4">
+              <div className="rounded-xl border border-border bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Payment Status
                 </p>
-                <p className="mt-1 font-medium capitalize">
+
+                <p className="mt-1 font-medium capitalize text-foreground">
                   {String(paymentStatus).replace(/_/g, " ")}
                 </p>
               </div>
@@ -297,7 +285,9 @@ const OrderDetails = ({
         <aside className="space-y-6">
           {/* Summary */}
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 font-semibold">Order Summary</h2>
+            <h2 className="mb-4 font-semibold text-foreground">
+              Order Summary
+            </h2>
 
             <OrderSummary order={order} />
           </section>
@@ -305,7 +295,7 @@ const OrderDetails = ({
           {/* Actions */}
           {(canCancel || canReturn) && (
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="font-semibold">Order Actions</h2>
+              <h2 className="font-semibold text-foreground">Order Actions</h2>
 
               <div className="mt-4 space-y-3">
                 {canCancel && onCancelOrder && (

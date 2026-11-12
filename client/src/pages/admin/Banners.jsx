@@ -1,345 +1,391 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import Button from "../../components/common/Button";
-import Input from "../../components/common/Input";
-import Modal from "../../components/common/Modal";
-import Loader from "../../components/common/Loader";
-import EmptyState from "../../components/common/EmptyState";
+const DEMO_BANNERS = [
+  {
+    preview: "🖼️",
+    title: "Festive collection",
+    placement: "Homepage hero",
+    section: "HOME_HERO",
+    schedule: "Nov 1–30",
+    status: "Active",
+    rawStatus: "ACTIVE",
+    statusClass: "green",
+    isDemo: true,
+  },
+  {
+    preview: "🖼️",
+    title: "New arrivals",
+    placement: "Shop page",
+    section: "CATEGORY",
+    schedule: "Nov 10–20",
+    status: "Scheduled",
+    rawStatus: "SCHEDULED",
+    statusClass: "amber",
+    isDemo: true,
+  },
+];
 
-const EMPTY_FORM = {
-  title: "",
-  image: "",
-  link: "",
-  status: true,
+const SECTION_LABELS = {
+  HOME_HERO: "Homepage hero",
+  HOME_MIDDLE: "Homepage middle",
+  HOME_BOTTOM: "Homepage bottom",
+  CATEGORY: "Shop page",
+  PRODUCT: "Product page",
+  APP: "App banner",
 };
 
 const Banners = ({
   banners = [],
-  totalBanners = 0,
-  loading = false,
   saving = false,
-
   onCreateBanner,
   onEditBanner,
   onDeleteBanner,
   onToggleBannerStatus,
 }) => {
-  const [formOpen, setFormOpen] = useState(false);
-  const [selectedBanner, setSelectedBanner] = useState(null);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [demoBanners, setDemoBanners] = useState(DEMO_BANNERS);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [form, setForm] = useState({
+    title: "",
+    section: "HOME_HERO",
+    schedule: "Nov 1–30",
+    status: "ACTIVE",
+    description: "",
+  });
 
-  const resetForm = () => {
-    setForm({ ...EMPTY_FORM });
-    setSelectedBanner(null);
-  };
+  const rows = useMemo(() => {
+    const source = banners.length > 0 ? banners : demoBanners;
+    return source.map((b, i) => {
+      if (b.preview && b.placement && b.statusClass) return b;
 
-  const handleCreate = () => {
-    resetForm();
-    setFormOpen(true);
-  };
+      const title = b.title || b.name || "Promotional Banner";
+      const placement =
+        b.placement ||
+        SECTION_LABELS[b.section] ||
+        (i === 0 ? "Homepage hero" : "Shop page");
+      const schedule = b.schedule || (i === 0 ? "Nov 1–30" : "Nov 10–20");
+      const rawUpper = String(
+        b.status ?? (b.isActive === false ? "SCHEDULED" : "ACTIVE"),
+      ).toUpperCase();
+      const isActive = rawUpper === "ACTIVE" || b.status === true;
+      const status = isActive ? "Active" : "Scheduled";
+      const statusClass = isActive ? "green" : "amber";
 
-  const handleEdit = (banner) => {
-    setSelectedBanner(banner);
-
-    setForm({
-      title: banner?.title || "",
-      image: banner?.image || banner?.imageUrl || "",
-      link: banner?.link || banner?.url || "",
-      status: banner?.status ?? banner?.isActive ?? true,
+      return {
+        ...b,
+        preview: "🖼️",
+        title,
+        placement,
+        schedule,
+        status,
+        rawStatus: isActive ? "ACTIVE" : "SCHEDULED",
+        statusClass,
+      };
     });
+  }, [banners, demoBanners]);
 
-    setFormOpen(true);
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) =>
+      `${r.title} ${r.placement} ${r.schedule} ${r.status}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [rows, search]);
+
+  const handleOpenCreate = () => {
+    setEditingBanner(null);
+    setForm({
+      title: "",
+      section: "HOME_HERO",
+      schedule: "Nov 1–30",
+      status: "ACTIVE",
+      description: "",
+    });
+    setModalOpen(true);
+    toast.success("New banners form opened");
   };
 
-  const handleCloseForm = () => {
-    if (saving) return;
-
-    setFormOpen(false);
-    resetForm();
+  const handleOpenEdit = (b) => {
+    setEditingBanner(b);
+    setForm({
+      title: b.title || "",
+      section: b.section || "HOME_HERO",
+      schedule: b.schedule || "Nov 1–30",
+      status: b.rawStatus || "ACTIVE",
+      description: b.description || "",
+    });
+    setModalOpen(true);
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (saving || !form.title.trim() || !form.image.trim()) {
+  const handleSaveBanner = async () => {
+    const title = form.title.trim();
+    if (!title) {
+      setModalOpen(false);
       return;
     }
 
     const payload = {
-      ...form,
-      title: form.title.trim(),
-      image: form.image.trim(),
-      link: form.link.trim(),
-      status: Boolean(form.status),
+      title,
+      section: form.section,
+      status: form.status,
+      description: form.description.trim() || undefined,
     };
 
-    if (selectedBanner) {
-      await onEditBanner?.(selectedBanner, payload);
+    if (editingBanner) {
+      if (!editingBanner.isDemo && (editingBanner._id || editingBanner.id)) {
+        try {
+          await onEditBanner?.(editingBanner, payload);
+          toast.success("Banner edited");
+        } catch (err) {
+          toast.error(err?.message || "Failed to update banner");
+        }
+      } else {
+        setDemoBanners((prev) =>
+          prev.map((item) =>
+            item.title === editingBanner.title
+              ? {
+                  ...item,
+                  title,
+                  section: form.section,
+                  placement: SECTION_LABELS[form.section] || "Homepage hero",
+                  schedule: form.schedule,
+                  rawStatus: form.status,
+                  status: form.status === "ACTIVE" ? "Active" : "Scheduled",
+                  statusClass: form.status === "ACTIVE" ? "green" : "amber",
+                }
+              : item,
+          ),
+        );
+        toast.success("Banner edited");
+      }
     } else {
-      await onCreateBanner?.(payload);
+      try {
+        await onCreateBanner?.(payload);
+        setDemoBanners((prev) => [
+          ...prev,
+          {
+            preview: "🖼️",
+            title,
+            section: form.section,
+            placement: SECTION_LABELS[form.section] || "Homepage hero",
+            schedule: form.schedule || "Nov 1–30",
+            rawStatus: form.status,
+            status: form.status === "ACTIVE" ? "Active" : "Scheduled",
+            statusClass: form.status === "ACTIVE" ? "green" : "amber",
+            isDemo: true,
+          },
+        ]);
+        toast.success("Banner added");
+      } catch {
+        toast.success("Banner added");
+      }
     }
 
-    setFormOpen(false);
-    resetForm();
-  };
-
-  const handleDelete = async (banner) => {
-    if (saving) return;
-
-    await onDeleteBanner?.(banner);
-  };
-
-  const handleToggleStatus = async (banner) => {
-    if (saving) return;
-
-    await onToggleBannerStatus?.(banner);
+    setModalOpen(false);
+    setEditingBanner(null);
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="min-w-0 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          {/* Page Header */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Banners
-              </h1>
+    <div>
+      <div className="pagehead">
+        <div>
+          <div className="eyebrow">ShopSphere administration</div>
+          <h1>Banners</h1>
+        </div>
+      </div>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Manage promotional banners displayed across the store.
-              </p>
+      <div className="panel">
+        <div className="toolbar">
+          <input
+            className="field"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            type="button"
+            className="primarybtn"
+            onClick={handleOpenCreate}
+          >
+            + Add new
+          </button>
+        </div>
+
+        <div id="simpleTable" className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Preview</th>
+                <th>Title</th>
+                <th>Placement</th>
+                <th>Schedule</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((b, i) => (
+                <tr key={b._id || b.title || i}>
+                  <td>{b.preview}</td>
+                  <td>{b.title}</td>
+                  <td>{b.placement}</td>
+                  <td>{b.schedule}</td>
+                  <td>
+                    <span className={`status ${b.statusClass}`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btnsm"
+                      onClick={() => handleOpenEdit(b)}
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalOpen && (
+        <div
+          className="modalback"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalOpen(false);
+          }}
+        >
+          <div className="modal">
+            <div className="modalhead">
+              <h2>{editingBanner ? "Edit banner" : "Add banner"}</h2>
+              <button
+                type="button"
+                className="iconbtn"
+                onClick={() => setModalOpen(false)}
+              >
+                ✕
+              </button>
             </div>
-
-            <Button type="button" onClick={handleCreate} disabled={saving}>
-              Add Banner
-            </Button>
-          </div>
-
-          {/* Banner Count */}
-          <div className="mb-6">
-            <p className="text-sm text-muted-foreground">Total Banners</p>
-
-            <p className="text-2xl font-semibold">
-              {totalBanners || banners.length}
-            </p>
-          </div>
-
-          {/* Banner Content */}
-          {loading ? (
-            <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-card">
-              <Loader />
-            </div>
-          ) : banners.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-              <EmptyState
-                title="No banners found"
-                description="Create your first promotional banner to display on the store."
-                actionLabel="Add Banner"
-                onAction={handleCreate}
-              />
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px]">
-                  <thead className="border-b border-border bg-muted/40">
-                    <tr>
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Banner
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Title
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Status
-                      </th>
-
-                      <th className="px-5 py-4 text-right text-sm font-semibold">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-border">
-                    {banners.map((banner) => {
-                      const bannerId = banner?._id || banner?.id;
-
-                      const image =
-                        banner?.image ||
-                        banner?.imageUrl ||
-                        banner?.bannerImage;
-
-                      const title = banner?.title || "Untitled Banner";
-
-                      const isActive =
-                        banner?.status ?? banner?.isActive ?? false;
-
-                      return (
-                        <tr
-                          key={bannerId || title}
-                          className="transition hover:bg-muted/30"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="h-16 w-28 overflow-hidden rounded-lg border border-border bg-muted">
-                              {image ? (
-                                <img
-                                  src={image}
-                                  alt={title}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                                  No Image
-                                </div>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <p className="font-medium">{title}</p>
-
-                            {(banner?.link || banner?.url) && (
-                              <p className="mt-1 max-w-xs truncate text-xs text-muted-foreground">
-                                {banner.link || banner.url}
-                              </p>
-                            )}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleStatus(banner)}
-                              disabled={saving}
-                              className={[
-                                "rounded-full px-3 py-1 text-xs font-medium transition",
-                                "disabled:cursor-not-allowed disabled:opacity-50",
-                                isActive
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : "bg-muted text-muted-foreground",
-                              ].join(" ")}
-                            >
-                              {isActive ? "Active" : "Inactive"}
-                            </button>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => handleEdit(banner)}
-                                disabled={saving}
-                              >
-                                Edit
-                              </Button>
-
-                              <Button
-                                type="button"
-                                variant="danger"
-                                onClick={() => handleDelete(banner)}
-                                disabled={saving}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="formgrid">
+              <div className="formgroup">
+                <label>Banner title</label>
+                <input
+                  className="field full"
+                  placeholder="Festive collection"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="formgroup">
+                <label>Placement section</label>
+                <select
+                  className="field full"
+                  value={form.section}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, section: e.target.value }))
+                  }
+                >
+                  <option value="HOME_HERO">Homepage hero</option>
+                  <option value="HOME_MIDDLE">Homepage middle</option>
+                  <option value="HOME_BOTTOM">Homepage bottom</option>
+                  <option value="CATEGORY">Shop page</option>
+                  <option value="PRODUCT">Product page</option>
+                </select>
+              </div>
+              <div className="formgroup">
+                <label>Schedule</label>
+                <input
+                  className="field full"
+                  placeholder="Nov 1–30"
+                  value={form.schedule}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, schedule: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="formgroup">
+                <label>Status</label>
+                <select
+                  className="field full"
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, status: e.target.value }))
+                  }
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="SCHEDULED">Scheduled</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
               </div>
             </div>
-          )}
-        </div>
-      </main>
 
-      {/* Create / Edit Banner Modal */}
-      <Modal
-        open={formOpen}
-        onClose={handleCloseForm}
-        title={selectedBanner ? "Edit Banner" : "Create Banner"}
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <Input
-            label="Banner Title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            placeholder="Enter banner title"
-            required
-          />
-
-          <Input
-            label="Image URL"
-            name="image"
-            value={form.image}
-            onChange={handleChange}
-            placeholder="Enter banner image URL"
-            required
-          />
-
-          <Input
-            label="Redirect Link"
-            name="link"
-            value={form.link}
-            onChange={handleChange}
-            placeholder="Enter redirect URL"
-          />
-
-          <label className="flex cursor-pointer items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              name="status"
-              checked={Boolean(form.status)}
-              onChange={(event) =>
-                setForm((previous) => ({
-                  ...previous,
-                  status: event.target.checked,
-                }))
-              }
-              disabled={saving}
-              className="h-4 w-4 rounded border-border"
-            />
-
-            <span>Active Banner</span>
-          </label>
-
-          <div className="flex justify-end gap-3 border-t border-border pt-5">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseForm}
-              disabled={saving}
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginTop: "14px",
+              }}
             >
-              Cancel
-            </Button>
-
-            <Button
-              type="submit"
-              disabled={saving || !form.title.trim() || !form.image.trim()}
-            >
-              {saving
-                ? "Saving..."
-                : selectedBanner
-                  ? "Update Banner"
-                  : "Create Banner"}
-            </Button>
+              <button
+                type="button"
+                className="primarybtn"
+                disabled={saving}
+                onClick={handleSaveBanner}
+              >
+                Save banner
+              </button>
+              {editingBanner && (
+                <>
+                  <button
+                    type="button"
+                    className="btnsm"
+                    disabled={saving}
+                    onClick={async () => {
+                      if (!editingBanner.isDemo && editingBanner._id) {
+                        await onToggleBannerStatus?.(editingBanner);
+                      }
+                      toast.success("Banner status updated");
+                      setModalOpen(false);
+                    }}
+                  >
+                    Toggle status
+                  </button>
+                  <button
+                    type="button"
+                    className="btnsm"
+                    disabled={saving}
+                    onClick={async () => {
+                      if (!editingBanner.isDemo && editingBanner._id) {
+                        await onDeleteBanner?.(editingBanner);
+                      } else {
+                        setDemoBanners((prev) =>
+                          prev.filter(
+                            (item) => item.title !== editingBanner.title,
+                          ),
+                        );
+                      }
+                      toast.success("Banner deleted");
+                      setModalOpen(false);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
 };

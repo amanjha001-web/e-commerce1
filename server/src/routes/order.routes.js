@@ -29,7 +29,14 @@ router.post(
 router.get(
   "/my",
   verifyJWT,
-  authorizeRoles("customer"),
+  authorizeRoles("customer", "vendor", "admin"),
+  orderController.getMyOrders,
+);
+
+router.get(
+  "/my-orders",
+  verifyJWT,
+  authorizeRoles("customer", "vendor", "admin"),
   orderController.getMyOrders,
 );
 
@@ -51,6 +58,14 @@ router.get(
   orderController.getAllOrders,
 );
 
+// Track Order
+router.get(
+  "/:id/track",
+  verifyJWT,
+  validate(orderIdSchema),
+  orderController.trackOrder,
+);
+
 // Order Details
 router.get(
   "/:id",
@@ -63,9 +78,18 @@ router.get(
 router.patch(
   "/:id/cancel",
   verifyJWT,
-  authorizeRoles("customer"),
+  authorizeRoles("customer", "vendor", "admin"),
   validate(orderIdSchema),
   orderController.cancelOrder,
+);
+
+// Return Order
+router.post(
+  "/:id/return",
+  verifyJWT,
+  authorizeRoles("customer", "vendor", "admin"),
+  validate(orderIdSchema),
+  orderController.returnOrder,
 );
 
 /*                              Admin Routes                                  */

@@ -6,47 +6,40 @@ const Badge = ({
   className = "",
 }) => {
   const variants = {
-    default: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-
-    primary: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-
-    success:
-      "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-
-    danger: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-
-    warning:
-      "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-
-    info: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
-
-    purple:
-      "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-
-    orange:
-      "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+    default: "bg-[var(--soft)] text-[var(--primary)] font-bold",
+    pill: "bg-[var(--soft)] text-[var(--primary)] font-extrabold tracking-wide uppercase",
+    primary: "bg-[var(--primary)] text-white font-bold",
+    gold: "bg-[#fff8e9] text-[#76571d] border border-[#f0dfb9] font-bold",
+    success: "bg-[#e7f6ef] text-[#16845b] font-bold",
+    warning: "bg-[#fff4df] text-[#9b6814] font-bold",
+    amber: "bg-[#fff4df] text-[#9b6814] font-bold",
+    danger: "bg-[#ffeaec] text-[#bd3345] font-bold",
+    red: "bg-[#ffeaec] text-[#bd3345] font-bold",
+    info: "bg-[#ebf5fa] text-[#1d6b99] font-bold",
+    secondary: "bg-[var(--soft)] text-[var(--primary)] font-bold",
+    burgundy: "bg-[var(--primary)] text-white font-bold",
   };
 
   const sizes = {
-    sm: "px-2 py-0.5 text-xs",
-    md: "px-2.5 py-1 text-xs",
-    lg: "px-3 py-1.5 text-sm",
+    xs: "px-2 py-0.5 text-[10px]",
+    sm: "px-2.5 py-0.5 text-xs",
+    md: "px-3 py-1 text-xs",
+    lg: "px-3.5 py-1.5 text-sm",
   };
 
   const dotColors = {
-    default: "bg-gray-500",
-    primary: "bg-blue-500",
-    success: "bg-green-500",
-    danger: "bg-red-500",
-    warning: "bg-yellow-500",
-    info: "bg-cyan-500",
-    purple: "bg-purple-500",
-    orange: "bg-orange-500",
+    default: "bg-[var(--primary)]",
+    primary: "bg-white",
+    gold: "bg-[#b68d40]",
+    success: "bg-[#16845b]",
+    warning: "bg-[#b7791f]",
+    danger: "bg-[#c0394b]",
+    info: "bg-[#1d6b99]",
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-full font-bold ${
         variants[variant] || variants.default
       } ${sizes[size] || sizes.md} ${className}`}
     >
@@ -55,6 +48,7 @@ const Badge = ({
           className={`h-1.5 w-1.5 rounded-full ${
             dotColors[variant] || dotColors.default
           }`}
+          aria-hidden="true"
         />
       )}
 

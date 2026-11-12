@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -29,7 +28,7 @@ const CartItem = ({ item, loading = false }) => {
     product.images?.[0]?.url ||
     product.images?.[0] ||
     product.image ||
-    "/images/placeholder.png";
+    "";
 
   const name = product.name || product.title || "Product";
 
@@ -38,14 +37,13 @@ const CartItem = ({ item, loading = false }) => {
       item.price ??
       product.finalPrice ??
       product.price ??
-      0
+      0,
   );
 
   const quantity = Math.max(1, Number(item.quantity) || 1);
   const subtotal = price * quantity;
 
-  const isUpdating =
-    loading || updatingQuantity || removingItem;
+  const isUpdating = loading || updatingQuantity || removingItem;
 
   // Update quantity through Redux and backend PATCH API.
   const handleQuantityChange = async (nextQuantity) => {
@@ -63,13 +61,13 @@ const CartItem = ({ item, loading = false }) => {
 
     try {
       const result = await dispatch(
-        updateCartProduct(productId, nextQuantity)
+        updateCartProduct(productId, nextQuantity),
       );
 
       if (!result?.success) {
         console.error(
           "Quantity update failed:",
-          result?.message || "Please try again."
+          result?.message || "Please try again.",
         );
       }
     } catch (error) {
@@ -97,84 +95,69 @@ const CartItem = ({ item, loading = false }) => {
 
     try {
       const result = await dispatch(removeCartProduct(productId));
-
       if (!result?.success) {
         console.error(
-          "Remove cart item failed:",
-          result?.message || "Please try again."
+          "Failed to remove item:",
+          result?.message || "Please try again.",
         );
       }
     } catch (error) {
-      console.error("Remove cart item failed:", error);
+      console.error("Failed to remove item:", error);
     } finally {
       setRemovingItem(false);
     }
   };
 
   return (
-    <div className="flex gap-4 border-b border-gray-200 py-5 dark:border-gray-800">
-      {/* Product image */}
+    <div className="flex gap-4 border-b border-[var(--line)] py-4 sm:gap-6">
+      {/* Product visual thumbnail */}
       <Link
         to={`/products/${productId}`}
-        className="h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#f7e9ed] to-[#ead7dd] text-3xl sm:h-24 sm:w-24"
       >
-        <img
-          src={image}
-          alt={name}
-          className="h-full w-full object-cover"
-          onError={(event) => {
-            event.currentTarget.onerror = null;
-            event.currentTarget.src = "/images/placeholder.png";
-          }}
-        />
+        {image ? (
+          <img
+            src={image}
+            alt={name}
+            className="h-full w-full object-cover"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <span>🛍️</span>
+        )}
       </Link>
 
       {/* Product details */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link
-              to={`/products/${productId}`}
-              className="line-clamp-2 text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
-            >
-              {name}
-            </Link>
-
-            {item.variant && (
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {item.variant}
-              </p>
-            )}
-          </div>
-
-          {/* Remove button */}
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={isUpdating}
-            className="shrink-0 text-sm text-red-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+      <div className="flex min-w-0 flex-1 flex-col justify-between">
+        <div>
+          <Link
+            to={`/products/${productId}`}
+            className="line-clamp-1 text-sm font-bold text-[var(--text)] transition hover:text-[var(--primary)] dark:text-foreground"
           >
-            {removingItem ? "Removing..." : "Remove"}
-          </button>
+            {name}
+          </Link>
+
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            ₹{price.toLocaleString("en-IN")} each
+          </p>
         </div>
 
-        {/* Quantity and price */}
-        <div className="mt-auto flex items-end justify-between gap-4 pt-4">
-          <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-700">
+        {/* Quantity Controls */}
+        <div className="mt-2.5 flex items-center gap-2">
+          <div className="flex items-center rounded-lg border border-[var(--line)] bg-white dark:bg-card">
             <button
               type="button"
               onClick={handleDecrease}
               disabled={quantity <= 1 || isUpdating}
-              className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="flex h-7 w-7 items-center justify-center font-bold text-[var(--text)] transition hover:bg-[var(--soft)] disabled:opacity-30 cursor-pointer"
               aria-label="Decrease quantity"
             >
               −
             </button>
 
-            <span
-              className="min-w-10 border-x border-gray-300 px-3 py-1.5 text-center text-sm text-gray-900 dark:border-gray-700 dark:text-white"
-              aria-live="polite"
-            >
+            <span className="min-w-8 text-center text-xs font-bold text-[var(--text)] dark:text-foreground">
               {isUpdating ? "…" : quantity}
             </span>
 
@@ -182,24 +165,29 @@ const CartItem = ({ item, loading = false }) => {
               type="button"
               onClick={handleIncrease}
               disabled={isUpdating}
-              className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="flex h-7 w-7 items-center justify-center font-bold text-[var(--text)] transition hover:bg-[var(--soft)] disabled:opacity-30 cursor-pointer"
               aria-label="Increase quantity"
             >
               +
             </button>
           </div>
-
-          {/* Price */}
-          <div className="text-right">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              ₹{price.toLocaleString("en-IN")} each
-            </p>
-
-            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-              ₹{subtotal.toLocaleString("en-IN")}
-            </p>
-          </div>
         </div>
+      </div>
+
+      {/* Price & Remove */}
+      <div className="flex flex-col items-end justify-between">
+        <span className="text-sm font-black text-[var(--primary)]">
+          ₹{subtotal.toLocaleString("en-IN")}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={isUpdating}
+          className="btnsm text-[11px] !py-1 !px-2.5"
+        >
+          {removingItem ? "..." : "Remove"}
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from "react";
 
 import RatingSummary from "../../components/review/RatingSummary";
@@ -30,11 +29,7 @@ const Reviews = ({
     const keyword = search.trim().toLowerCase();
 
     return reviews.filter((review) => {
-      const rating = Number(
-        review?.rating ||
-          review?.stars ||
-          0
-      );
+      const rating = Number(review?.rating || review?.stars || 0);
 
       const productName =
         review?.product?.name ||
@@ -43,23 +38,15 @@ const Reviews = ({
         "";
 
       const reviewText =
-        review?.comment ||
-        review?.review ||
-        review?.content ||
-        "";
+        review?.comment || review?.review || review?.content || "";
 
       const matchesRating =
-        ratingFilter === "all" ||
-        rating === Number(ratingFilter);
+        ratingFilter === "all" || rating === Number(ratingFilter);
 
       const matchesSearch =
         !keyword ||
-        String(productName)
-          .toLowerCase()
-          .includes(keyword) ||
-        String(reviewText)
-          .toLowerCase()
-          .includes(keyword);
+        String(productName).toLowerCase().includes(keyword) ||
+        String(reviewText).toLowerCase().includes(keyword);
 
       return matchesRating && matchesSearch;
     });
@@ -69,14 +56,8 @@ const Reviews = ({
     if (!reviews.length) return 0;
 
     const total = reviews.reduce(
-      (sum, review) =>
-        sum +
-        Number(
-          review?.rating ||
-            review?.stars ||
-            0
-        ),
-      0
+      (sum, review) => sum + Number(review?.rating || review?.stars || 0),
+      0,
     );
 
     return total / reviews.length;
@@ -88,15 +69,13 @@ const Reviews = ({
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto min-h-screen max-w-6xl bg-background px-4 py-8 text-foreground transition-colors duration-300 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Account
-          </p>
+          <p className="text-sm font-medium text-primary">Account</p>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             My Reviews
           </h1>
 
@@ -105,9 +84,7 @@ const Reviews = ({
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowForm((value) => !value)}
-        >
+        <Button onClick={() => setShowForm((value) => !value)}>
           {showForm ? "Close Review Form" : "Write a Review"}
         </Button>
       </div>
@@ -115,7 +92,7 @@ const Reviews = ({
       {/* Review Form */}
       {showForm && (
         <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-foreground">
             Write a Review
           </h2>
 
@@ -136,11 +113,9 @@ const Reviews = ({
       {/* Rating Overview */}
       <section className="mb-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
         <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
-          <p className="text-sm text-muted-foreground">
-            Overall Rating
-          </p>
+          <p className="text-sm text-muted-foreground">Overall Rating</p>
 
-          <p className="mt-2 text-4xl font-bold">
+          <p className="mt-2 text-4xl font-bold text-foreground">
             {averageRating.toFixed(1)}
           </p>
 
@@ -155,10 +130,7 @@ const Reviews = ({
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <RatingSummary
-            reviews={reviews}
-            rating={averageRating}
-          />
+          <RatingSummary reviews={reviews} rating={averageRating} />
         </div>
       </section>
 
@@ -168,9 +140,7 @@ const Reviews = ({
           <div className="w-full md:max-w-md">
             <Input
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search your reviews..."
             />
           </div>
@@ -180,10 +150,10 @@ const Reviews = ({
               type="button"
               onClick={() => setRatingFilter("all")}
               className={[
-                "shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition",
+                "shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
                 ratingFilter === "all"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:text-foreground",
+                  : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
               ].join(" ")}
             >
               All
@@ -193,14 +163,12 @@ const Reviews = ({
               <button
                 key={rating}
                 type="button"
-                onClick={() =>
-                  setRatingFilter(String(rating))
-                }
+                onClick={() => setRatingFilter(String(rating))}
                 className={[
-                  "flex shrink-0 items-center gap-1 rounded-xl px-4 py-2 text-sm font-medium transition",
+                  "flex shrink-0 items-center gap-1 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
                   ratingFilter === String(rating)
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
+                    : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
                 ].join(" ")}
               >
                 <span>{rating}</span>
@@ -234,9 +202,7 @@ const Reviews = ({
 
             {!search && ratingFilter === "all" && (
               <div className="mt-5 flex justify-center">
-                <Button
-                  onClick={() => setShowForm(true)}
-                >
+                <Button onClick={() => setShowForm(true)}>
                   Write Your First Review
                 </Button>
               </div>
@@ -259,7 +225,7 @@ const Reviews = ({
         <button
           type="button"
           onClick={() => onNavigate?.("/")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           ← Back to Home
         </button>
@@ -267,7 +233,7 @@ const Reviews = ({
         <button
           type="button"
           onClick={() => onNavigate?.("/orders")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
         >
           My Orders →
         </button>

@@ -100,6 +100,9 @@ const VendorDetailsContent = ({
   initialEdit = false,
   onClose,
   onStatusChange,
+  onApprove,
+  onReject,
+  onDelete,
   onUpdate,
 }) => {
   const [isEditing, setIsEditing] = useState(() => initialEdit);
@@ -263,7 +266,7 @@ const VendorDetailsContent = ({
             rows={options.rows || 3}
             required={options.required}
             disabled={isBusy}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
+            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         ) : (
           <input
@@ -273,7 +276,7 @@ const VendorDetailsContent = ({
             onChange={onChange}
             required={options.required}
             disabled={isBusy}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
+            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         )
       ) : (
@@ -490,7 +493,7 @@ const VendorDetailsContent = ({
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-border bg-background p-4"
+                className="rounded-2xl border border-border bg-white p-4"
               >
                 <p className="text-xs text-muted-foreground">
                   {item.label}
@@ -546,6 +549,41 @@ const VendorDetailsContent = ({
               >
                 Close
               </Button>
+
+              {onDelete && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => onDelete(vendor)}
+                  disabled={isBusy}
+                >
+                  Delete
+                </Button>
+              )}
+
+              {onApprove &&
+                String(status).toLowerCase() !== "approved" &&
+                String(status).toLowerCase() !== "active" && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onApprove(vendor)}
+                    disabled={isBusy}
+                  >
+                    Approve Vendor
+                  </Button>
+                )}
+
+              {onReject && String(status).toLowerCase() !== "rejected" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onReject(vendor)}
+                  disabled={isBusy}
+                >
+                  Reject Vendor
+                </Button>
+              )}
 
               {onStatusChange && (
                 <Button

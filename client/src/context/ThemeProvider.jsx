@@ -4,32 +4,21 @@ import ThemeContext from "./ThemeContext";
 
 const STORAGE_KEY = "shopsphere-theme";
 
-const getInitialTheme = () => {
-  const savedTheme = localStorage.getItem(STORAGE_KEY);
-
-  if (savedTheme === "light" || savedTheme === "dark") {
-    return savedTheme;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-};
-
 const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     const root = document.documentElement;
 
-    root.setAttribute("data-theme", theme);
-    root.classList.toggle("dark", theme === "dark");
+    root.setAttribute("data-theme", "light");
+    root.classList.remove("dark");
+    root.style.colorScheme = "light";
 
-    localStorage.setItem(STORAGE_KEY, theme);
+    localStorage.setItem(STORAGE_KEY, "light");
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+    setTheme("light");
   }, []);
 
   const setLightTheme = useCallback(() => {
@@ -37,19 +26,19 @@ const ThemeProvider = ({ children }) => {
   }, []);
 
   const setDarkTheme = useCallback(() => {
-    setTheme("dark");
+    setTheme("light");
   }, []);
 
   const value = useMemo(
     () => ({
-      theme,
-      isDark: theme === "dark",
-      isLight: theme === "light",
+      theme: "light",
+      isDark: false,
+      isLight: true,
       toggleTheme,
       setLightTheme,
       setDarkTheme,
     }),
-    [theme, toggleTheme, setLightTheme, setDarkTheme],
+    [toggleTheme, setLightTheme, setDarkTheme],
   );
 
   return (

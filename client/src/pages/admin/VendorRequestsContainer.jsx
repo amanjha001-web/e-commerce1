@@ -22,7 +22,6 @@ const VendorRequestsContainer = () => {
     loading,
     detailsLoading,
     saving,
-    error,
   } = useSelector((state) => state.vendorRequests);
 
   const [filters, setFilters] = useState({
@@ -46,38 +45,30 @@ const VendorRequestsContainer = () => {
   };
 
   const handleViewRequest = (request) => {
-    dispatch(fetchVendorRequestById(request._id));
+    if (request?._id) {
+      dispatch(fetchVendorRequestById(request._id));
+    }
   };
 
   const handleApproveRequest = async (request) => {
-    if (
-      !window.confirm(`Approve ${request.shopName || request.businessName}?`)
-    ) {
-      return;
-    }
-
+    if (!request?._id) return;
     const result = await dispatch(approveVendorRequest(request._id));
-
     if (approveVendorRequest.fulfilled.match(result)) {
       dispatch(fetchVendorRequests(filters));
     }
   };
 
-  // Accept a reason from the details drawer.
-  // If called from the table, prompt for a reason.
   const handleRejectRequest = async (request, suppliedReason) => {
-    let reason = suppliedReason;
-
-    if (typeof reason !== "string") {
-      reason = window.prompt("Enter rejection reason:");
-    }
-
-    if (reason === null || !reason?.trim()) return;
+    if (!request?._id) return;
+    const reason =
+      typeof suppliedReason === "string" && suppliedReason.trim()
+        ? suppliedReason.trim()
+        : "Rejected by admin";
 
     const result = await dispatch(
       rejectVendorRequest({
         requestId: request._id,
-        reason: reason.trim(),
+        reason,
       }),
     );
 
@@ -87,51 +78,30 @@ const VendorRequestsContainer = () => {
   };
 
   const handleDeleteRequest = async (request) => {
-    if (
-      !window.confirm(
-        `Delete vendor request for ${
-          request.shopName || request.businessName
-        }?`,
-      )
-    ) {
-      return;
-    }
-
+    if (!request?._id) return;
     const result = await dispatch(deleteVendorRequest(request._id));
-
     if (deleteVendorRequest.fulfilled.match(result)) {
       dispatch(fetchVendorRequests(filters));
     }
   };
 
   return (
-    <>
-      {error && (
-        <div
-          role="alert"
-          className="mx-4 mt-4 rounded-lg border border-red-300 p-3 text-sm text-red-600"
-        >
-          {error}
-        </div>
-      )}
-
-      <VendorRequests
-        requests={requests}
-        selectedRequest={selectedRequest}
-        totalRequests={pagination.total}
-        pagination={pagination}
-        loading={loading}
-        detailsLoading={detailsLoading}
-        saving={saving}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onViewRequest={handleViewRequest}
-        onApproveRequest={handleApproveRequest}
-        onRejectRequest={handleRejectRequest}
-        onDeleteRequest={handleDeleteRequest}
-        onCloseDetails={() => dispatch(clearSelectedVendorRequest())}
-      />
-    </>
+    <VendorRequests
+      requests={requests}
+      selectedRequest={selectedRequest}
+      totalRequests={pagination.total}
+      pagination={pagination}
+      loading={loading}
+      detailsLoading={detailsLoading}
+      saving={saving}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      onViewRequest={handleViewRequest}
+      onApproveRequest={handleApproveRequest}
+      onRejectRequest={handleRejectRequest}
+      onDeleteRequest={handleDeleteRequest}
+      onCloseDetails={() => dispatch(clearSelectedVendorRequest())}
+    />
   );
 };
 

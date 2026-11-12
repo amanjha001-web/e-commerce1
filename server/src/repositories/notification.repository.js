@@ -92,6 +92,39 @@ const getUnreadCount = async (userId) => {
   });
 };
 
+const countUnreadNotifications = async (userId) => {
+  return await getUnreadCount(userId);
+};
+
+/*                     Get All Notifications (Admin)                          */
+
+const getAllNotifications = async (filter = {}, options = {}) => {
+  const { page = 1, limit = 10, sort = { createdAt: -1 } } = options;
+
+  const skip = (page - 1) * limit;
+
+  const [notifications, totalNotifications] = await Promise.all([
+    Notification.find(filter)
+      .populate("user", "fullName username email avatar role")
+      .sort(sort)
+      .skip(skip)
+      .limit(limit),
+
+    Notification.countDocuments(filter),
+  ]);
+
+  return {
+    notifications,
+
+    pagination: {
+      total: totalNotifications,
+      page,
+      limit,
+      totalPages: Math.ceil(totalNotifications / limit),
+    },
+  };
+};
+
 /*                        Delete Notification                                 */
 
 const deleteNotification = async (notificationId) => {
@@ -128,10 +161,12 @@ export default {
   createNotification,
   getNotificationById,
   getMyNotifications,
+  getAllNotifications,
   updateNotification,
   markAsRead,
   markAllAsRead,
   getUnreadCount,
+  countUnreadNotifications,
   deleteNotification,
   clearAllNotifications,
 };

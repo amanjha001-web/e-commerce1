@@ -16,23 +16,20 @@ const InventoryTable = ({
     if (stock <= 0) {
       return {
         label: "Out of Stock",
-        className:
-          "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+        className: "status-badge red",
       };
     }
 
     if (stock <= 10) {
       return {
         label: "Low Stock",
-        className:
-          "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+        className: "status-badge amber",
       };
     }
 
     return {
       label: "In Stock",
-      className:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      className: "status-badge green",
     };
   };
 
@@ -56,21 +53,21 @@ const InventoryTable = ({
               <img
                 src={image}
                 alt={name}
-                className="h-12 w-12 rounded-lg object-cover"
+                className="h-11 w-11 rounded-xl object-cover border border-[var(--line)]"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-lg dark:bg-gray-800">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--soft)] border border-[var(--line)] text-base">
                 📦
               </div>
             )}
 
             <div className="min-w-0">
-              <p className="max-w-[220px] truncate font-medium text-gray-900 dark:text-white">
+              <p className="max-w-[220px] truncate text-xs font-bold text-[var(--text)] dark:text-foreground">
                 {name}
               </p>
 
               {product?.sku && (
-                <p className="mt-0.5 text-xs text-gray-400">
+                <p className="mt-0.5 text-[11px] font-medium text-[var(--muted)]">
                   SKU: {product.sku}
                 </p>
               )}
@@ -82,8 +79,11 @@ const InventoryTable = ({
     {
       key: "category",
       label: "Category",
-      render: (product) =>
-        product?.category?.name || product?.categoryName || "—",
+      render: (product) => (
+        <span className="text-xs font-medium text-[var(--muted)]">
+          {product?.category?.name || product?.categoryName || "—"}
+        </span>
+      ),
     },
     {
       key: "price",
@@ -92,7 +92,9 @@ const InventoryTable = ({
         const price = Number(product?.price ?? product?.sellingPrice ?? 0);
 
         return (
-          <span className="font-medium">₹{price.toLocaleString("en-IN")}</span>
+          <span className="text-xs font-black text-[var(--primary)]">
+            ₹{price.toLocaleString("en-IN")}
+          </span>
         );
       },
     },
@@ -103,7 +105,17 @@ const InventoryTable = ({
         const stock = getStock(product);
 
         return (
-          <span className="font-semibold">{stock.toLocaleString("en-IN")}</span>
+          <span
+            className={
+              stock <= 0
+                ? "text-xs font-black text-[var(--red)]"
+                : stock <= 10
+                  ? "text-xs font-black text-[var(--amber)]"
+                  : "text-xs font-bold text-[var(--text)]"
+            }
+          >
+            {stock.toLocaleString("en-IN")}
+          </span>
         );
       },
     },
@@ -115,9 +127,7 @@ const InventoryTable = ({
         const status = getStatus(getStock(product));
 
         return (
-          <span
-            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}
-          >
+          <span className={status.className}>
             {status.label}
           </span>
         );
@@ -126,12 +136,12 @@ const InventoryTable = ({
   ];
 
   const actions = (product) => (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex items-center justify-end gap-1.5">
       {onUpdateStock && (
         <button
           type="button"
           onClick={() => onUpdateStock(product)}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="btnsm"
         >
           Stock
         </button>
@@ -141,7 +151,7 @@ const InventoryTable = ({
         <button
           type="button"
           onClick={() => onEdit(product)}
-          className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-900/20"
+          className="btnsm primary"
         >
           Edit
         </button>
@@ -151,7 +161,7 @@ const InventoryTable = ({
         <button
           type="button"
           onClick={() => onDelete(product)}
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+          className="btnsm text-[var(--red)] border-[#f3cbd0] hover:bg-[#fff0f1]"
         >
           Delete
         </button>
@@ -171,3 +181,5 @@ const InventoryTable = ({
 };
 
 export default InventoryTable;
+
+

@@ -5,6 +5,8 @@ import Coupons from "./Coupons";
 
 import {
   fetchCoupons,
+  fetchCouponById,
+  fetchCouponUsage,
   createCoupon,
   updateCoupon,
   deleteCoupon,
@@ -16,6 +18,8 @@ const CouponsContainer = () => {
 
   const {
     coupons = [],
+    selectedCoupon,
+    couponUsage,
     loading,
     saving,
     error,
@@ -34,63 +38,75 @@ const CouponsContainer = () => {
     dispatch(fetchCoupons(filters));
   }, [dispatch, filters]);
 
-  const handleFilterChange = useCallback(
-    (newFilters) => {
-      setFilters((prev) => ({
-        ...prev,
-        ...newFilters,
-        page: newFilters.page || 1,
-      }));
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newFilters,
+      page: newFilters.page || 1,
+    }));
+  }, []);
+
+  const handleInspectCoupon = useCallback(
+    (couponId) => {
+      if (couponId) {
+        dispatch(fetchCouponById(couponId));
+        dispatch(fetchCouponUsage(couponId));
+      }
     },
-    []
+    [dispatch],
   );
 
   const handleCreateCoupon = useCallback(
     async (couponData) => {
-      dispatch(createCoupon(couponData));
+      await dispatch(createCoupon(couponData)).unwrap();
+      dispatch(fetchCoupons(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
   const handleEditCoupon = useCallback(
     async (coupon, data) => {
-      dispatch(updateCoupon({ couponId: coupon._id, couponData: data }));
+      await dispatch(
+        updateCoupon({ couponId: coupon._id, couponData: data }),
+      ).unwrap();
+      dispatch(fetchCoupons(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
   const handleDeleteCoupon = useCallback(
     async (coupon) => {
-      if (
-        !window.confirm(
-          `Are you sure you want to delete coupon "${
-            coupon?.code || coupon?.name || "this coupon"
-          }"? This action cannot be undone.`
-        )
-      ) {
-        return;
-      }
-      dispatch(deleteCoupon(coupon._id));
+      await dispatch(deleteCoupon(coupon._id)).unwrap();
+      dispatch(fetchCoupons(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
   const handleToggleCouponStatus = useCallback(
-    async (coupon) => {
-      dispatch(toggleCouponStatus(coupon._id));
+    async (coupon, nextActive) => {
+      await dispatch(
+        toggleCouponStatus({
+          couponId: coupon._id,
+          isActive: nextActive,
+        }),
+      ).unwrap();
+      dispatch(fetchCoupons(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
   return (
     <Coupons
       coupons={coupons}
+      selectedCoupon={selectedCoupon}
+      couponUsage={couponUsage}
       totalCoupons={pagination?.total || coupons.length}
       loading={loading}
       saving={saving}
       error={error}
       filters={filters}
       onFilterChange={handleFilterChange}
+      onInspectCoupon={handleInspectCoupon}
       onCreateCoupon={handleCreateCoupon}
       onEditCoupon={handleEditCoupon}
       onDeleteCoupon={handleDeleteCoupon}

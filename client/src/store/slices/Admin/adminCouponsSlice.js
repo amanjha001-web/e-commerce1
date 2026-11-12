@@ -4,7 +4,7 @@ import couponService from "../../../services/coupon.service";
 const getErrorMessage = (error) =>
   error?.response?.data?.message || error?.message || "Something went wrong";
 
-// Fetch all coupons
+// Fetch all coupons (GET /admin/coupons)
 export const fetchCoupons = createAsyncThunk(
   "adminCoupons/fetchCoupons",
   async (params = {}, { rejectWithValue }) => {
@@ -13,22 +13,39 @@ export const fetchCoupons = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to fetch coupons");
       }
+      const data = response?.data ?? response;
       return {
-        coupons: Array.isArray(response.data?.coupons)
-          ? response.data.coupons
-          : Array.isArray(response.data)
-          ? response.data
-          : [],
-        pagination: response.data?.pagination || {},
-        message: response.message || "",
+        coupons: Array.isArray(data?.coupons)
+          ? data.coupons
+          : Array.isArray(data)
+            ? data
+            : [],
+        pagination: data?.pagination || {},
+        message: response?.message || "",
       };
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
-// Create coupon
+// Fetch coupon by ID (GET /admin/coupons/:id)
+export const fetchCouponById = createAsyncThunk(
+  "adminCoupons/fetchCouponById",
+  async (couponId, { rejectWithValue }) => {
+    try {
+      const response = await couponService.getCouponById(couponId);
+      if (response?.success === false) {
+        return rejectWithValue(response.message || "Failed to fetch coupon");
+      }
+      return response?.data?.coupon ?? response?.data ?? response;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// Create coupon (POST /admin/coupons)
 export const createCoupon = createAsyncThunk(
   "adminCoupons/createCoupon",
   async (couponData, { rejectWithValue }) => {
@@ -37,14 +54,14 @@ export const createCoupon = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to create coupon");
       }
-      return response.data?.coupon || response;
+      return response?.data?.coupon ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
-// Update coupon
+// Update coupon (PATCH /admin/coupons/:id)
 export const updateCoupon = createAsyncThunk(
   "adminCoupons/updateCoupon",
   async ({ couponId, couponData }, { rejectWithValue }) => {
@@ -53,14 +70,14 @@ export const updateCoupon = createAsyncThunk(
       if (response?.success === false) {
         return rejectWithValue(response.message || "Failed to update coupon");
       }
-      return response.data?.coupon || response;
+      return response?.data?.coupon ?? response?.data ?? response;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
-// Delete coupon
+// Delete coupon (DELETE /admin/coupons/:id)
 export const deleteCoupon = createAsyncThunk(
   "adminCoupons/deleteCoupon",
   async (couponId, { rejectWithValue }) => {
@@ -73,27 +90,66 @@ export const deleteCoupon = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
 );
 
-// Toggle coupon status
+// Toggle coupon status (PATCH /admin/coupons/:id/status)
 export const toggleCouponStatus = createAsyncThunk(
   "adminCoupons/toggleStatus",
-  async (couponId, { rejectWithValue }) => {
+  async (arg, { getState, rejectWithValue }) => {
     try {
-      const response = await couponService.toggleCouponStatus(couponId);
-      if (response?.success === false) {
-        return rejectWithValue(response.message || "Failed to toggle coupon status");
+      const couponId = typeof arg === "object" ? arg.couponId : arg;
+      let isActive = typeof arg === "object" ? arg.isActive : undefined;
+
+      if (typeof isActive !== "boolean") {
+        const existing = getState()?.adminCoupons?.coupons?.find(
+          (c) => (c._id || c.id) === couponId,
+        );
+        isActive = !(existing?.isActive ?? existing?.status ?? true);
       }
-      return couponId;
+
+      const response = await couponService.toggleCouponStatus(
+        couponId,
+        isActive,
+      );
+      if (response?.success === false) {
+        return rejectWithValue(
+          response.message || "Failed to toggle coupon status",
+        );
+      }
+      return {
+        couponId,
+        coupon: response?.data?.coupon ?? response?.data ?? null,
+        isActive,
+      };
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
-  }
+  },
+);
+
+// Fetch coupon usage stats (GET /admin/coupons/:id/usage)
+export const fetchCouponUsage = createAsyncThunk(
+  "adminCoupons/fetchCouponUsage",
+  async (couponId, { rejectWithValue }) => {
+    try {
+      const response = await couponService.getCouponUsage(couponId);
+      if (response?.success === false) {
+        return rejectWithValue(
+          response.message || "Failed to fetch coupon usage",
+        );
+      }
+      return response?.data ?? response;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
 );
 
 const initialState = {
   coupons: [],
+  selectedCoupon: null,
+  couponUsage: null,
   pagination: {
     total: 0,
     page: 1,
@@ -115,6 +171,10 @@ const adminCouponsSlice = createSlice({
     setAdminCouponsPage: (state, action) => {
       state.pagination.page = action.payload;
     },
+    clearSelectedCoupon: (state) => {
+      state.selectedCoupon = null;
+      state.couponUsage = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -131,13 +191,21 @@ const adminCouponsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Failed to fetch coupons";
       })
+      .addCase(fetchCouponById.fulfilled, (state, action) => {
+        state.selectedCoupon = action.payload;
+      })
+      .addCase(fetchCouponUsage.fulfilled, (state, action) => {
+        state.couponUsage = action.payload;
+      })
       .addCase(createCoupon.pending, (state) => {
         state.saving = true;
         state.error = null;
       })
       .addCase(createCoupon.fulfilled, (state, action) => {
         state.saving = false;
-        state.coupons.unshift(action.payload);
+        if (action.payload) {
+          state.coupons.unshift(action.payload);
+        }
       })
       .addCase(createCoupon.rejected, (state, action) => {
         state.saving = false;
@@ -150,7 +218,7 @@ const adminCouponsSlice = createSlice({
       .addCase(updateCoupon.fulfilled, (state, action) => {
         state.saving = false;
         const index = state.coupons.findIndex(
-          (c) => c._id === action.payload._id
+          (c) => (c._id || c.id) === (action.payload?._id || action.payload?.id),
         );
         if (index !== -1) {
           state.coupons[index] = action.payload;
@@ -166,27 +234,36 @@ const adminCouponsSlice = createSlice({
       })
       .addCase(deleteCoupon.fulfilled, (state, action) => {
         state.saving = false;
-        state.coupons = state.coupons.filter((c) => c._id !== action.payload);
+        state.coupons = state.coupons.filter(
+          (c) => (c._id || c.id) !== action.payload,
+        );
       })
       .addCase(deleteCoupon.rejected, (state, action) => {
         state.saving = false;
         state.error = action.payload || "Failed to delete coupon";
       })
       .addCase(toggleCouponStatus.fulfilled, (state, action) => {
+        const { couponId, coupon, isActive } = action.payload;
         const index = state.coupons.findIndex(
-          (c) => c._id === action.payload
+          (c) => (c._id || c.id) === couponId,
         );
         if (index !== -1) {
-          state.coupons[index] = {
-            ...state.coupons[index],
-            status: !state.coupons[index].status,
-          };
+          state.coupons[index] = coupon
+            ? { ...state.coupons[index], ...coupon }
+            : {
+                ...state.coupons[index],
+                isActive,
+                status: isActive,
+              };
         }
       });
   },
 });
 
-export const { clearAdminCouponsError, setAdminCouponsPage } =
-  adminCouponsSlice.actions;
+export const {
+  clearAdminCouponsError,
+  setAdminCouponsPage,
+  clearSelectedCoupon,
+} = adminCouponsSlice.actions;
 
 export default adminCouponsSlice.reducer;

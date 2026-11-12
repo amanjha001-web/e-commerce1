@@ -1,13 +1,10 @@
-
 import { useMemo, useState } from "react";
 
 import TicketTable from "../../components/admin/support/TicketTable";
 import TicketDetails from "../../components/admin/support/TicketDetails";
-
-import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
-import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
+import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Support = ({
   tickets = [],
@@ -28,34 +25,18 @@ const Support = ({
 
     return tickets.filter((ticket) => {
       const status = String(
-        ticket?.status ||
-          ticket?.ticketStatus ||
-          "open"
+        ticket?.status || ticket?.ticketStatus || "open",
       ).toLowerCase();
 
-      const ticketId =
-        ticket?._id ||
-        ticket?.id ||
-        ticket?.ticketId ||
-        "";
+      const ticketId = ticket?._id || ticket?.id || ticket?.ticketId || "";
+      const subject = ticket?.subject || ticket?.title || "";
 
-      const subject =
-        ticket?.subject ||
-        ticket?.title ||
-        "";
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        status === statusFilter;
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
       const matchesSearch =
         !keyword ||
-        String(ticketId)
-          .toLowerCase()
-          .includes(keyword) ||
-        String(subject)
-          .toLowerCase()
-          .includes(keyword) ||
+        String(ticketId).toLowerCase().includes(keyword) ||
+        String(subject).toLowerCase().includes(keyword) ||
         String(ticket?.message || "")
           .toLowerCase()
           .includes(keyword);
@@ -69,34 +50,23 @@ const Support = ({
     open: tickets.filter(
       (ticket) =>
         String(
-          ticket?.status ||
-            ticket?.ticketStatus ||
-            "open"
-        ).toLowerCase() === "open"
+          ticket?.status || ticket?.ticketStatus || "open",
+        ).toLowerCase() === "open",
     ).length,
     pending: tickets.filter(
       (ticket) =>
-        String(
-          ticket?.status ||
-            ticket?.ticketStatus ||
-            ""
-        ).toLowerCase() === "pending"
+        String(ticket?.status || ticket?.ticketStatus || "").toLowerCase() ===
+        "pending",
     ).length,
     resolved: tickets.filter(
       (ticket) =>
-        String(
-          ticket?.status ||
-            ticket?.ticketStatus ||
-            ""
-        ).toLowerCase() === "resolved"
+        String(ticket?.status || ticket?.ticketStatus || "").toLowerCase() ===
+        "resolved",
     ).length,
     closed: tickets.filter(
       (ticket) =>
-        String(
-          ticket?.status ||
-            ticket?.ticketStatus ||
-            ""
-        ).toLowerCase() === "closed"
+        String(ticket?.status || ticket?.ticketStatus || "").toLowerCase() ===
+        "closed",
     ).length,
   };
 
@@ -112,68 +82,53 @@ const Support = ({
 
   if (selectedTicket) {
     return (
-      <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <CustomerWorkspace title="Ticket Details" eyebrow="Customer workspace">
         <button
           type="button"
           onClick={() => setSelectedTicket(null)}
-          className="mb-6 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          className="mb-4 text-xs font-bold text-[var(--primary)] hover:underline"
         >
-          ← Back to Support
+          ← Back to all tickets
         </button>
 
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card dark:border-line">
           <TicketDetails
             ticket={selectedTicket}
             onCloseTicket={onCloseTicket}
-            onBack={() => setSelectedTicket(null)}
           />
         </section>
-      </main>
+      </CustomerWorkspace>
     );
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-primary">
-            Help Center
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            Customer Support
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Need help? Create a support ticket and track its progress.
-          </p>
-        </div>
-
-        <Button
-          onClick={() => setShowForm((value) => !value)}
+    <CustomerWorkspace
+      title="Support Tickets"
+      eyebrow="Customer workspace"
+      action={
+        <button
+          type="button"
+          onClick={() => setShowForm((val) => !val)}
+          className="primarybtn !py-2 !px-3.5 !text-xs !rounded-xl"
         >
-          {showForm ? "Close Form" : "Create Ticket"}
-        </Button>
-      </div>
-
-      {/* Create Ticket */}
+          {showForm ? "Close Form" : "+ Create ticket"}
+        </button>
+      }
+    >
+      {/* Create Ticket Form */}
       {showForm && (
-        <section className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold">
-            Create Support Ticket
+        <section className="mb-8 rounded-2xl border border-[var(--line)] bg-white p-6 shadow-md dark:bg-card dark:border-line">
+          <h2 className="text-base font-bold text-[var(--text)] dark:text-foreground">
+            Create new support ticket
           </h2>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tell us what went wrong and our support team will help you.
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            Describe your issue and our customer care team will respond shortly.
           </p>
 
           <form
             onSubmit={(event) => {
               event.preventDefault();
-
               const formData = new FormData(event.currentTarget);
-
               handleCreateTicket({
                 subject: formData.get("subject"),
                 category: formData.get("category"),
@@ -182,212 +137,163 @@ const Support = ({
             }}
             className="mt-5 space-y-4"
           >
-            <Input
-              name="subject"
-              label="Subject"
-              placeholder="What do you need help with?"
-              required
-            />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                Subject
+              </label>
+              <input
+                name="subject"
+                required
+                placeholder="What do you need help with?"
+                className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
+              />
+            </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
                 Category
               </label>
-
               <select
                 name="category"
                 defaultValue="general"
-                className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary"
+                className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
               >
-                <option value="general">
-                  General
-                </option>
-                <option value="order">
-                  Order
-                </option>
-                <option value="payment">
-                  Payment
-                </option>
-                <option value="product">
-                  Product
-                </option>
-                <option value="delivery">
-                  Delivery
-                </option>
-                <option value="account">
-                  Account
-                </option>
-                <option value="refund">
-                  Refund
-                </option>
+                <option value="general">General Inquiry</option>
+                <option value="order">Order & Tracking</option>
+                <option value="payment">Payment & Refunds</option>
+                <option value="delivery">Delivery Delay</option>
+                <option value="account">Account & Profile</option>
               </select>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
                 Message
               </label>
-
               <textarea
                 name="message"
-                rows={5}
+                rows={4}
                 required
-                placeholder="Describe your issue..."
-                className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary"
+                placeholder="Describe your issue with order numbers if applicable..."
+                className="mt-1.5 w-full resize-none rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
               />
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button
+            <div className="flex justify-end gap-3 pt-2">
+              <button
                 type="button"
-                variant="outline"
                 onClick={() => setShowForm(false)}
+                className="btnsm"
               >
                 Cancel
-              </Button>
-
-              <Button
+              </button>
+              <button
                 type="submit"
                 disabled={submitting}
+                className="primarybtn"
               >
-                {submitting
-                  ? "Submitting..."
-                  : "Submit Ticket"}
-              </Button>
+                {submitting ? "Submitting..." : "Submit ticket"}
+              </button>
             </div>
           </form>
         </section>
       )}
 
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Total Tickets
-          </p>
-          <p className="mt-2 text-2xl font-bold">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[var(--text)] dark:text-foreground">
             {statusCounts.all}
-          </p>
+          </strong>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Open
-          </p>
-          <p className="mt-2 text-2xl font-bold text-primary">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[#b7791f]">
             {statusCounts.open}
-          </p>
+          </strong>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Pending
-          </p>
-          <p className="mt-2 text-2xl font-bold">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[var(--primary)]">
             {statusCounts.pending}
-          </p>
+          </strong>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Resolved
-          </p>
-          <p className="mt-2 text-2xl font-bold">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[#16845b]">
             {statusCounts.resolved}
-          </p>
+          </strong>
         </div>
       </div>
 
-      {/* Filters */}
-      <section className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4">
-          <div className="w-full md:max-w-md">
-            <Input
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Search tickets..."
-            />
-          </div>
+      {/* Toolbar */}
+      <div className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-xs dark:bg-card dark:border-line">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tickets..."
+            className="w-full sm:max-w-xs rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
+          />
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {[
-              "all",
-              "open",
-              "pending",
-              "resolved",
-              "closed",
-            ].map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => setStatusFilter(status)}
-                className={[
-                  "flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium capitalize transition",
-                  statusFilter === status
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                ].join(" ")}
-              >
-                <span>{status}</span>
-                <span className="rounded-full bg-background/50 px-2 py-0.5 text-xs">
-                  {statusCounts[status]}
-                </span>
-              </button>
-            ))}
+          <div className="flex gap-2">
+            {["all", "open", "pending", "resolved"].map((tab) => {
+              const isActive = statusFilter === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setStatusFilter(tab)}
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-bold capitalize transition-all cursor-pointer ${
+                    isActive
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                      : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--primary)] hover:bg-[var(--soft)] dark:bg-card"
+                  }`}
+                >
+                  {tab}
+                </button>
+              );
+            })}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Tickets */}
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Tickets Table / List */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:bg-card dark:border-line">
         {loading ? (
-          <div className="flex min-h-[350px] items-center justify-center">
+          <div className="flex min-h-[250px] items-center justify-center">
             <Loader />
           </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="p-8">
+          <div className="p-10 text-center">
             <EmptyState
-              title={
-                search || statusFilter !== "all"
-                  ? "No matching tickets"
-                  : "No support tickets"
-              }
-              description={
-                search || statusFilter !== "all"
-                  ? "Try changing your search or status filter."
-                  : "You haven't created any support tickets yet."
-              }
+              title="No tickets found"
+              message="Have an issue with an order or product? Create a ticket and we'll assist you."
+              action={() => setShowForm(true)}
+              actionText="+ Create Ticket"
             />
-
-            {!search && statusFilter === "all" && (
-              <div className="mt-5 flex justify-center">
-                <Button
-                  onClick={() => setShowForm(true)}
-                >
-                  Create Your First Ticket
-                </Button>
-              </div>
-            )}
           </div>
         ) : (
           <TicketTable
             tickets={filteredTickets}
-            onView={handleViewTicket}
-            onClose={onCloseTicket}
+            onViewTicket={handleViewTicket}
           />
         )}
-      </section>
-
-      <button
-        type="button"
-        onClick={() => onNavigate?.("/")}
-        className="mt-8 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Back to Home
-      </button>
-    </main>
+      </div>
+    </CustomerWorkspace>
   );
 };
 

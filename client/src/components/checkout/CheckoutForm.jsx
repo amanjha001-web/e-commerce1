@@ -58,7 +58,7 @@ const CheckoutForm = ({
     `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
       errors[field]
         ? "border-red-500 focus:ring-2 focus:ring-red-100"
-        : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
+        : "border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-gray-700"
     }`;
 
   return (
@@ -132,7 +132,7 @@ const CheckoutForm = ({
             rows={4}
             maxLength={500}
             placeholder="Any special instructions for delivery? (optional)"
-            className="mt-1.5 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            className="mt-1.5 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
 
           <div className="mt-1 flex justify-end">
@@ -161,7 +161,7 @@ const CheckoutForm = ({
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Processing..." : "Continue"}
         </button>
@@ -171,3 +171,4 @@ const CheckoutForm = ({
 };
 
 export default CheckoutForm;
+

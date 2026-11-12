@@ -211,7 +211,7 @@ const OrderSummary = ({
             type="button"
             onClick={onPlaceOrder}
             disabled={loading || items.length === 0}
-            className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-secondary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
             {buttonText}
           </button>
@@ -227,3 +227,4 @@ const OrderSummary = ({
 };
 
 export default OrderSummary;
+

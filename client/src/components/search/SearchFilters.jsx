@@ -68,7 +68,7 @@ const SearchFilters = ({
           type="button"
           onClick={handleReset}
           disabled={loading}
-          className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 dark:text-blue-400"
+          className="text-xs font-medium text-secondary hover:text-primary disabled:opacity-50 dark:text-primary"
         >
           Reset
         </button>
@@ -95,7 +95,7 @@ const SearchFilters = ({
                 )
               }
               disabled={loading}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             >
               <option value="">All Categories</option>
 
@@ -148,7 +148,7 @@ const SearchFilters = ({
                 )
               }
               disabled={loading}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             >
               <option value="">All Brands</option>
 
@@ -201,7 +201,7 @@ const SearchFilters = ({
               }
               placeholder="Min"
               disabled={loading}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             />
 
             <input
@@ -217,7 +217,7 @@ const SearchFilters = ({
               }
               placeholder="Max"
               disabled={loading}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             />
           </div>
         </div>
@@ -241,7 +241,7 @@ const SearchFilters = ({
               )
             }
             disabled={loading}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           >
             <option value="">Any Rating</option>
             <option value="4">⭐ 4 & above</option>
@@ -270,7 +270,7 @@ const SearchFilters = ({
               )
             }
             disabled={loading}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           >
             <option value="">Relevance</option>
             <option value="latest">Newest</option>
@@ -294,7 +294,7 @@ const SearchFilters = ({
           type="button"
           onClick={handleApply}
           disabled={loading}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Applying..." : "Apply Filters"}
         </button>
@@ -304,3 +304,4 @@ const SearchFilters = ({
 };
 
 export default SearchFilters;
+

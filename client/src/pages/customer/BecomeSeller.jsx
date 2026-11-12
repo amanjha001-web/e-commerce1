@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import vendorRequestService from "../../services/vendorRequest.service";
 
 const initialForm = {
@@ -103,9 +104,9 @@ const bankFields = [
 ];
 
 const inputClass =
-  "mt-2 w-full rounded-xl border border-slate-700 bg-[#070b14] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
+  "mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[var(--text)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 dark:border-line dark:bg-card dark:text-foreground";
 
-const errorClass = "mt-1.5 text-xs text-red-400";
+const errorClass = "mt-1.5 text-xs font-semibold text-[var(--red)]";
 
 function FormField({
   name,
@@ -119,7 +120,7 @@ function FormField({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="text-sm font-medium text-slate-300">
+      <label htmlFor={name} className="text-xs font-bold uppercase tracking-wider text-[var(--text)] dark:text-foreground">
         {label}
         {required ? " *" : ""}
       </label>
@@ -316,14 +317,12 @@ export default function BecomeSeller() {
       setSubmitting(true);
       setApiError("");
 
-      // Actual backend API call
       const response = await vendorRequestService.createRequest(payload);
 
       if (response?.success === false) {
         throw new Error(response.message || "Request submission failed.");
       }
 
-      // POST response contains the created application in response.data
       navigate("/seller/request-status", {
         replace: true,
         state: { application: response?.data },
@@ -340,43 +339,48 @@ export default function BecomeSeller() {
   };
 
   return (
-    <main className="min-h-screen bg-[#070b14] px-4 py-10 text-white sm:px-6">
+    <main className="min-h-screen bg-[var(--bg)] px-4 py-10 text-[var(--text)] transition-colors duration-300 sm:px-6 dark:bg-background dark:text-foreground">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 text-sm text-slate-400">
-          <Link to="/" className="hover:text-blue-400">
+        {/* Breadcrumb */}
+        <div className="mb-6 flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
+          <Link to="/" className="transition-colors hover:text-[var(--primary)]">
             Home
           </Link>
-          <span className="mx-2">/</span>
-          <span className="text-white">Become a Seller</span>
+          <span>/</span>
+          <span className="text-[var(--text)] dark:text-foreground font-bold">Become a Seller</span>
         </div>
 
+        {/* Header */}
         <header className="mb-8">
-          <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-300">
+          <span className="eyebrow">
             Seller Registration
           </span>
 
-          <h1 className="mt-4 text-3xl font-bold sm:text-4xl">
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-[var(--text)] sm:text-3xl dark:text-foreground">
             Become a ShopSphere Seller
           </h1>
 
-          <p className="mt-3 text-sm leading-6 text-slate-400">
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--muted)]">
             Submit your business and bank details for admin review. You can
             check your application status after submission.
           </p>
         </header>
 
-        <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm leading-6 text-blue-200">
+        {/* Information Notice */}
+        <div className="mb-6 panel border-l-4 border-l-[var(--gold)] bg-[var(--soft)]/50 p-4 text-xs font-semibold leading-relaxed text-[var(--text)] dark:text-foreground">
           Your application will remain pending until an administrator reviews
           it. Submit accurate information. Your bank details are sensitive; only
           enter them on your trusted application.
         </div>
 
+        {/* Registration Form */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-slate-800 bg-[#0e1422] p-5 sm:p-8"
+          className="panel p-5 sm:p-8 space-y-6"
         >
+          {/* Business Information */}
           <section>
-            <h2 className="mb-5 border-b border-slate-800 pb-4 text-lg font-semibold">
+            <h2 className="mb-5 border-b border-[var(--line)] pb-4 text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-foreground dark:border-line">
               Business Information
             </h2>
 
@@ -395,7 +399,7 @@ export default function BecomeSeller() {
               <div className="sm:col-span-2">
                 <label
                   htmlFor="description"
-                  className="text-sm font-medium text-slate-300"
+                  className="text-xs font-bold uppercase tracking-wider text-[var(--text)] dark:text-foreground"
                 >
                   Business Description *
                 </label>
@@ -418,8 +422,9 @@ export default function BecomeSeller() {
             </div>
           </section>
 
+          {/* Business Address */}
           <section>
-            <h2 className="mb-5 border-b border-slate-800 pb-4 text-lg font-semibold">
+            <h2 className="mb-5 border-b border-[var(--line)] pb-4 text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-foreground dark:border-line">
               Business Address
             </h2>
 
@@ -428,7 +433,6 @@ export default function BecomeSeller() {
                 <FormField
                   key={field.name}
                   {...field}
-                  name={field.name}
                   value={form.address[field.name]}
                   onChange={(event) => handleChange(event, "address")}
                   error={errors[`address.${field.name}`]}
@@ -438,10 +442,13 @@ export default function BecomeSeller() {
             </div>
           </section>
 
+          {/* Bank Details */}
           <section>
-            <h2 className="mb-2 text-lg font-semibold">Bank Details</h2>
+            <h2 className="mb-1 text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-foreground">
+              Bank Details
+            </h2>
 
-            <p className="mb-5 text-sm leading-6 text-slate-400">
+            <p className="mb-5 text-xs font-medium leading-relaxed text-[var(--muted)]">
               Provide the bank details requested by the seller registration API.
             </p>
 
@@ -459,19 +466,21 @@ export default function BecomeSeller() {
             </div>
           </section>
 
+          {/* API Error */}
           {apiError && (
             <div
               role="alert"
-              className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm leading-6 text-red-300"
+              className="rounded-xl border border-[var(--red)]/30 bg-[var(--red)]/10 p-3.5 text-xs font-semibold text-[var(--red)]"
             >
               {apiError}
             </div>
           )}
 
-          <div className="flex flex-col-reverse gap-4 border-t border-slate-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          {/* Form Actions */}
+          <div className="flex flex-col-reverse gap-4 border-t border-[var(--line)] pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-line">
             <Link
               to="/seller/request-status"
-              className="text-center text-sm font-medium text-blue-400 hover:text-blue-300"
+              className="outlinebtn text-center"
             >
               Check Existing Request Status
             </Link>
@@ -479,7 +488,7 @@ export default function BecomeSeller() {
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="primarybtn shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Submitting Request..." : "Submit Seller Request →"}
             </button>

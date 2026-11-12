@@ -9,7 +9,7 @@ const AuthLayout = ({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="grid min-h-screen lg:grid-cols-2">
         {/* Left Section */}
-        <div className="hidden flex-col justify-between bg-blue-600 p-8 text-white lg:flex xl:p-12">
+        <div className="hidden flex-col justify-between bg-secondary p-8 text-white lg:flex xl:p-12">
           <Link to="/" className="text-2xl font-bold">
             {logo}
           </Link>
@@ -41,7 +41,7 @@ const AuthLayout = ({
 
             <Link
               to="/"
-              className="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+              className="text-sm font-medium text-gray-600 hover:text-secondary dark:text-gray-400 dark:hover:text-primary"
             >
               Home
             </Link>
@@ -59,3 +59,4 @@ const AuthLayout = ({
 };
 
 export default AuthLayout;
+

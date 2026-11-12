@@ -100,7 +100,7 @@ const AddAddress = ({
     `mt-1.5 w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition ${
       errors[field]
         ? "border-red-500 focus:ring-2 focus:ring-red-100"
-        : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:focus:border-blue-500"
+        : "border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-gray-700 dark:focus:border-primary"
     } bg-white text-gray-900 dark:bg-gray-800 dark:text-white`;
 
   return (
@@ -290,7 +290,7 @@ const AddAddress = ({
                 }
                 className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
                   form.addressType === value
-                    ? "border-blue-600 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                    ? "border-secondary bg-secondary/10 text-secondary dark:bg-secondary/30 dark:text-secondary-foreground"
                     : "border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
                 }`}
               >
@@ -317,7 +317,7 @@ const AddAddress = ({
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading
             ? "Saving..."
@@ -331,3 +331,4 @@ const AddAddress = ({
 };
 
 export default AddAddress;
+

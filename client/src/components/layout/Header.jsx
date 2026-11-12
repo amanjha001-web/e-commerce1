@@ -49,7 +49,7 @@ const DashboardHeader = ({
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground dark:bg-primary dark:text-primary-foreground">
                   {(user.name || "U").charAt(0).toUpperCase()}
                 </span>
               )}

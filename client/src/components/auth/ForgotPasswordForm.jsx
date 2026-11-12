@@ -31,18 +31,18 @@ const ForgotPassword = ({ onSubmit, onBackToLogin, loading = false }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900"
+      className="panel p-6"
     >
       <div className="mb-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl dark:bg-blue-900/20">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--soft)] text-2xl text-[var(--primary)]">
           🔑
         </div>
 
-        <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+        <h2 className="mt-4 text-xl font-bold text-[var(--text)]">
           Forgot Password?
         </h2>
 
-        <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xs font-medium leading-6 text-[var(--muted)]">
           Enter your registered email and we'll generate a password reset link.
         </p>
       </div>
@@ -50,7 +50,7 @@ const ForgotPassword = ({ onSubmit, onBackToLogin, loading = false }) => {
       <div>
         <label
           htmlFor="forgot-email"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Email Address
         </label>
@@ -63,20 +63,20 @@ const ForgotPassword = ({ onSubmit, onBackToLogin, loading = false }) => {
           placeholder="Enter your email"
           autoComplete="email"
           disabled={loading}
-          className={`mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
+          className={`field mt-1.5 w-full text-sm text-[var(--text)] ${
             error
-              ? "border-red-500"
-              : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
+              ? "border-[var(--red)]"
+              : "border-[var(--line)]"
           }`}
         />
 
-        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+        {error && <p className="mt-1 text-xs font-semibold text-[var(--red)]">{error}</p>}
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="mt-5 w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="primarybtn mt-5 w-full py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? "Sending..." : "Send Reset Link"}
       </button>
@@ -86,7 +86,7 @@ const ForgotPassword = ({ onSubmit, onBackToLogin, loading = false }) => {
           type="button"
           onClick={onBackToLogin}
           disabled={loading}
-          className="mt-3 w-full rounded-lg border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="outlinebtn mt-3 w-full py-2.5 text-xs disabled:opacity-50"
         >
           Back to Login
         </button>

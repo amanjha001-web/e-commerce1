@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 
 import OrderList from "../../components/order/OrderList";
-
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
+import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const STATUS_FILTERS = [
   { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
   { label: "Processing", value: "processing" },
   { label: "Shipped", value: "shipped" },
   { label: "Delivered", value: "delivered" },
+  { label: "Pending", value: "pending" },
   { label: "Cancelled", value: "cancelled" },
 ];
 
@@ -78,66 +78,70 @@ const Orders = ({
   const hasFilters = Boolean(search.trim() || filter !== "all");
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-primary">Account</p>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            My Orders
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            View and manage all your orders in one place.
-          </p>
-        </div>
-
-        <Button variant="outline" onClick={() => onNavigate?.("/")}>
+    <CustomerWorkspace
+      title="My Orders"
+      eyebrow="Customer workspace"
+      action={
+        <button
+          type="button"
+          onClick={() => onNavigate?.("/products")}
+          className="outlinebtn !py-2 !px-3 !text-xs"
+        >
           Continue Shopping
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        </button>
+      }
+    >
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {/* Total Orders */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Total Orders</p>
-
-          <p className="mt-2 text-2xl font-bold">{orders.length}</p>
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total Orders
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[var(--text)] dark:text-foreground">
+            {orders.length}
+          </strong>
+          <span className="text-[11px] font-bold text-[var(--muted)]">Lifetime purchases</span>
         </div>
 
         {/* Active Orders */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Active Orders</p>
-
-          <p className="mt-2 text-2xl font-bold text-primary">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+            In Transit
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[#b7791f]">
             {activeOrdersCount}
-          </p>
+          </strong>
+          <span className="text-[11px] font-bold text-[#16845b]">↗ In progress</span>
         </div>
 
         {/* Delivered */}
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Delivered</p>
-
-          <p className="mt-2 text-2xl font-bold">{getCount("delivered")}</p>
+        <div className="stat-card col-span-2 sm:col-span-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+            Delivered
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[#16845b]">
+            {getCount("delivered")}
+          </strong>
+          <span className="text-[11px] font-bold text-[#16845b]">✓ Completed</span>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4">
-          {/* Search */}
-          <div className="w-full md:max-w-md">
-            <Input
+      {/* Toolbar & Filters */}
+      <div className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-5 shadow-xs dark:bg-card dark:border-line">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full sm:max-w-xs">
+            <input
+              type="text"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by order ID or status..."
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by order ID..."
+              className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-medium text-[var(--text)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
             />
           </div>
 
           {/* Status Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((item) => {
               const isActive = filter === item.value;
 
@@ -146,20 +150,19 @@ const Orders = ({
                   key={item.value}
                   type="button"
                   onClick={() => setFilter(item.value)}
-                  className={[
-                    "flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition",
+                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all duration-150 cursor-pointer ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-xs"
+                      : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
+                  }`}
                 >
                   <span>{item.label}</span>
-
                   <span
-                    className={[
-                      "rounded-full px-2 py-0.5 text-xs",
-                      isActive ? "bg-primary-foreground/15" : "bg-background",
-                    ].join(" ")}
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--soft)] text-[var(--primary)]"
+                    }`}
                   >
                     {getCount(item.value)}
                   </span>
@@ -170,30 +173,24 @@ const Orders = ({
         </div>
       </div>
 
-      {/* Orders */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Orders List Container */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:bg-card dark:border-line">
         {loading ? (
-          <div className="flex min-h-[350px] items-center justify-center">
+          <div className="flex min-h-[300px] items-center justify-center">
             <Loader />
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="p-8">
+          <div className="p-10 text-center">
             <EmptyState
-              title={hasFilters ? "No matching orders" : "No orders yet"}
-              description={
+              title={hasFilters ? "No matching orders" : "No orders placed yet"}
+              message={
                 hasFilters
-                  ? "Try changing your search or status filter."
-                  : "Your orders will appear here after you place an order."
+                  ? "Try changing your search term or status filter."
+                  : "Your orders will appear here once you make your first purchase."
               }
+              action={!hasFilters ? () => onNavigate?.("/products") : undefined}
+              actionText="Start Shopping"
             />
-
-            {!hasFilters && (
-              <div className="mt-5 flex justify-center">
-                <Button onClick={() => onNavigate?.("/products")}>
-                  Start Shopping
-                </Button>
-              </div>
-            )}
           </div>
         ) : (
           <OrderList
@@ -205,26 +202,7 @@ const Orders = ({
           />
         )}
       </div>
-
-      {/* Navigation */}
-      <div className="mt-8 flex justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => onNavigate?.("/")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          ← Back to Home
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigate?.("/profile")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          Account →
-        </button>
-      </div>
-    </main>
+    </CustomerWorkspace>
   );
 };
 

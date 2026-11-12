@@ -91,7 +91,7 @@ const TicketDetails = ({
 
   const getStatusClasses = (value) => {
     const classes = {
-      open: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      open: "bg-blue-50 text-blue-700 ring-secondary/30",
       pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
       in_progress: "bg-purple-50 text-purple-700 ring-purple-600/20",
       resolved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -104,7 +104,7 @@ const TicketDetails = ({
   const getPriorityClasses = (value) => {
     const classes = {
       low: "bg-gray-100 text-gray-700 ring-gray-500/20",
-      medium: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      medium: "bg-blue-50 text-blue-700 ring-secondary/30",
       high: "bg-orange-50 text-orange-700 ring-orange-600/20",
       urgent: "bg-red-50 text-red-700 ring-red-600/20",
     };
@@ -165,7 +165,7 @@ const TicketDetails = ({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="ticket-details-title"
@@ -629,3 +629,4 @@ const TicketDetails = ({
 };
 
 export default TicketDetails;
+

@@ -64,34 +64,34 @@ const RevenueChart = ({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+      <div className="panel p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <div className="h-6 w-44 animate-pulse rounded bg-muted" />
-            <div className="mt-2 h-4 w-28 animate-pulse rounded bg-muted" />
+            <div className="h-6 w-44 animate-pulse rounded bg-[var(--soft)]" />
+            <div className="mt-2 h-4 w-28 animate-pulse rounded bg-[var(--soft)]" />
           </div>
 
-          <div className="h-9 w-28 animate-pulse rounded-lg bg-muted" />
+          <div className="h-9 w-28 animate-pulse rounded-lg bg-[var(--soft)]" />
         </div>
 
-        <div className="h-[280px] animate-pulse rounded-xl bg-muted/50" />
+        <div className="h-[280px] animate-pulse rounded-xl bg-[var(--soft)]/50" />
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+    <div className="panel p-6">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          <h2 className="text-base font-black text-[var(--text)]">{title}</h2>
 
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
             Revenue performance
           </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground">
+        <div className="pill">
           {period}
         </div>
       </div>

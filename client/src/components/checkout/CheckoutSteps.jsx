@@ -28,7 +28,7 @@ const CheckoutSteps = ({
                   onClick={() => onStepClick?.(stepNumber)}
                   className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition ${
                     isCompleted || isCurrent
-                      ? "border-blue-600 bg-blue-600 text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-gray-300 bg-white text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
                   } ${
                     canClick
@@ -42,7 +42,7 @@ const CheckoutSteps = ({
                 <span
                   className={`mt-2 text-xs font-semibold ${
                     isCurrent || isCompleted
-                      ? "text-blue-600 dark:text-blue-400"
+                      ? "text-primary dark:text-primary/80"
                       : "text-gray-500 dark:text-gray-400"
                   }`}
                 >
@@ -54,7 +54,7 @@ const CheckoutSteps = ({
                 <div
                   className={`mx-3 mt-[-20px] h-0.5 flex-1 ${
                     stepNumber < safeStep
-                      ? "bg-blue-600"
+                      ? "bg-primary"
                       : "bg-gray-200 dark:bg-gray-700"
                   }`}
                 />
@@ -71,14 +71,14 @@ const CheckoutSteps = ({
             Step {safeStep} of {steps.length}
           </span>
 
-          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+          <span className="text-sm font-medium text-primary dark:text-primary/80">
             {steps[safeStep - 1]}
           </span>
         </div>
 
         <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className="h-full rounded-full bg-blue-600 transition-all duration-300"
+            className="h-full rounded-full bg-primary transition-all duration-300"
             style={{
               width: `${(safeStep / steps.length) * 100}%`,
             }}
@@ -91,7 +91,7 @@ const CheckoutSteps = ({
               key={step}
               className={`text-[10px] ${
                 index + 1 <= safeStep
-                  ? "font-semibold text-blue-600 dark:text-blue-400"
+                  ? "font-semibold text-primary dark:text-primary/80"
                   : "text-gray-400"
               }`}
             >

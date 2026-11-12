@@ -108,35 +108,31 @@ const Reviews = ({
       : 0;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      
-      
-
-      <div >
-        
-
+    <div className="min-h-screen bg-[var(--bg)]">
+      <div>
         <main className="p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl space-y-6">
             {/* Header */}
             <div>
-              <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+              <div className="eyebrow">Customer Feedback</div>
+              <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
                 Customer Reviews
               </h1>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                 See what customers are saying about your products.
               </p>
             </div>
 
             {/* Rating Overview */}
             <section className="grid gap-6 lg:grid-cols-[320px_1fr]">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="stat-card">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs font-bold text-[var(--muted)]">
                     Overall Rating
                   </p>
 
-                  <p className="mt-2 text-5xl font-bold text-foreground">
+                  <p className="mt-2 text-5xl font-black text-[var(--gold)]">
                     {averageRating.toFixed(
                       1
                     )}
@@ -148,7 +144,7 @@ const Reviews = ({
                     />
                   </div>
 
-                  <p className="mt-3 text-sm text-muted-foreground">
+                  <p className="mt-3 text-xs font-medium text-[var(--muted)]">
                     Based on {reviews.length}{" "}
                     review
                     {reviews.length !==
@@ -159,7 +155,7 @@ const Reviews = ({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="panel">
                 <RatingSummary
                   averageRating={
                     averageRating
@@ -175,7 +171,7 @@ const Reviews = ({
             </section>
 
             {/* Filters */}
-            <section className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+            <section className="panel p-4">
               <div className="grid gap-4 md:grid-cols-[1fr_220px]">
                 <Input
                   value={search}
@@ -225,15 +221,15 @@ const Reviews = ({
             </section>
 
             {/* Reviews */}
-            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <div className="border-b border-border p-5 sm:p-6">
+            <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
+              <div className="border-b border-[var(--line)] p-5 sm:p-6 bg-[#fcf9fa] dark:bg-card">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground">
+                    <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                       Reviews
                     </h2>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                       {filteredReviews.length}{" "}
                       review
                       {filteredReviews.length !==
@@ -252,6 +248,7 @@ const Reviews = ({
                           filteredReviews
                         )
                       }
+                      className="outlinebtn"
                     >
                       View All
                     </Button>

@@ -42,35 +42,36 @@ const StoreSettings = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <Loader />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-[var(--bg)]">
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-5xl space-y-6">
           {/* Page Header */}
           <div>
-            <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+            <div className="eyebrow">Seller Centre</div>
+            <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
               Store Settings
             </h1>
 
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs font-medium text-[var(--muted)]">
               Update the information customers see about your store.
             </p>
           </div>
 
           {/* Store Information */}
-          <section className="rounded-2xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-6">
-              <h2 className="text-lg font-semibold text-foreground">
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
+            <div className="border-b border-[var(--line)] p-6 bg-[#fcf9fa] dark:bg-card">
+              <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                 Store Information
               </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                 Basic information about your vendor store.
               </p>
             </div>
@@ -116,7 +117,7 @@ const StoreSettings = ({
 
               {/* Store Address */}
               <div>
-                <h3 className="mb-4 text-base font-semibold text-foreground">
+                <h3 className="mb-4 text-sm font-black text-[var(--text)] dark:text-foreground">
                   Store Address
                 </h3>
 
@@ -160,8 +161,8 @@ const StoreSettings = ({
               </div>
 
               {/* Save */}
-              <div className="flex justify-end border-t border-border pt-5">
-                <Button type="submit" disabled={saving}>
+              <div className="flex justify-end border-t border-[var(--line)] pt-5">
+                <Button type="submit" disabled={saving} className="primarybtn">
                   {saving ? "Saving..." : "Save Store Settings"}
                 </Button>
               </div>
@@ -169,46 +170,46 @@ const StoreSettings = ({
           </section>
 
           {/* Store Preview */}
-          <section className="rounded-2xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-6">
-              <h2 className="text-lg font-semibold text-foreground">
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
+            <div className="border-b border-[var(--line)] p-6 bg-[#fcf9fa] dark:bg-card">
+              <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                 Store Preview
               </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                 Preview the basic information customers will see.
               </p>
             </div>
 
             <div className="p-6">
-              <div className="rounded-2xl border border-border bg-background p-6">
-                <h3 className="text-xl font-bold text-foreground">
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--soft)]/40 p-6">
+                <h3 className="text-xl font-black text-[var(--primary)]">
                   {form.storeName || "Your Store"}
                 </h3>
 
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <p className="mt-2 text-xs font-medium leading-5 text-[var(--muted)]">
                   {form.description ||
                     "Your store description will appear here."}
                 </p>
 
-                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                <div className="mt-5 grid gap-3 text-xs sm:grid-cols-2">
                   <div>
-                    <span className="text-muted-foreground">Email:</span>{" "}
-                    <span className="font-medium text-foreground">
+                    <span className="font-bold text-[var(--muted)]">Email:</span>{" "}
+                    <span className="font-bold text-[var(--text)] dark:text-foreground">
                       {form.email || "—"}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground">Phone:</span>{" "}
-                    <span className="font-medium text-foreground">
+                    <span className="font-bold text-[var(--muted)]">Phone:</span>{" "}
+                    <span className="font-bold text-[var(--text)] dark:text-foreground">
                       {form.phone || "—"}
                     </span>
                   </div>
 
                   <div className="sm:col-span-2">
-                    <span className="text-muted-foreground">Address:</span>{" "}
-                    <span className="font-medium text-foreground">
+                    <span className="font-bold text-[var(--muted)]">Address:</span>{" "}
+                    <span className="font-bold text-[var(--text)] dark:text-foreground">
                       {[form.address, form.city, form.state, form.pincode]
                         .filter(Boolean)
                         .join(", ") || "—"}

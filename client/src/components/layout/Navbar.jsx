@@ -8,7 +8,7 @@ import { fetchWishlist } from "../../store/slices/wishlistThunk.js";
 import { fetchCart } from "../../store/slices/cartThunk.js";
 
 const Navbar = ({
-  logo = "ShopSphere",
+  logo,
   navItems = [],
   onMenuClick,
   showMenuButton = true,
@@ -37,7 +37,7 @@ const Navbar = ({
 
   const isAdmin = ["admin", "superadmin", "super_admin"].includes(role);
   const isVendor = ["vendor", "seller"].includes(role);
-  const isCustomer = ["customer", "user"].includes(role);
+  const isCustomer = ["customer", "user"].includes(role) || (!isAdmin && !isVendor);
 
   // Wishlist Redux state
   const wishlistItems = useSelector((state) => state.wishlist?.items || []);
@@ -68,8 +68,9 @@ const Navbar = ({
 
   const defaultNavItems = [
     { label: "Home", to: "/" },
-    { label: "Products", to: "/products" },
+    { label: "Shop", to: "/products" },
     { label: "Categories", to: "/categories" },
+    { label: "Deals", to: "/products?deals=true" },
   ];
 
   const items = navItems.length > 0 ? navItems : defaultNavItems;
@@ -91,41 +92,45 @@ const Navbar = ({
 
   return (
     <header
-      className={`sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-950/95 ${className}`}
+      className={`sticky top-0 z-40 w-full border-b border-[var(--line)] bg-white/95 backdrop-blur-md dark:border-line dark:bg-card/95 ${className}`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Mobile Menu */}
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-4 sm:px-7">
+        {/* Mobile Menu Button */}
         {showMenuButton && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-800"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-white text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] md:hidden"
             aria-label="Open menu"
           >
             ☰
           </button>
         )}
 
-        {/* Logo */}
+        {/* Brand Logo */}
         <Link
           to="/"
-          className="shrink-0 text-xl font-bold text-gray-900 dark:text-white"
+          className="shrink-0 text-2xl font-black tracking-tight text-[var(--primary)] transition hover:opacity-90"
         >
-          {logo}
+          {logo || (
+            <>
+              Shop<span className="text-[var(--gold)]">Sphere</span>.
+            </>
+          )}
         </Link>
 
-        {/* Navigation */}
+        {/* Navigation Links */}
         <nav className="hidden items-center gap-1 md:flex">
           {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
+              end={item.to === "/"}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm font-medium transition ${
+                `rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
                   isActive
-                    ? "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                    ? "bg-[var(--soft)] text-[var(--primary)]"
+                    : "text-[#55464c] hover:bg-[var(--soft)]/60 hover:text-[var(--primary)] dark:text-foreground"
                 }`
               }
             >
@@ -135,108 +140,128 @@ const Navbar = ({
           ))}
         </nav>
 
-        {/* Right Content */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* Right Tools */}
+        <div className="ml-auto flex items-center gap-2.5">
           {rightContent || (
             <>
-              {/* Customer Wishlist */}
+              {/* Wishlist Button */}
               {(!isAuthenticated || isCustomer) && (
                 <Link
                   to="/wishlist"
-                  className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-red-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                  className="hidden items-center gap-1.5 rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] sm:inline-flex dark:bg-card"
                   aria-label={`Wishlist, ${wishlistCount} items`}
                 >
-                  <span className="text-xl">♡</span>
-
+                  <span className="text-sm">♡</span>
+                  <span>Wishlist</span>
                   {wishlistCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    <span className="rounded-full bg-[var(--soft)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--primary)]">
+                      {wishlistCount}
                     </span>
                   )}
                 </Link>
               )}
 
-              {/* Customer Cart */}
+              {/* Cart Button */}
               {(!isAuthenticated || isCustomer) && (
                 <Link
                   to="/cart"
-                  className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
                   aria-label={`Cart, ${cartCount} items`}
                 >
-                  <span className="text-xl">🛒</span>
-
-                  {cartCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                      {cartCount > 99 ? "99+" : cartCount}
-                    </span>
-                  )}
+                  <span>🛍</span>
+                  <span>Cart</span>
+                  <span className="rounded-full bg-[var(--soft)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--primary)]">
+                    {cartCount}
+                  </span>
                 </Link>
               )}
 
-              {/* Account Dropdown */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setAccountOpen((prev) => !prev)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                  aria-expanded={accountOpen}
-                >
-                  {user?.avatar?.url ? (
-                    <img
-                      src={user.avatar.url}
-                      alt={user.fullName || "User"}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
-                      {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
+              {/* Account / Sign In */}
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setAccountOpen((prev) => !prev)}
+                    className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] dark:bg-card"
+                    aria-expanded={accountOpen}
+                  >
+                    {user?.avatar?.url ? (
+                      <img
+                        src={user.avatar.url}
+                        alt={user.fullName || "User"}
+                        className="h-6 w-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-white">
+                        {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
+                      </span>
+                    )}
+
+                    <span className="hidden max-w-28 truncate sm:inline">
+                      {user?.fullName || user?.username || "Account"}
                     </span>
-                  )}
 
-                  <span className="hidden md:block">
-                    {isAuthenticated
-                      ? user?.fullName || user?.username || "Account"
-                      : "Account"}
-                  </span>
+                    <span className="text-[10px] text-[var(--muted)]">
+                      {accountOpen ? "▲" : "▼"}
+                    </span>
+                  </button>
 
-                  <span className="text-xs">{accountOpen ? "▲" : "▼"}</span>
-                </button>
+                  {/* Dropdown Menu */}
+                  {accountOpen && (
+                    <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xl dark:bg-card">
+                      <div className="border-b border-[var(--line)] bg-[var(--soft)] px-4 py-3">
+                        <p className="truncate text-sm font-bold text-[var(--primary)]">
+                          {user?.fullName || user?.username || "User"}
+                        </p>
+                        <p className="truncate text-xs text-[var(--muted)]">
+                          {user?.email || ""}
+                        </p>
+                        <span className="mt-1 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold uppercase text-[var(--primary)]">
+                          {role || "Customer"}
+                        </span>
+                      </div>
 
-                {/* Dropdown */}
-                {accountOpen && (
-                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                    {isAuthenticated ? (
-                      <>
-                        <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                            {user?.fullName || user?.username || "User"}
-                          </p>
-
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                            {user?.email || ""}
-                          </p>
-
-                          <p className="mt-1 text-xs capitalize text-gray-500 dark:text-gray-400">
-                            Role: {role || "Unknown"}
-                          </p>
-                        </div>
-
+                      <div className="py-1">
                         {isCustomer && (
                           <>
                             <Link
                               to="/profile"
                               onClick={closeAccount}
-                              className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+                              className="block px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
                             >
-                              My Profile
+                              ♙ My Profile
+                            </Link>
+
+                            <Link
+                              to="/orders"
+                              onClick={closeAccount}
+                              className="block px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+                            >
+                              ▤ My Orders
+                            </Link>
+
+                            <Link
+                              to="/addresses"
+                              onClick={closeAccount}
+                              className="block px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+                            >
+                              ⌖ Saved Addresses
+                            </Link>
+
+                            <Link
+                              to="/wishlist"
+                              onClick={closeAccount}
+                              className="block px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+                            >
+                              ♡ Wishlist
                             </Link>
 
                             <Link
                               to="/become-seller"
                               onClick={closeAccount}
-                              className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                              className="block border-t border-[var(--line)] px-4 py-2.5 text-xs font-bold text-[var(--gold)] transition hover:bg-[var(--soft)]"
                             >
-                              Become a Seller
+                              ✨ Become a Seller
                             </Link>
                           </>
                         )}
@@ -245,9 +270,9 @@ const Navbar = ({
                           <Link
                             to="/vendor"
                             onClick={closeAccount}
-                            className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
+                            className="block px-4 py-2.5 text-xs font-bold text-[var(--primary)] transition hover:bg-[var(--soft)]"
                           >
-                            Vendor Dashboard
+                            ▦ Vendor Dashboard
                           </Link>
                         )}
 
@@ -255,76 +280,31 @@ const Navbar = ({
                           <Link
                             to="/admin"
                             onClick={closeAccount}
-                            className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-purple-600 hover:bg-purple-50 dark:border-gray-800 dark:text-purple-400 dark:hover:bg-purple-950/30"
+                            className="block px-4 py-2.5 text-xs font-bold text-[var(--primary)] transition hover:bg-[var(--soft)]"
                           >
-                            Admin Dashboard
-                          </Link>
-                        )}
-
-                        {!isVendor && !isAdmin && (
-                          <Link
-                            to="/login?role=vendor"
-                            onClick={closeAccount}
-                            className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
-                          >
-                            Seller / Vendor Login
+                            ⚙ Admin Console
                           </Link>
                         )}
 
                         <button
                           type="button"
                           onClick={handleLogout}
-                          className="w-full border-t border-gray-100 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:border-gray-800 dark:text-red-400 dark:hover:bg-red-950/30"
+                          className="w-full border-t border-[var(--line)] px-4 py-2.5 text-left text-xs font-bold text-[var(--red)] transition hover:bg-[#fff0f1]"
                         >
-                          Logout
+                          🚪 Logout
                         </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link
-                          to="/login"
-                          onClick={closeAccount}
-                          className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                          Customer Login
-                        </Link>
-
-                        <Link
-                          to="/login/register"
-                          onClick={closeAccount}
-                          className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                          Register
-                        </Link>
-
-                        <Link
-                          to="/login?role=admin"
-                          onClick={closeAccount}
-                          className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-purple-600 hover:bg-purple-50 dark:border-gray-800 dark:text-purple-400 dark:hover:bg-purple-950/30"
-                        >
-                          Admin Login
-                        </Link>
-
-                        <Link
-                          to="/become-seller"
-                          onClick={closeAccount}
-                          className="block border-t border-gray-100 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-gray-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
-                        >
-                          Become a Seller
-                        </Link>
-
-                        <Link
-                          to="/login?role=vendor"
-                          onClick={closeAccount}
-                          className="block border-t border-gray-100 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-                        >
-                          Seller / Vendor Login
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="primarybtn !py-2 !px-4 !text-xs !rounded-xl"
+                >
+                  Sign in
+                </Link>
+              )}
             </>
           )}
         </div>

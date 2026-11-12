@@ -127,7 +127,7 @@ const Pagination = ({
             aria-current={page === currentPage ? "page" : undefined}
             className={`min-w-9 rounded-lg px-3 py-2 text-sm font-medium transition ${
               page === currentPage
-                ? "bg-blue-600 text-white"
+                ? "bg-secondary text-white"
                 : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
             }`}
           >
@@ -162,3 +162,4 @@ const Pagination = ({
 };
 
 export default Pagination;
+

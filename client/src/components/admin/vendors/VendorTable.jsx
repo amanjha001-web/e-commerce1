@@ -67,20 +67,20 @@ const VendorTable = ({
     switch (status) {
       case "active":
       case "approved":
-        return "bg-green-100 text-green-700";
+        return "status-badge green";
 
       case "pending":
       case "requested":
-        return "bg-yellow-100 text-yellow-700";
+        return "status-badge amber";
 
       case "suspended":
       case "blocked":
       case "inactive":
       case "rejected":
-        return "bg-red-100 text-red-700";
+        return "status-badge red";
 
       default:
-        return "bg-gray-100 text-gray-700";
+        return "status-badge";
     }
   };
 
@@ -89,11 +89,11 @@ const VendorTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px]">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-[var(--line)] bg-[#fcf9fa] text-[11px] font-black uppercase tracking-wider text-[var(--muted)] dark:bg-card">
                 {[
                   "Vendor",
                   "Owner",
@@ -174,7 +174,7 @@ const VendorTable = ({
 
   if (!vendors.length) {
     return (
-      <div className="rounded-2xl border border-border bg-background px-6 py-14 text-center">
+      <div className="rounded-2xl border border-border bg-white px-6 py-14 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
           🏪
         </div>
@@ -191,33 +191,33 @@ const VendorTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background">
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
       {/* Desktop */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1000px]">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-[var(--line)] bg-[#fcf9fa] text-[11px] font-black uppercase tracking-wider text-[var(--muted)] dark:bg-card">
+              <th className="px-5 py-3.5 text-left">
                 Vendor
               </th>
 
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-left">
                 Owner
               </th>
 
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-left">
                 Email
               </th>
 
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-left">
                 Status
               </th>
 
-              <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-left">
                 Joined
               </th>
 
-              <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-right">
                 Actions
               </th>
             </tr>
@@ -235,7 +235,7 @@ const VendorTable = ({
               return (
                 <tr
                   key={vendor?._id || vendor?.id}
-                  className="border-b border-border transition-colors last:border-0 hover:bg-muted/20"
+                  className="border-b border-[#f0e8eb] transition hover:bg-[var(--soft)]/50 last:border-0 dark:border-line dark:hover:bg-soft/20"
                 >
                   {/* Vendor */}
                   <td className="px-5 py-4">

@@ -2,7 +2,16 @@ import { useState } from "react";
 import ProductImage from "./ProductImage";
 
 const ProductGallery = ({ images = [], product }) => {
-  const productImages = images.length > 0 ? images : product?.images || [];
+  const productImages =
+    images.length > 0
+      ? images
+      : product?.images?.length
+        ? product.images
+        : product?.thumbnail
+          ? [product.thumbnail]
+          : product?.image
+            ? [product.image]
+            : [];
 
   const normalizedImages = productImages
     .map((image) => {
@@ -22,33 +31,33 @@ const ProductGallery = ({ images = [], product }) => {
 
   if (!normalizedImages.length) {
     return (
-      <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-gray-100 text-6xl dark:bg-gray-800">
-        🛍️
+      <div className="detailvisual">
+        {product?.icon || "🛍️"}
       </div>
     );
   }
 
   return (
     <div className="w-full">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
+      <div className="detailvisual">
         <ProductImage
           src={activeImage}
           alt={product?.name || product?.title || "Product"}
-          className="aspect-square w-full object-contain"
+          className="max-h-[420px] w-full object-contain"
         />
       </div>
 
       {normalizedImages.length > 1 && (
-        <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6">
+        <div className="mt-3 grid grid-cols-5 gap-2.5 sm:grid-cols-6">
           {normalizedImages.map((image, index) => (
             <button
               key={`${image}-${index}`}
               type="button"
               onClick={() => setActiveIndex(index)}
-              className={`aspect-square overflow-hidden rounded-lg border-2 bg-gray-50 transition dark:bg-gray-800 ${
+              className={`aspect-square overflow-hidden rounded-xl border-2 bg-white transition ${
                 safeIndex === index
-                  ? "border-blue-600"
-                  : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+                  ? "border-[var(--primary)] shadow-xs"
+                  : "border-[var(--line)] hover:border-[var(--primary)]/50"
               }`}
             >
               <img
@@ -65,3 +74,4 @@ const ProductGallery = ({ images = [], product }) => {
 };
 
 export default ProductGallery;
+

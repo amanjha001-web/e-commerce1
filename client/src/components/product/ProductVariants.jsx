@@ -120,7 +120,7 @@ const ProductVariants = ({
                       aria-pressed={isSelected}
                       className={`relative min-w-12 rounded-lg border px-4 py-2 text-sm font-medium transition ${
                         isSelected
-                          ? "border-blue-600 bg-blue-50 text-blue-600 ring-2 ring-blue-600/20 dark:bg-blue-900/20 dark:text-blue-400"
+                          ? "border-secondary bg-blue-50 text-primary ring-2 ring-secondary/30 dark:bg-blue-900/20 dark:text-primary"
                           : "border-gray-300 bg-white text-gray-700 hover:border-blue-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
                       } ${
                         isDisabled
@@ -161,3 +161,6 @@ const ProductVariants = ({
 };
 
 export default ProductVariants;
+
+
+

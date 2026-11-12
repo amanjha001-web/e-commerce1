@@ -7,7 +7,7 @@ const CouponBox = ({
   loading = false,
   error = "",
   success = "",
-  placeholder = "Enter coupon code",
+  placeholder = "Coupon code (e.g. WELCOME10)",
 }) => {
   const [couponCode, setCouponCode] = useState(appliedCoupon?.code || "");
 
@@ -33,20 +33,20 @@ const CouponBox = ({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-        Apply Coupon
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-xs dark:bg-card dark:border-line">
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+        Have a coupon?
       </h3>
 
       {appliedCoupon ? (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 dark:border-green-900/50 dark:bg-green-950/30">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#c3ebda] bg-[#e7f6ef] px-3.5 py-2.5">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+            <p className="text-sm font-bold text-[#16845b]">
               {appliedCoupon.code}
             </p>
 
             {appliedCoupon.discount !== undefined && (
-              <p className="mt-0.5 text-xs text-green-600 dark:text-green-500">
+              <p className="mt-0.5 text-xs font-medium text-[#16845b]/80">
                 You saved ₹
                 {Number(appliedCoupon.discount).toLocaleString("en-IN")}
               </p>
@@ -57,7 +57,7 @@ const CouponBox = ({
             type="button"
             onClick={handleRemove}
             disabled={loading}
-            className="shrink-0 text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+            className="text-xs font-bold text-[var(--red)] hover:underline disabled:opacity-50"
           >
             Remove
           </button>
@@ -72,27 +72,27 @@ const CouponBox = ({
             }
             placeholder={placeholder}
             disabled={loading}
-            className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 uppercase outline-none transition placeholder:normal-case placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-950 dark:text-white dark:disabled:bg-gray-800"
+            className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-xs font-bold uppercase text-[var(--text)] outline-none transition placeholder:normal-case placeholder:font-normal placeholder:text-[var(--muted)]/70 focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 disabled:bg-gray-100 dark:bg-card"
           />
 
           <button
             type="submit"
             disabled={!couponCode.trim() || loading}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="outlinebtn !py-2 !px-4 !text-xs !rounded-xl"
           >
-            {loading ? "Applying..." : "Apply"}
+            {loading ? "Applying..." : "Apply coupon"}
           </button>
         </form>
       )}
 
       {error && (
-        <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">
+        <p className="mt-2 text-xs font-medium text-[var(--red)]">
           {error}
         </p>
       )}
 
       {success && !error && (
-        <p className="mt-2 text-xs font-medium text-green-600 dark:text-green-400">
+        <p className="mt-2 text-xs font-medium text-[#16845b]">
           {success}
         </p>
       )}

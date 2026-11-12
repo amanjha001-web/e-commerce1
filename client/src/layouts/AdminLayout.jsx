@@ -1,77 +1,81 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 
-import AdminHeader from "../components/admin/AdminHeader";
-import Sidebar from "../components/layout/Sidebar";
-import { logout } from "../store/slices/authSlice";
+import TopBar from "../components/layout/TopBar";
+import Navbar from "../components/layout/Navbar";
 
-const adminItems = [
-  { label: "Dashboard", to: "/admin/dashboard", icon: "📊" },
-  { label: "Users", to: "/admin/users", icon: "👥" },
-  {
-    label: "Vendors",
-    icon: "🏪",
-    children: [
-      { label: "All Vendors", to: "/admin/vendors" },
-      { label: "Vendor Requests", to: "/admin/vendor-requests" },
-    ],
-  },
-  { label: "Products", to: "/admin/products", icon: "🛍️" },
-  { label: "Orders", to: "/admin/orders", icon: "📦" },
-  { label: "Payments", to: "/admin/payments", icon: "💳" },
-  {
-    label: "Catalog",
-    icon: "📂",
-    children: [
-      { label: "Categories", to: "/admin/categories" },
-      { label: "Brands", to: "/admin/brands" },
-      { label: "Banners", to: "/admin/banners" },
-      { label: "Coupons", to: "/admin/coupons" },
-    ],
-  },
-  { label: "Reports", to: "/admin/reports", icon: "📈" },
-  { label: "Support", to: "/admin/support", icon: "🎧" },
-  { label: "Notifications", to: "/admin/notifications", icon: "🔔" },
-  { label: "Permissions", to: "/admin/permissions", icon: "🛡️" },
-  { label: "Settings", to: "/admin/settings", icon: "⚙️" },
+const adminLinks = [
+  ["/admin/dashboard", "▦", "Dashboard"],
+  ["/admin/users", "♙", "Users"],
+  ["/admin/vendors", "♧", "Vendors"],
+  ["/admin/vendor-requests", "✉", "Vendor requests"],
+  ["/admin/products", "▣", "Products"],
+  ["/admin/categories", "▤", "Categories"],
+  ["/admin/orders", "▥", "Orders"],
+  ["/admin/refunds", "↩", "Refund requests"],
+  ["/admin/payments", "₹", "Payments"],
+  ["/admin/coupons", "％", "Coupons"],
+  ["/admin/banners", "▧", "Banners"],
+  ["/admin/support", "☏", "Support"],
+  ["/admin/settings", "⚙", "Settings"],
 ];
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const user = useSelector((state) => state.auth?.user);
+  const location = useLocation();
 
-  const handleLogout = async () => {
-    try {
-      await dispatch(logout()).unwrap();
-    } catch (error) {
-      console.error("Admin logout failed:", error);
-    } finally {
-      navigate("/", { replace: true });
+  const isLinkActive = (path) => {
+    if (path === "/admin/dashboard") {
+      return (
+        location.pathname === "/admin" ||
+        location.pathname === "/admin/" ||
+        location.pathname === "/admin/dashboard"
+      );
     }
+    return (
+      location.pathname === path || location.pathname.startsWith(`${path}/`)
+    );
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <header className="fixed inset-x-0 top-0 z-50 h-16">
-        <AdminHeader user={user} onMenuClick={() => setSidebarOpen(true)} />
-      </header>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <TopBar />
+      <Navbar onMenuClick={() => setSidebarOpen((prev) => !prev)} />
 
-      <Sidebar
-        variant="admin"
-        logo="ShopSphere Admin"
-        sectionTitle="Administration"
-        items={adminItems}
-        user={user}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onLogout={handleLogout}
-      />
+      <main className="page">
+        <div className="layout">
+          <aside
+            id="sideNav"
+            className={`sidebar ${sidebarOpen ? "open" : ""}`}
+          >
+            <div className="side-title">Admin console</div>
 
-      <main className="min-h-screen min-w-0 px-4 pb-6 pt-20 md:px-6 lg:ml-[272px]">
-        <Outlet />
+            {adminLinks.map(([path, icon, label]) => (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={() => setSidebarOpen(false)}
+                className={`side-link ${isLinkActive(path) ? "active" : ""}`}
+              >
+                <span>{icon}</span>
+                {label}
+              </NavLink>
+            ))}
+
+            <Link
+              to="/"
+              onClick={() => setSidebarOpen(false)}
+              className="side-link"
+            >
+              <span>↗</span>
+              View storefront
+            </Link>
+          </aside>
+
+          <section className="content">
+            <Outlet />
+          </section>
+        </div>
       </main>
     </div>
   );

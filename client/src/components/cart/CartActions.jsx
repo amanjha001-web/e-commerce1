@@ -47,7 +47,7 @@ const CartActions = ({
 
       <Link
         to={checkoutPath}
-        className={`rounded-lg bg-blue-600 px-5 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-blue-700 ${
+        className={`rounded-lg bg-primary px-5 py-2.5 text-center text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 ${
           loading ? "pointer-events-none opacity-50" : ""
         }`}
       >

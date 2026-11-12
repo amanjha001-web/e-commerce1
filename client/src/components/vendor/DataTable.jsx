@@ -99,24 +99,24 @@ const DataTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px]">
-            <thead className="bg-gray-50 dark:bg-gray-800/50">
+            <thead className="border-b border-[var(--line)] bg-[#fcf9fa] dark:bg-soft/30">
               <tr>
-                {selectable && <th className="w-12 px-4 py-3" />}
+                {selectable && <th className="w-12 px-4 py-3.5" />}
 
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                    className="px-4 py-3.5 text-left text-[11px] font-black uppercase tracking-wider text-[var(--muted)]"
                   >
                     {column.label}
                   </th>
                 ))}
 
                 {actions && (
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <th className="px-4 py-3.5 text-right text-[11px] font-black uppercase tracking-wider text-[var(--muted)]">
                     Actions
                   </th>
                 )}
@@ -127,23 +127,23 @@ const DataTable = ({
               {[1, 2, 3, 4, 5].map((row) => (
                 <tr
                   key={row}
-                  className="border-t border-gray-100 dark:border-gray-800"
+                  className="border-b border-[#f0e8eb] dark:border-line"
                 >
                   {selectable && (
                     <td className="px-4 py-4">
-                      <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-4 w-4 animate-pulse rounded bg-[var(--soft)]" />
                     </td>
                   )}
 
                   {columns.map((column) => (
                     <td key={column.key} className="px-4 py-4">
-                      <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-4 w-24 animate-pulse rounded bg-[var(--soft)]" />
                     </td>
                   ))}
 
                   {actions && (
                     <td className="px-4 py-4">
-                      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="ml-auto h-4 w-16 animate-pulse rounded bg-[var(--soft)]" />
                     </td>
                   )}
                 </tr>
@@ -156,19 +156,19 @@ const DataTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[700px]">
-          <thead className="bg-gray-50 dark:bg-gray-800/50">
+          <thead className="border-b border-[var(--line)] bg-[#fcf9fa] dark:bg-soft/30">
             <tr>
               {selectable && (
-                <th className="w-12 px-4 py-3">
+                <th className="w-12 px-4 py-3.5">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={handleSelectAll}
                     aria-label="Select all rows"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-[var(--line)] text-[var(--primary)] accent-[var(--primary)] focus:ring-[var(--primary)]"
                   />
                 </th>
               )}
@@ -179,18 +179,18 @@ const DataTable = ({
                 return (
                   <th
                     key={column.key}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                    className="px-4 py-3.5 text-left text-[11px] font-black uppercase tracking-wider text-[var(--muted)]"
                   >
                     {sortable ? (
                       <button
                         type="button"
                         onClick={() => handleSort(column.key)}
-                        className="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                        className="inline-flex items-center gap-1.5 transition hover:text-[var(--primary)]"
                       >
                         {column.label}
 
                         {sortConfig.key === column.key && (
-                          <span>
+                          <span className="text-[var(--primary)]">
                             {sortConfig.direction === "asc" ? "↑" : "↓"}
                           </span>
                         )}
@@ -203,7 +203,7 @@ const DataTable = ({
               })}
 
               {actions && (
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <th className="px-4 py-3.5 text-right text-[11px] font-black uppercase tracking-wider text-[var(--muted)]">
                   Actions
                 </th>
               )}
@@ -217,7 +217,7 @@ const DataTable = ({
                   colSpan={
                     columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)
                   }
-                  className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
+                  className="px-6 py-12 text-center text-sm font-medium text-[var(--muted)]"
                 >
                   {emptyMessage}
                 </td>
@@ -226,7 +226,7 @@ const DataTable = ({
               sortedData.map((row, index) => (
                 <tr
                   key={getRowKey(row, index)}
-                  className="border-t border-gray-100 transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/40"
+                  className="border-b border-[#f0e8eb] transition hover:bg-[var(--soft)]/50 dark:border-line dark:hover:bg-soft/20"
                 >
                   {selectable && (
                     <td className="px-4 py-4">
@@ -235,7 +235,7 @@ const DataTable = ({
                         checked={isSelected(row)}
                         onChange={() => handleSelectRow(row)}
                         aria-label={`Select row ${index + 1}`}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="h-4 w-4 rounded border-[var(--line)] text-[var(--primary)] accent-[var(--primary)] focus:ring-[var(--primary)]"
                       />
                     </td>
                   )}
@@ -243,7 +243,7 @@ const DataTable = ({
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="px-4 py-4 text-sm text-gray-700 dark:text-gray-300"
+                      className="px-4 py-4 text-xs font-semibold text-[var(--text)] dark:text-foreground"
                     >
                       {renderCell(column, row, index)}
                     </td>
@@ -265,8 +265,8 @@ const DataTable = ({
 
       {/* Pagination */}
       {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 dark:border-gray-800">
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3.5 bg-[#fcf9fa] dark:bg-card">
+          <span className="text-xs font-bold text-[var(--muted)]">
             Page {page} of {totalPages}
           </span>
 
@@ -275,7 +275,7 @@ const DataTable = ({
               type="button"
               disabled={page <= 1}
               onClick={() => onPageChange?.(page - 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700"
+              className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
             </button>
@@ -284,7 +284,7 @@ const DataTable = ({
               type="button"
               disabled={page >= totalPages}
               onClick={() => onPageChange?.(page + 1)}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700"
+              className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
             </button>
@@ -296,3 +296,5 @@ const DataTable = ({
 };
 
 export default DataTable;
+
+

@@ -31,7 +31,7 @@ const NotificationDropdown = ({
             <button
               type="button"
               onClick={onMarkAllRead}
-              className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              className="text-xs font-medium text-primary hover:underline dark:text-primary"
             >
               Mark all read
             </button>
@@ -60,3 +60,5 @@ const NotificationDropdown = ({
 };
 
 export default NotificationDropdown;
+
+

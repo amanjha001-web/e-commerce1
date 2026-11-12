@@ -2,9 +2,9 @@ import ConversationList from "../../components/chat/ConversationList";
 import ChatHeader from "../../components/chat/ChatHeader";
 import ChatWindow from "../../components/chat/ChatWindow";
 import MessageInput from "../../components/chat/MessageInput";
-
 import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
+import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Chat = ({
   conversations = [],
@@ -31,7 +31,6 @@ const Chat = ({
 
   const handleSendMessage = (message) => {
     if (!selectedConversation || !message) return;
-
     onSendMessage?.(getConversationId(selectedConversation), message);
   };
 
@@ -40,40 +39,35 @@ const Chat = ({
   };
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-2rem)] max-w-7xl overflow-hidden px-4 py-4 sm:px-6 lg:px-8">
-      <div className="flex w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {/* Conversations */}
+    <CustomerWorkspace title="Messages" eyebrow="Customer workspace">
+      <div className="flex h-[600px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:bg-card dark:border-line">
+        {/* Conversations Sidebar */}
         <aside
           className={[
-            "w-full shrink-0 border-r border-border md:w-80",
+            "w-full shrink-0 border-r border-[var(--line)] bg-white dark:bg-card md:w-80",
             selectedConversation ? "hidden md:block" : "block",
           ].join(" ")}
         >
           <div className="flex h-full flex-col">
-            {/* Sidebar Header */}
-            <div className="border-b border-border p-5">
-              <p className="text-sm font-medium text-primary">
-                Customer Support
-              </p>
-
-              <h1 className="mt-1 text-xl font-bold">Messages</h1>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Chat with vendors and support.
-              </p>
+            {/* Header */}
+            <div className="border-b border-[var(--line)] bg-[var(--soft)]/50 p-4">
+              <span className="pill text-[10px]">Chat support</span>
+              <h2 className="mt-1 text-sm font-bold text-[var(--text)] dark:text-foreground">
+                All conversations
+              </h2>
             </div>
 
             {/* Conversation List */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               {loading ? (
-                <div className="flex min-h-[250px] items-center justify-center">
+                <div className="flex min-h-[200px] items-center justify-center">
                   <Loader />
                 </div>
               ) : conversations.length === 0 ? (
-                <div className="p-5">
+                <div className="p-6 text-center">
                   <EmptyState
                     title="No conversations"
-                    description="Your conversations will appear here."
+                    message="Your chats with sellers and customer support will appear here."
                   />
                 </div>
               ) : (
@@ -85,83 +79,52 @@ const Chat = ({
                 />
               )}
             </div>
-
-            {/* Back Home */}
-            <div className="border-t border-border p-4">
-              <button
-                type="button"
-                onClick={() => onNavigate?.("/")}
-                className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-              >
-                ← Back to Home
-              </button>
-            </div>
           </div>
         </aside>
 
-        {/* Chat Section */}
-        <section
+        {/* Chat Window */}
+        <div
           className={[
-            "min-w-0 flex-1",
-            selectedConversation ? "block" : "hidden md:block",
+            "flex min-w-0 flex-1 flex-col bg-[var(--bg)]",
+            !selectedConversation ? "hidden md:flex" : "flex",
           ].join(" ")}
         >
-          {!selectedConversation ? (
-            <div className="flex h-full items-center justify-center p-8">
-              <EmptyState
-                title="Select a conversation"
-                description="Choose a conversation from the list to start chatting."
+          {selectedConversation ? (
+            <>
+              <ChatHeader
+                conversation={selectedConversation}
+                onBack={handleBack}
               />
-            </div>
+
+              <div className="min-h-0 flex-1 p-4 overflow-y-auto">
+                <ChatWindow
+                  messages={messages}
+                  loading={messagesLoading}
+                  currentUser={user}
+                  onLoadMore={onLoadMoreMessages}
+                />
+              </div>
+
+              <div className="border-t border-[var(--line)] bg-white p-3 dark:bg-card">
+                <MessageInput onSend={handleSendMessage} disabled={sending} />
+              </div>
+            </>
           ) : (
-            <div className="flex h-full flex-col">
-              {/* Chat Header */}
-              <div className="border-b border-border">
-                <ChatHeader
-                  conversation={selectedConversation}
-                  user={user}
-                  onBack={handleBack}
-                  onNavigate={onNavigate}
-                />
+            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--soft)] text-3xl">
+                💬
               </div>
-
-              {/* Messages */}
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                {messagesLoading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <Loader />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center p-8">
-                    <EmptyState
-                      title="No messages yet"
-                      description="Send a message to start the conversation."
-                    />
-                  </div>
-                ) : (
-                  <ChatWindow
-                    messages={messages}
-                    user={user}
-                    conversation={selectedConversation}
-                    loading={messagesLoading}
-                    onLoadMore={onLoadMoreMessages}
-                  />
-                )}
-              </div>
-
-              {/* Message Input */}
-              <div className="border-t border-border p-4">
-                <MessageInput
-                  onSend={handleSendMessage}
-                  loading={sending}
-                  disabled={!selectedConversation}
-                />
-              </div>
+              <h2 className="mt-3 text-sm font-bold text-[var(--text)]">
+                Select a conversation
+              </h2>
+              <p className="mt-1 max-w-xs text-xs text-[var(--muted)]">
+                Choose a conversation from the left to start messaging.
+              </p>
             </div>
           )}
-        </section>
+        </div>
       </div>
-    </main>
+    </CustomerWorkspace>
   );
 };
 

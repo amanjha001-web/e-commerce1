@@ -64,7 +64,7 @@ const ProductActions = ({
           type="button"
           onClick={handleAddToCart}
           disabled={loading || isOutOfStock || quantity < 1}
-          className="flex-1 rounded-lg border border-blue-600 px-5 py-3 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+          className="flex-1 rounded-lg border border-secondary px-5 py-3 text-sm font-semibold text-secondary transition hover:bg-secondary/10 disabled:cursor-not-allowed disabled:opacity-50 dark:border-secondary dark:bg-secondary/30 dark:text-secondary-foreground dark:hover:bg-secondary/20"
         >
           {loading
             ? "Adding..."
@@ -79,7 +79,7 @@ const ProductActions = ({
           type="button"
           onClick={handleBuyNow}
           disabled={loading || isOutOfStock || quantity < 1}
-          className="flex-1 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-lg bg-secondary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary dark:text-white"
         >
           Buy Now
         </button>

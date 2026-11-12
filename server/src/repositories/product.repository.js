@@ -358,6 +358,41 @@ const getNewArrivalProducts = async (
     .lean();
 };
 
+/*                    Related Products                                        */
+
+const getRelatedProducts = async (
+  productId,
+  categoryId,
+  brandId,
+  limit = 8,
+) => {
+  const orConditions = [];
+  if (categoryId) {
+    orConditions.push({ category: categoryId });
+  }
+  if (brandId) {
+    orConditions.push({ brand: brandId });
+  }
+
+  const filter = {
+    _id: { $ne: productId },
+    isActive: true,
+    status: "published",
+    deletedAt: null,
+  };
+
+  if (orConditions.length > 0) {
+    filter.$or = orConditions;
+  }
+
+  return await Product.find(filter)
+    .populate("category", "name slug")
+    .populate("brand", "name slug")
+    .sort({ sold: -1, createdAt: -1 })
+    .limit(limit)
+    .lean();
+};
+
 /*                      Count Products                                        */
 
 const countProducts = async (
@@ -395,6 +430,7 @@ export default {
   getTrendingProducts,
   getBestSellerProducts,
   getNewArrivalProducts,
+  getRelatedProducts,
 
   countProducts,
 };

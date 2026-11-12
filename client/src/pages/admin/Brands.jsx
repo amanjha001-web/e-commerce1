@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
 import Modal from "../../components/common/Modal";
 import Loader from "../../components/common/Loader";
 import EmptyState from "../../components/common/EmptyState";
+import adminService from "../../services/admin.service";
 
 const EMPTY_FORM = {
   name: "",
@@ -14,19 +16,47 @@ const EMPTY_FORM = {
 };
 
 const Brands = ({
-  brands = [],
+  brands: propBrands = [],
   totalBrands = 0,
-  loading = false,
-  saving = false,
+  loading: propLoading = false,
+  saving: propSaving = false,
 
   onCreateBrand,
   onEditBrand,
   onDeleteBrand,
   onToggleBrandStatus,
 }) => {
+  const [apiBrands, setApiBrands] = useState([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiSaving, setApiSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+
+  const fetchBrands = useCallback(async () => {
+    try {
+      setApiLoading(true);
+      const res = await adminService.getBrands({ limit: 50 });
+      const data = res?.data ?? res;
+      if (Array.isArray(data?.brands)) {
+        setApiBrands(data.brands);
+      }
+    } catch {
+      // Ignore fallback error
+    } finally {
+      setApiLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (propBrands.length === 0) {
+      fetchBrands();
+    }
+  }, [propBrands.length, fetchBrands]);
+
+  const brands = propBrands.length > 0 ? propBrands : apiBrands;
+  const loading = propLoading || apiLoading;
+  const saving = propSaving || apiSaving;
 
   const resetForm = () => {
     setForm({ ...EMPTY_FORM });
@@ -38,17 +68,29 @@ const Brands = ({
     setFormOpen(true);
   };
 
-  const handleEdit = (brand) => {
+  const handleEdit = async (brand) => {
     setSelectedBrand(brand);
 
     setForm({
       name: brand?.name || "",
-      logo: brand?.logo || brand?.logoUrl || "",
+      logo: brand?.logo?.url || brand?.logo || brand?.logoUrl || "",
       description: brand?.description || "",
       status: brand?.status ?? brand?.isActive ?? true,
     });
 
     setFormOpen(true);
+
+    if (brand?._id) {
+      try {
+        const res = await adminService.getBrandById(brand._id);
+        const detail = res?.data ?? res;
+        if (detail && typeof detail === "object") {
+          setSelectedBrand(detail);
+        }
+      } catch {
+        // Ignore detail fetch error
+      }
+    }
   };
 
   const handleCloseForm = () => {
@@ -73,72 +115,122 @@ const Brands = ({
     if (saving || !form.name.trim()) return;
 
     const payload = {
-      ...form,
       name: form.name.trim(),
-      logo: form.logo.trim(),
       description: form.description.trim(),
-      status: Boolean(form.status),
+      isActive: Boolean(form.status),
     };
 
-    if (selectedBrand) {
-      await onEditBrand?.(selectedBrand, payload);
-    } else {
-      await onCreateBrand?.(payload);
+    try {
+      setApiSaving(true);
+      if (selectedBrand) {
+        if (onEditBrand) {
+          await onEditBrand(selectedBrand, payload);
+        } else if (selectedBrand._id) {
+          await adminService.updateBrand(selectedBrand._id, payload);
+          await fetchBrands();
+        }
+        toast.success("Brand updated");
+      } else {
+        if (onCreateBrand) {
+          await onCreateBrand(payload);
+        } else {
+          await adminService.createBrand(payload);
+          await fetchBrands();
+        }
+        toast.success("Brand created");
+      }
+      setFormOpen(false);
+      resetForm();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to save brand");
+    } finally {
+      setApiSaving(false);
     }
-
-    setFormOpen(false);
-    resetForm();
   };
 
   const handleDelete = async (brand) => {
     if (saving) return;
-
-    await onDeleteBrand?.(brand);
+    if (onDeleteBrand) {
+      await onDeleteBrand(brand);
+      return;
+    }
+    if (!brand?._id) return;
+    if (!window.confirm(`Delete brand "${brand.name}"?`)) return;
+    try {
+      setApiSaving(true);
+      await adminService.deleteBrand(brand._id);
+      toast.success("Brand deleted");
+      fetchBrands();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to delete brand");
+    } finally {
+      setApiSaving(false);
+    }
   };
 
   const handleToggleStatus = async (brand) => {
     if (saving) return;
-
-    await onToggleBrandStatus?.(brand);
+    if (onToggleBrandStatus) {
+      await onToggleBrandStatus(brand);
+      return;
+    }
+    if (!brand?._id) return;
+    const nextActive = !(brand?.status ?? brand?.isActive ?? false);
+    try {
+      setApiSaving(true);
+      await adminService.updateBrandStatus(brand._id, nextActive);
+      toast.success(nextActive ? "Brand activated" : "Brand deactivated");
+      fetchBrands();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update status");
+    } finally {
+      setApiSaving(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <main className="min-w-0 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
-          {/* Page Header */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <div className="eyebrow">Catalog Management</div>
+              <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
                 Brands
               </h1>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                 Manage product brands and their visibility.
               </p>
             </div>
 
-            <Button type="button" onClick={handleCreate} disabled={saving}>
-              Add Brand
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="stat-card py-2.5 px-4 w-fit">
+                <p className="text-[11px] font-bold text-[var(--muted)]">
+                  Total Brands
+                </p>
+                <p className="text-xl font-black text-[var(--text)] dark:text-foreground">
+                  {totalBrands || brands.length}
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleCreate}
+                disabled={saving}
+                className="primarybtn"
+              >
+                + Add Brand
+              </Button>
+            </div>
           </div>
 
-          {/* Brand Count */}
-          <div className="mb-6">
-            <p className="text-sm text-muted-foreground">Total Brands</p>
-
-            <p className="text-2xl font-semibold">
-              {totalBrands || brands.length}
-            </p>
-          </div>
-
-          {/* Brand Content */}
           {loading ? (
-            <div className="flex min-h-48 items-center justify-center rounded-2xl border border-border bg-card">
+            <div className="flex min-h-48 items-center justify-center panel">
               <Loader />
             </div>
           ) : brands.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+            <div className="panel p-8 text-center">
               <EmptyState
                 title="No brands found"
                 description="Create your first brand to start organizing products."
@@ -147,48 +239,35 @@ const Brands = ({
               />
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px]">
-                  <thead className="border-b border-border bg-muted/40">
+                  <thead className="border-b border-[var(--line)] bg-[#fcf9fa] text-[11px] font-black uppercase tracking-wider text-[var(--muted)] dark:bg-card">
                     <tr>
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Brand
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Description
-                      </th>
-
-                      <th className="px-5 py-4 text-left text-sm font-semibold">
-                        Status
-                      </th>
-
-                      <th className="px-5 py-4 text-right text-sm font-semibold">
-                        Actions
-                      </th>
+                      <th className="px-5 py-3.5 text-left">Brand</th>
+                      <th className="px-5 py-3.5 text-left">Description</th>
+                      <th className="px-5 py-3.5 text-left">Status</th>
+                      <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-border">
+                  <tbody className="divide-y divide-[#f0e8eb] dark:divide-line">
                     {brands.map((brand) => {
                       const brandId = brand?._id || brand?.id;
-
-                      const logo = brand?.logo || brand?.logoUrl;
-
+                      const logo =
+                        brand?.logo?.url || brand?.logo || brand?.logoUrl;
                       const name = brand?.name || "Unnamed Brand";
-
                       const isActive =
                         brand?.status ?? brand?.isActive ?? false;
 
                       return (
                         <tr
                           key={brandId || name}
-                          className="transition hover:bg-muted/30"
+                          className="transition hover:bg-[var(--soft)]/50"
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted">
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--soft)]">
                                 {logo ? (
                                   <img
                                     src={logo}
@@ -196,18 +275,20 @@ const Brands = ({
                                     className="h-full w-full object-contain"
                                   />
                                 ) : (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-[10px] font-bold text-[var(--muted)]">
                                     N/A
                                   </span>
                                 )}
                               </div>
 
-                              <span className="font-medium">{name}</span>
+                              <span className="font-bold text-xs text-[var(--text)] dark:text-foreground">
+                                {name}
+                              </span>
                             </div>
                           </td>
 
                           <td className="max-w-md px-5 py-4">
-                            <p className="truncate text-sm text-muted-foreground">
+                            <p className="truncate text-xs font-medium text-[var(--muted)]">
                               {brand?.description || "No description"}
                             </p>
                           </td>
@@ -218,11 +299,10 @@ const Brands = ({
                               onClick={() => handleToggleStatus(brand)}
                               disabled={saving}
                               className={[
-                                "rounded-full px-3 py-1 text-xs font-medium transition",
-                                "disabled:cursor-not-allowed disabled:opacity-50",
+                                "cursor-pointer transition disabled:opacity-50",
                                 isActive
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                  : "bg-muted text-muted-foreground",
+                                  ? "status-badge green"
+                                  : "status-badge",
                               ].join(" ")}
                             >
                               {isActive ? "Active" : "Inactive"}
@@ -230,24 +310,24 @@ const Brands = ({
                           </td>
 
                           <td className="px-5 py-4">
-                            <div className="flex justify-end gap-2">
-                              <Button
+                            <div className="flex justify-end gap-1.5">
+                              <button
                                 type="button"
-                                variant="outline"
                                 onClick={() => handleEdit(brand)}
                                 disabled={saving}
+                                className="btnsm primary"
                               >
                                 Edit
-                              </Button>
+                              </button>
 
-                              <Button
+                              <button
                                 type="button"
-                                variant="danger"
                                 onClick={() => handleDelete(brand)}
                                 disabled={saving}
+                                className="btnsm text-[var(--red)] border-[#f3cbd0] hover:bg-[#fff0f1]"
                               >
                                 Delete
-                              </Button>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -261,7 +341,6 @@ const Brands = ({
         </div>
       </main>
 
-      {/* Create / Edit Brand Modal */}
       <Modal
         open={formOpen}
         onClose={handleCloseForm}

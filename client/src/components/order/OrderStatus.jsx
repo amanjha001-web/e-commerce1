@@ -12,17 +12,17 @@ const OrderStatus = ({ status }) => {
     confirmed: {
       label: "Confirmed",
       className:
-        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+        "bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground",
     },
     processing: {
       label: "Processing",
       className:
-        "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+        "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
     },
     shipped: {
       label: "Shipped",
       className:
-        "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+        "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
     },
     out_for_delivery: {
       label: "Out for Delivery",

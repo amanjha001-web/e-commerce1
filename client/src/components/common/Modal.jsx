@@ -48,7 +48,7 @@ const Modal = ({
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
-    full: "max-w-7xl",
+    full: "max-w-6xl",
   };
 
   const handleOverlayClick = (event) => {
@@ -59,21 +59,21 @@ const Modal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-99 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#1b0a11]/65 p-4 backdrop-blur-xs"
       onMouseDown={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white shadow-xl dark:bg-gray-900 ${sizes[size] || sizes.md} ${className}`}
+        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl border border-[var(--line)] bg-white p-6 shadow-2xl dark:border-line dark:bg-card ${sizes[size] || sizes.md} ${className}`}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+          <div className="mb-4 flex items-center justify-between border-b border-[var(--line)] pb-4">
             {title ? (
               <h2
                 id="modal-title"
-                className="text-lg font-semibold text-gray-900 dark:text-white"
+                className="text-xl font-bold tracking-tight text-[var(--text)] dark:text-foreground"
               >
                 {title}
               </h2>
@@ -86,7 +86,7 @@ const Modal = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close modal"
-                className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-white text-sm font-bold text-[var(--muted)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
               >
                 ✕
               </button>
@@ -94,7 +94,7 @@ const Modal = ({
           </div>
         )}
 
-        <div className="p-5">{children}</div>
+        <div>{children}</div>
       </div>
     </div>,
     document.body,

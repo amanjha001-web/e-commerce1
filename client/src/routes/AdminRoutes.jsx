@@ -13,6 +13,7 @@ import Categories from "../pages/admin/Categories";
 import Brands from "../pages/admin/Brands";
 import BannersContainer from "../pages/admin/BannersContainer";
 import Orders from "../pages/admin/Orders";
+import Refunds from "../pages/admin/Refunds";
 import PaymentsContainer from "../pages/admin/PaymentsContainer";
 import CouponsContainer from "../pages/admin/CouponsContainer";
 import Reports from "../pages/admin/Reports";
@@ -43,6 +44,7 @@ const AdminRoutes = () => {
           <Route path="brands" element={<Brands />} />
           <Route path="banners" element={<BannersContainer />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="refunds" element={<Refunds />} />
           <Route path="payments" element={<PaymentsContainer />} />
           <Route path="coupons" element={<CouponsContainer />} />
           <Route path="reports" element={<Reports />} />

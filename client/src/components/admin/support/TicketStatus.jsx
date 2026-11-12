@@ -53,7 +53,7 @@ const TicketStatus = ({
 
   const getStatusClasses = (value) => {
     const classes = {
-      open: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      open: "bg-blue-50 text-blue-700 ring-secondary/30",
       pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
       in_progress: "bg-purple-50 text-purple-700 ring-purple-600/20",
       resolved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -85,7 +85,7 @@ const TicketStatus = ({
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="ticket-status-title"
@@ -240,7 +240,7 @@ const TicketStatus = ({
                 rows={3}
                 maxLength={500}
                 placeholder={`Why are you changing the ticket to "${selectedOption.label}"?`}
-                className="mt-2 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
 
               <div className="mt-1 text-right text-xs text-muted-foreground">
@@ -297,3 +297,4 @@ const TicketStatus = ({
 };
 
 export default TicketStatus;
+

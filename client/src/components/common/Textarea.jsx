@@ -63,7 +63,7 @@ const Textarea = forwardRef(
               ? `${textareaId}-message`
               : undefined
           }
-          className={`w-full resize-y rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-800 ${
+          className={`w-full resize-y rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-secondary/30 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-800 ${
             error
               ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
               : "border-gray-300"
@@ -99,3 +99,4 @@ const Textarea = forwardRef(
 Textarea.displayName = "Textarea";
 
 export default Textarea;
+

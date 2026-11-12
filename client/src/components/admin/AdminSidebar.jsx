@@ -306,9 +306,9 @@
 //             ) : (
 //               <div
 //                 className="flex h-10 w-10 shrink-0 items-center
-//                            justify-center rounded-full bg-blue-100
-//                            text-sm font-bold text-blue-700
-//                            dark:bg-blue-500/15 dark:text-blue-300"
+//                            justify-center rounded-full bg-secondary/10
+//                            text-sm font-bold text-primary
+//                            dark:bg-secondary/100/15 dark:text-primary/80"
 //               >
 //                 {initials}
 //               </div>
@@ -370,7 +370,7 @@
 //                         "justify-between rounded-xl px-3 py-2.5",
 //                         "text-[13px] font-medium transition-colors",
 //                         groupIsActive
-//                           ? "text-blue-700 dark:text-blue-300"
+//                           ? "text-primary dark:text-primary/80"
 //                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
 //                       ].join(" ")}
 //                     >
@@ -380,7 +380,7 @@
 //                           strokeWidth={1.8}
 //                           className={
 //                             groupIsActive
-//                               ? "text-blue-600 dark:text-blue-400"
+//                               ? "text-secondary dark:text-primary"
 //                               : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
 //                           }
 //                         />
@@ -422,7 +422,7 @@
 //                                 "rounded-lg px-3 py-2 text-left",
 //                                 "text-[12px] transition-colors",
 //                                 active
-//                                   ? "bg-blue-50 font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+//                                   ? "bg-secondary/10 font-semibold text-primary dark:bg-secondary/100/10 dark:text-primary/80"
 //                                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white",
 //                               ].join(" ")}
 //                             >
@@ -430,7 +430,7 @@
 //                                 <span
 //                                   className="absolute -left-[16px]
 //                                              h-5 w-[2px] rounded-full
-//                                              bg-blue-600"
+//                                              bg-secondary"
 //                                 />
 //                               )}
 
@@ -457,7 +457,7 @@
 //                     "rounded-xl px-3 py-2.5 text-[13px]",
 //                     "font-medium transition-all duration-150",
 //                     active
-//                       ? "bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+//                       ? "bg-secondary text-white shadow-sm shadow-blue-600/20"
 //                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
 //                   ].join(" ")}
 //                 >
@@ -504,3 +504,5 @@
 // };
 
 // export default AdminSidebar;
+
+

@@ -77,7 +77,7 @@ const EditProduct = ({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <Loader />
       </div>
     );
@@ -85,7 +85,7 @@ const EditProduct = ({
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-[var(--bg)]">
         <VendorSidebar
           activeItem="products"
           collapsed={false}
@@ -109,17 +109,17 @@ const EditProduct = ({
 
           <main className="p-4 sm:p-6 lg:p-8">
             <div className="mx-auto max-w-7xl">
-              <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-                <h1 className="text-xl font-semibold text-foreground">
+              <div className="panel p-8 text-center">
+                <h1 className="text-xl font-black text-[var(--text)] dark:text-foreground">
                   Product not found
                 </h1>
 
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-xs font-medium text-[var(--muted)]">
                   The product you are trying to edit could not be found.
                 </p>
 
                 <div className="mt-6">
-                  <Button onClick={() => handleNavigate("products")}>
+                  <Button onClick={() => handleNavigate("products")} className="primarybtn">
                     Back to Products
                   </Button>
                 </div>
@@ -132,7 +132,7 @@ const EditProduct = ({
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-[var(--bg)]">
       <VendorSidebar
         activeItem="products"
         collapsed={false}
@@ -173,19 +173,20 @@ const EditProduct = ({
             />
 
             <div className="mb-8 mt-6">
-              <h1 className="text-2xl font-bold text-foreground">
+              <div className="eyebrow">Store Catalog</div>
+              <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
                 Edit Product
               </h1>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                 Update details, pricing, inventory and images.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Information */}
-              <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-foreground">
+              <section className="panel">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Basic Information
                 </h2>
 
@@ -235,8 +236,8 @@ const EditProduct = ({
               </section>
 
               {/* Pricing & Inventory */}
-              <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-foreground">
+              <section className="panel">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Pricing & Inventory
                 </h2>
 
@@ -281,8 +282,8 @@ const EditProduct = ({
               </section>
 
               {/* Images */}
-              <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-foreground">
+              <section className="panel">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Product Images
                 </h2>
 
@@ -298,8 +299,8 @@ const EditProduct = ({
               </section>
 
               {/* Variants */}
-              <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-foreground">
+              <section className="panel">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Product Variants
                 </h2>
 
@@ -309,8 +310,8 @@ const EditProduct = ({
               </section>
 
               {/* Status */}
-              <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-foreground">
+              <section className="panel">
+                <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                   Product Status
                 </h2>
 
@@ -345,11 +346,12 @@ const EditProduct = ({
                   variant="outline"
                   disabled={saving}
                   onClick={() => handleNavigate("products")}
+                  className="outlinebtn"
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving} className="primarybtn">
                   {saving ? "Saving..." : "Update Product"}
                 </Button>
               </div>

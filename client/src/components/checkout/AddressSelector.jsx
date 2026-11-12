@@ -52,7 +52,7 @@ const AddressSelector = ({
           <button
             type="button"
             onClick={onAdd}
-            className="shrink-0 rounded-lg border border-blue-600 px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            className="shrink-0 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/5 dark:text-primary/80 dark:hover:bg-primary/20"
           >
             + Add Address
           </button>
@@ -93,7 +93,7 @@ const AddressSelector = ({
             <button
               type="button"
               onClick={onAdd}
-              className="mt-4 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              className="mt-4 rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
             >
               + Add Address
             </button>
@@ -108,3 +108,4 @@ const AddressSelector = ({
 };
 
 export default AddressSelector;
+

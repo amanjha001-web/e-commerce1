@@ -6,8 +6,8 @@ const Breadcrumb = ({ items = [], separator = "/", className = "" }) => {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={className}>
-      <ol className="flex flex-wrap items-center gap-2 text-sm">
+    <nav aria-label="Breadcrumb" className={`mb-3.5 ${className}`}>
+      <ol className="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--muted)]">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
@@ -21,17 +21,15 @@ const Breadcrumb = ({ items = [], separator = "/", className = "" }) => {
                   {item.href ? (
                     <Link
                       to={item.href}
-                      className="text-gray-500 transition hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                      className="transition hover:text-[var(--primary)] hover:underline"
                     >
                       {item.label}
                     </Link>
                   ) : (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {item.label}
-                    </span>
+                    <span>{item.label}</span>
                   )}
 
-                  <span className="text-gray-400" aria-hidden="true">
+                  <span className="opacity-50" aria-hidden="true">
                     {separator}
                   </span>
                 </>
@@ -39,7 +37,7 @@ const Breadcrumb = ({ items = [], separator = "/", className = "" }) => {
 
               {isLast && (
                 <span
-                  className="font-medium text-gray-900 dark:text-white"
+                  className="font-bold text-[var(--text)] dark:text-foreground"
                   aria-current="page"
                 >
                   {item.label}

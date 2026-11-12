@@ -172,7 +172,7 @@ const CouponForm = ({
   };
 
   const inputClasses =
-    "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60";
 
   const labelClasses = "mb-1.5 block text-xs font-medium text-foreground";
 
@@ -183,7 +183,7 @@ const CouponForm = ({
       className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div>

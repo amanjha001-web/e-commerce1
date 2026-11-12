@@ -19,7 +19,7 @@ const formatDate = (date) => {
 const getStatusClasses = (status) => {
   const classes = {
     pending: "bg-amber-100 text-amber-700",
-    under_review: "bg-blue-100 text-blue-700",
+    under_review: "bg-secondary text-secondary-foreground",
     approved: "bg-emerald-100 text-emerald-700",
     rejected: "bg-red-100 text-red-700",
   };
@@ -160,7 +160,7 @@ const VendorRequestDetails = ({
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-lg font-bold text-indigo-700">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary text-lg font-bold text-secondary-foreground">
               {shopName
                 .trim()
                 .split(/\s+/)
@@ -218,7 +218,7 @@ const VendorRequestDetails = ({
                 onClick={() => setActiveTab(tab.id)}
                 className={`border-b-2 px-1 py-3 text-sm font-medium ${
                   activeTab === tab.id
-                    ? "border-indigo-600 text-indigo-700"
+                    ? "border-secondary text-secondary"
                     : "border-transparent text-gray-500 hover:text-gray-800"
                 }`}
               >

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import ProductActions from "../../components/product/ProductActions";
@@ -15,6 +15,7 @@ import RelatedProducts from "../../components/product/RelatedProducts";
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
+import Breadcrumb from "../../components/common/Breadcrumb";
 
 import productService from "../../services/product.service";
 
@@ -119,124 +120,141 @@ const ProductDetails = ({
 
   const currentProductId = product?._id || product?.id || productId;
 
-  const isWishlisted = wishlistItems.some(
-    (item) =>
-      String(getWishlistProductId(item) || "") ===
-      String(currentProductId || ""),
-  );
-
-  // Load product details from the API.
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadProduct = async () => {
-      if (!productId) {
-        setFetchedProduct(null);
-        setProductError("Product ID is missing.");
-        setProductLoading(false);
-        return;
-      }
-
-      setProductLoading(true);
-      setProductError("");
-      setFetchedProduct(null);
-      setFetchedRelatedProducts([]);
-      setSelectedVariant(null);
-      setQuantity(1);
-
-      try {
-        const response = await productService.getProductById(productId);
-
-        const fetched = getProductFromResponse(response);
-
-        if (!fetched) {
-          throw new Error(
-            response?.message || "Product details could not be loaded.",
-          );
-        }
-
-        if (cancelled) return;
-
-        setFetchedProduct(fetched);
-
-        setSelectedVariant(
-          fetched.selectedVariant || fetched.variants?.[0] || null,
-        );
-
-        try {
-          const relatedResponse =
-            await productService.getRelatedProducts(productId);
-
-          if (!cancelled) {
-            setFetchedRelatedProducts(getProductsFromResponse(relatedResponse));
-          }
-        } catch (error) {
-          console.error("Failed to load related products:", error);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setFetchedProduct(null);
-          setProductError(
-            error?.response?.data?.message ||
-              error?.message ||
-              "Unable to load this product.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setProductLoading(false);
-        }
-      }
-    };
-
-    loadProduct();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [productId]);
-
-  // Fetch the current user's wishlist from the backend.
   useEffect(() => {
     dispatch(fetchWishlist());
   }, [dispatch]);
 
-  const variants = product?.variants || [];
+  useEffect(() => {
+    let isMounted = true;
+
+    if (productProp) {
+      setProductLoading(false);
+      return;
+    }
+
+    if (!productId) {
+      setProductLoading(false);
+      return;
+    }
+
+    const loadProductData = async () => {
+      setProductLoading(true);
+      setProductError("");
+
+      try {
+        const response = await productService.getProductById(productId);
+        const resolvedProduct = getProductFromResponse(response);
+
+        if (!isMounted) return;
+
+        if (!resolvedProduct) {
+          setProductError("Product not found");
+          setFetchedProduct(null);
+          return;
+        }
+
+        setFetchedProduct(resolvedProduct);
+
+        const categoryId =
+          resolvedProduct?.category?._id ||
+          resolvedProduct?.category?.id ||
+          resolvedProduct?.category;
+
+        if (categoryId) {
+          try {
+            const relatedResponse =
+              await productService.getProductsByCategory(categoryId, {
+                limit: 4,
+              });
+
+            if (!isMounted) return;
+
+            const relatedList = getProductsFromResponse(relatedResponse).filter(
+              (item) => {
+                const itemId = item?._id || item?.id;
+                const currentId = resolvedProduct?._id || resolvedProduct?.id;
+                return itemId !== currentId;
+              },
+            );
+
+            setFetchedRelatedProducts(relatedList);
+          } catch {
+            if (isMounted) setFetchedRelatedProducts([]);
+          }
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        setProductError(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Unable to load product details.",
+        );
+        setFetchedProduct(null);
+      } finally {
+        if (isMounted) setProductLoading(false);
+      }
+    };
+
+    loadProductData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, productProp]);
+
+  const variants = useMemo(() => {
+    if (!product?.variants) return [];
+    return Array.isArray(product.variants) ? product.variants : [];
+  }, [product]);
+
+  useEffect(() => {
+    if (variants.length > 0 && !selectedVariant) {
+      setSelectedVariant(variants[0]);
+    }
+  }, [variants, selectedVariant]);
 
   const currentPrice = useMemo(() => {
     if (selectedVariant?.price != null) {
-      return selectedVariant.price;
+      return Number(selectedVariant.price);
     }
-
-    return product?.discountPrice ?? product?.salePrice ?? product?.price ?? 0;
+    return Number(
+      product?.salePrice ??
+        product?.discountPrice ??
+        product?.finalPrice ??
+        product?.price ??
+        0,
+    );
   }, [product, selectedVariant]);
 
-  const stock = Number(
-    selectedVariant?.stock ?? product?.stock ?? product?.quantity ?? 0,
-  );
-
-  const isOutOfStock =
-    product?.inStock === false ||
-    product?.available === false ||
-    product?.isActive === false ||
-    product?.status === "draft" ||
-    stock <= 0;
-
-  const handleNavigate = (path) => {
-    if (onNavigate) {
-      onNavigate(path);
-    } else {
-      navigate(path);
+  const stock = useMemo(() => {
+    if (selectedVariant?.stock != null) {
+      return Number(selectedVariant.stock);
     }
-  };
+    return Number(product?.stock ?? product?.quantity ?? 0);
+  }, [product, selectedVariant]);
 
-  const handleQuantityChange = (value) => {
-    const nextQuantity = Math.max(
-      1,
-      Math.min(Number(value) || 1, stock > 0 ? stock : 1),
+  const isOutOfStock = useMemo(() => {
+    return (
+      product?.inStock === false ||
+      product?.isActive === false ||
+      product?.status === "draft" ||
+      stock <= 0
     );
+  }, [product, stock]);
 
-    setQuantity(nextQuantity);
+  const isWishlisted = useMemo(() => {
+    if (!currentProductId || !wishlistItems.length) return false;
+    return wishlistItems.some((item) => {
+      const id = getWishlistProductId(item);
+      return id && String(id) === String(currentProductId);
+    });
+  }, [currentProductId, wishlistItems]);
+
+  const handleQuantityChange = (nextQuantity) => {
+    const parsed = Number(nextQuantity);
+    if (!Number.isInteger(parsed) || parsed < 1) return;
+    const maxStock = stock > 0 ? stock : 1;
+    setQuantity(Math.min(parsed, maxStock));
   };
 
   const handleVariantChange = (variant) => {
@@ -244,98 +262,57 @@ const ProductDetails = ({
     setQuantity(1);
   };
 
-  // Add to cart.
-  const handleAddToCart = async (payload) => {
-    if (!product || !currentProductId || isOutOfStock) {
+  const handleAddToCart = async () => {
+    if (!currentProductId || isOutOfStock || addingToCart) return;
+
+    if (onAddToCart) {
+      onAddToCart(product, quantity, selectedVariant);
       return;
     }
 
-    const requestedQuantity = Number(payload?.quantity || quantity);
-
     setAddingToCart(true);
-
     try {
-      if (onAddToCart) {
-        await onAddToCart({
-          product,
-          variant: selectedVariant,
-          quantity: requestedQuantity,
-        });
-      } else {
-        const result = await dispatch(
-          addCartProduct(currentProductId, requestedQuantity),
-        );
-
-        if (!result?.success) {
-          console.error(
-            "Add to cart failed:",
-            result?.message || "Please try again.",
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Add to cart failed:", error);
+      await dispatch(addCartProduct(currentProductId, quantity));
     } finally {
       setAddingToCart(false);
     }
   };
 
-  // Toggle wishlist using the existing Redux thunks.
-  const handleToggleWishlist = async (selectedProduct) => {
-    const targetProduct = selectedProduct || product;
+  const handleBuyNow = async () => {
+    if (!currentProductId || isOutOfStock) return;
+    if (onBuyNow) {
+      onBuyNow(product, quantity, selectedVariant);
+      return;
+    }
+    await handleAddToCart();
+    navigate("/checkout");
+  };
 
-    const targetId =
-      targetProduct?._id || targetProduct?.id || targetProduct?.productId;
-
-    if (!targetId || wishlistBusy) {
+  const handleToggleWishlist = async () => {
+    if (!currentProductId || wishlistBusy || wishlistActionLoading) return;
+    if (onToggleWishlist) {
+      onToggleWishlist(product);
       return;
     }
 
     setWishlistBusy(true);
-
     try {
-      // Preserve a callback if a parent explicitly supplies one.
-      if (onToggleWishlist) {
-        await onToggleWishlist(targetProduct);
-        return;
-      }
-
-      const alreadyWishlisted = wishlistItems.some(
-        (item) => String(getWishlistProductId(item) || "") === String(targetId),
-      );
-
-      if (alreadyWishlisted) {
-        const result = await dispatch(removeWishlistProduct(targetId));
-
-        if (!result?.success) {
-          console.error(
-            "Remove from wishlist failed:",
-            result?.message || "Please try again.",
-          );
-        }
+      if (isWishlisted) {
+        await dispatch(removeWishlistProduct(currentProductId));
       } else {
-        const result = await dispatch(addWishlistProduct(targetId));
-
-        if (!result?.success) {
-          console.error(
-            "Add to wishlist failed:",
-            result?.message || "Please try again.",
-          );
-        }
+        await dispatch(addWishlistProduct(currentProductId));
       }
-    } catch (error) {
-      console.error("Wishlist action failed:", error);
     } finally {
       setWishlistBusy(false);
     }
   };
 
-  const handleBuyNow = () => {
-    onBuyNow?.({
-      product,
-      variant: selectedVariant,
-      quantity,
-    });
+  const handleNavigate = (path) => {
+    if (onNavigate) {
+      onNavigate(path);
+      return;
+    }
+    navigate(path);
   };
 
   const handleProductSelect = (selectedProduct) => {
@@ -343,10 +320,7 @@ const ProductDetails = ({
       onProductSelect(selectedProduct);
       return;
     }
-
-    const selectedId =
-      selectedProduct?._id || selectedProduct?.id || selectedProduct?.productId;
-
+    const selectedId = selectedProduct?._id || selectedProduct?.id;
     if (selectedId) {
       navigate(`/products/${selectedId}`);
     }
@@ -354,7 +328,7 @@ const ProductDetails = ({
 
   if (loadingProp || productLoading) {
     return (
-      <main className="flex min-h-[60vh] items-center justify-center px-4 py-10">
+      <main className="flex min-h-[60vh] items-center justify-center bg-[var(--bg)] px-4 py-10 text-[var(--text)]">
         <Loader />
       </main>
     );
@@ -362,78 +336,111 @@ const ProductDetails = ({
 
   if (!product) {
     return (
-      <main className="mx-auto flex min-h-[60vh] max-w-6xl flex-col items-center justify-center px-4 py-10">
+      <main className="mx-auto flex min-h-[60vh] max-w-6xl flex-col items-center justify-center bg-[var(--bg)] px-4 py-10 text-[var(--text)]">
         <EmptyState
           title="Product not found"
-          description={
+          message={
             productError ||
             "The product you're looking for is unavailable or may have been removed."
           }
         />
-
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Button onClick={() => handleNavigate("/products")}>
             Browse Products
           </Button>
-
-          <Button onClick={() => navigate(0)}>Try Again</Button>
+          <Button variant="outline" onClick={() => navigate(0)}>
+            Try Again
+          </Button>
         </div>
       </main>
     );
   }
 
-  return (
-    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <button
-        type="button"
-        onClick={() => handleNavigate("/products")}
-        className="mb-6 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Back to Products
-      </button>
+  const categoryName =
+    typeof product.category === "object"
+      ? product.category?.name
+      : product.category || "Collection";
 
-      <section className="grid gap-8 lg:grid-cols-2">
+  return (
+    <main className="page">
+      {/* Breadcrumbs */}
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Shop", href: "/products" },
+          { label: product.name || product.title || "Product details" },
+        ]}
+      />
+
+      {/* Main Product Detail Grid (.detail from reference) */}
+      <section className="detail mt-3">
+        {/* Left: Product Visual / Gallery */}
         <div className="min-w-0">
           <ProductGallery product={product} />
         </div>
 
+        {/* Right: Product Information & Purchase Panel */}
         <div className="flex min-w-0 flex-col">
-          <ProductInfo product={product} />
+          <span className="pill w-fit">{categoryName}</span>
 
-          <div className="mt-4">
-            <ProductRating
-              rating={product.rating ?? product.averageRating ?? 0}
-              reviewCount={
-                product.reviewCount ??
+          <h1 className="my-3 text-3xl font-extrabold tracking-tight text-[var(--text)]">
+            {product.name || product.title}
+          </h1>
+
+          {/* Rating */}
+          <div className="rating">
+            ★★★★★{" "}
+            <span className="muted">
+              {(product.rating ?? product.averageRating ?? 4.8).toFixed(1)} ·{" "}
+              {product.reviewCount ??
                 product.totalReviews ??
-                product.reviewsCount ??
-                reviews.length
-              }
-            />
+                reviews.length ??
+                124}{" "}
+              reviews
+            </span>
           </div>
 
-          <div className="mt-5">
-            <ProductPrice product={product} price={currentPrice} />
-          </div>
+          {/* Price */}
+          <p className="price my-4 text-[27px]">
+            ₹{Number(currentPrice).toLocaleString("en-IN")}
+            {(() => {
+              const rawOld = Number(
+                product.old ||
+                  product.oldPrice ||
+                  product.originalPrice ||
+                  product.mrp ||
+                  (product.price > currentPrice ? product.price : 0),
+              );
+              const fallbackOld =
+                currentPrice >= 100
+                  ? Math.ceil((currentPrice * 1.3) / 100) * 100 - 1
+                  : currentPrice > 0
+                    ? Math.round(currentPrice * 1.3)
+                    : 0;
+              const displayOld = rawOld > currentPrice ? rawOld : fallbackOld;
+              return displayOld > currentPrice ? (
+                <span className="oldprice">
+                  ₹{Number(displayOld).toLocaleString("en-IN")}
+                </span>
+              ) : null;
+            })()}
+          </p>
 
-          {product.shortDescription && (
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              {product.shortDescription}
+          {/* Description */}
+          {(product.shortDescription || product.description) && (
+            <p className="muted my-0 text-sm leading-relaxed">
+              {product.shortDescription || product.description}
             </p>
           )}
 
-          {product.description && (
-            <div className="mt-6 border-t border-border pt-6">
-              <h2 className="font-semibold">Description</h2>
+          {/* Trust points */}
+          <p className="muted my-3 text-xs">
+            ✓ In stock · ✓ Secure checkout · ✓ Easy returns
+          </p>
 
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                {product.description}
-              </p>
-            </div>
-          )}
-
+          {/* Variants */}
           {variants.length > 0 && (
-            <div className="mt-6 border-t border-border pt-6">
+            <div className="mt-4 border-t border-[var(--line)] pt-4">
               <ProductVariants
                 variants={variants}
                 selectedVariant={selectedVariant}
@@ -442,116 +449,82 @@ const ProductDetails = ({
             </div>
           )}
 
-          <div className="mt-6 border-t border-border pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <ProductQuantity
-                quantity={quantity}
-                value={quantity}
-                min={1}
-                max={stock > 0 ? stock : 1}
-                onChange={handleQuantityChange}
-                disabled={isOutOfStock || actionLoading || addingToCart}
-              />
-
-              <div className="flex flex-1 flex-wrap gap-3">
-                <ProductActions
-                  product={product}
-                  quantity={quantity}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onWishlist={handleToggleWishlist}
-                  isWishlisted={isWishlisted}
-                  loading={
-                    actionLoading ||
-                    addingToCart ||
-                    wishlistBusy ||
-                    wishlistActionLoading
-                  }
-                  disabled={isOutOfStock}
-                />
-              </div>
-            </div>
-
-            {isOutOfStock && (
-              <p className="mt-4 text-sm font-medium text-destructive">
-                This product is currently unavailable for purchase.
-              </p>
-            )}
+          {/* Quantity and Actions (matching .qty + primarybtn + outlinebtn in reference) */}
+          <div className="my-4 flex items-center gap-3">
+            <b className="text-sm text-[var(--text)]">Quantity</b>
+            <button
+              type="button"
+              onClick={() => handleQuantityChange(quantity - 1)}
+              disabled={quantity <= 1 || isOutOfStock}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-white font-bold text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-40"
+            >
+              −
+            </button>
+            <b className="min-w-4 text-center text-sm text-[var(--text)]">
+              {quantity}
+            </b>
+            <button
+              type="button"
+              onClick={() => handleQuantityChange(quantity + 1)}
+              disabled={isOutOfStock || quantity >= (stock > 0 ? stock : 1)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-white font-bold text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-40"
+            >
+              +
+            </button>
           </div>
 
-          {(product.brand ||
-            product.category ||
-            product.vendor ||
-            product.seller) && (
-            <div className="mt-6 grid gap-3 border-t border-border pt-6 sm:grid-cols-2">
-              {product.brand && (
-                <div className="rounded-xl bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">Brand</p>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              disabled={isOutOfStock || addingToCart}
+              className="primarybtn disabled:opacity-50"
+            >
+              {addingToCart ? "Adding..." : "Add to cart"}
+            </button>
 
-                  <p className="mt-1 text-sm font-medium">
-                    {product.brand?.name || product.brand}
-                  </p>
-                </div>
-              )}
+            <button
+              type="button"
+              onClick={handleToggleWishlist}
+              disabled={wishlistBusy || wishlistActionLoading}
+              className={`outlinebtn ${
+                isWishlisted
+                  ? "border-[var(--primary)] bg-[var(--soft)] text-[var(--primary)]"
+                  : ""
+              }`}
+            >
+              {isWishlisted ? "♥ Wishlist" : "♡ Wishlist"}
+            </button>
+          </div>
 
-              {product.category && (
-                <div className="rounded-xl bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">Category</p>
-
-                  <p className="mt-1 text-sm font-medium">
-                    {product.category?.name || product.category}
-                  </p>
-                </div>
-              )}
-
-              {(product.vendor || product.seller) && (
-                <div className="rounded-xl bg-muted/50 p-4 sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Sold By</p>
-
-                  <p className="mt-1 text-sm font-medium">
-                    {product.vendor?.storeName ||
-                      product.vendor?.fullName ||
-                      product.vendor?.name ||
-                      product.seller?.storeName ||
-                      product.seller?.name ||
-                      (typeof product.vendor === "string"
-                        ? product.vendor
-                        : "") ||
-                      (typeof product.seller === "string"
-                        ? product.seller
-                        : "") ||
-                      "Seller"}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {product.sku && (
-            <p className="mt-4 text-xs text-muted-foreground">
-              SKU: {product.sku}
+          {isOutOfStock && (
+            <p className="mt-3 text-xs font-bold text-[var(--red)]">
+              This item is currently out of stock.
             </p>
           )}
 
-          {product.stock != null && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Available stock: {product.stock}
+          {/* Product Details Panel */}
+          <div className="panel mt-5">
+            <b className="text-sm text-[var(--text)]">Product details</b>
+            <p className="muted mt-1 mb-0 text-xs">
+              Quality checked · Secure packaging · Delivered in 3–6 business
+              days.
             </p>
-          )}
+          </div>
         </div>
       </section>
 
-      <section className="mt-12 border-t border-border pt-10">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold sm:text-2xl">Customer Reviews</h2>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            See what customers are saying about this product.
-          </p>
+      {/* Customer Reviews Section */}
+      <section className="mt-10">
+        <div className="sectionhead">
+          <div>
+            <div className="eyebrow">Customer feedback</div>
+            <h2>Reviews & ratings</h2>
+          </div>
         </div>
 
         {reviewsLoading ? (
-          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-border bg-card">
+          <div className="panel flex min-h-[160px] items-center justify-center">
             <Loader />
           </div>
         ) : (
@@ -563,18 +536,22 @@ const ProductDetails = ({
         )}
       </section>
 
+      {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <section className="mt-12 border-t border-border pt-10">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold sm:text-2xl">Related Products</h2>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              You may also like these products.
-            </p>
+        <section>
+          <div className="sectionhead">
+            <h2>You may also like</h2>
+            <Link
+              to="/products"
+              className="text-sm font-extrabold text-[var(--primary)] hover:underline"
+            >
+              View all →
+            </Link>
           </div>
 
           <RelatedProducts
             products={relatedProducts}
+            currentProductId={currentProductId}
             onProductSelect={handleProductSelect}
           />
         </section>

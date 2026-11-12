@@ -41,7 +41,7 @@ const ConversationItem = ({ conversation, isActive = false, onClick }) => {
       }}
       className={`flex gap-3 border-b border-gray-100 px-4 py-3 transition dark:border-gray-800 ${
         isActive
-          ? "bg-blue-50 dark:bg-blue-950/30"
+          ? "bg-secondary/10 dark:bg-blue-950/30"
           : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
       }`}
     >
@@ -53,7 +53,7 @@ const ConversationItem = ({ conversation, isActive = false, onClick }) => {
             className="h-11 w-11 rounded-full object-cover"
           />
         ) : (
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
             {name.charAt(0).toUpperCase()}
           </div>
         )}
@@ -99,7 +99,7 @@ const ConversationItem = ({ conversation, isActive = false, onClick }) => {
           </p>
 
           {unreadCount > 0 && (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-secondary px-1.5 text-[10px] font-bold text-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
@@ -110,3 +110,4 @@ const ConversationItem = ({ conversation, isActive = false, onClick }) => {
 };
 
 export default ConversationItem;
+

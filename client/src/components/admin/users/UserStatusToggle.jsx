@@ -16,34 +16,34 @@ const UserStatusToggle = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1b0a11]/60 backdrop-blur-xs p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-status-title"
-        className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-950"
+        className="panel w-full max-w-md p-6"
       >
         <h2
           id="user-status-title"
-          className="text-lg font-semibold text-gray-900 dark:text-white"
+          className="text-base font-black text-[var(--text)]"
         >
           {action} user?
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+        <p className="mt-3 text-xs font-medium leading-6 text-[var(--muted)]">
           Are you sure you want to {action.toLowerCase()}{" "}
-          <strong>{name}</strong>?
+          <strong className="text-[var(--text)]">{name}</strong>?
           {isBlocked
             ? " Unblocking will restore access if the backend allows it."
             : " Blocking should prevent access according to your backend's authorization rules."}
         </p>
 
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700"
+            className="outlinebtn text-xs disabled:opacity-50"
           >
             Cancel
           </button>
@@ -52,7 +52,7 @@ const UserStatusToggle = ({
             type="button"
             onClick={handleConfirm}
             disabled={loading}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="primarybtn text-xs disabled:opacity-50"
           >
             {loading ? "Please wait..." : `Confirm ${action}`}
           </button>

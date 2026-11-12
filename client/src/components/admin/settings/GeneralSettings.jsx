@@ -46,7 +46,7 @@ const GeneralSettings = ({
 
         <div className="h-4 w-96 max-w-full animate-pulse rounded bg-muted" />
 
-        <div className="rounded-2xl border border-border bg-background p-6">
+        <div className="rounded-2xl border border-border bg-white p-6">
           <div className="space-y-5">
             {Array.from({ length: 7 }).map((_, index) => (
               <div key={index} className="space-y-2">
@@ -77,7 +77,7 @@ const GeneralSettings = ({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Store Information */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">Store Information</h3>
 
@@ -104,7 +104,7 @@ const GeneralSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="ShopSphere"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
@@ -125,7 +125,7 @@ const GeneralSettings = ({
                 disabled={saving}
                 rows={4}
                 placeholder="Your multi-vendor e-commerce platform..."
-                className="mt-2 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
@@ -146,7 +146,7 @@ const GeneralSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="support@example.com"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
@@ -167,14 +167,14 @@ const GeneralSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="+91 9876543210"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
           </div>
         </div>
 
         {/* Localization */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">Localization</h3>
 
@@ -199,7 +199,7 @@ const GeneralSettings = ({
                 value={form.currency}
                 onChange={handleChange}
                 disabled={saving}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="INR">INR — Indian Rupee</option>
                 <option value="USD">USD — US Dollar</option>
@@ -223,7 +223,7 @@ const GeneralSettings = ({
                 value={form.timezone}
                 onChange={handleChange}
                 disabled={saving}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="Asia/Kolkata">Asia/Kolkata</option>
                 <option value="UTC">UTC</option>
@@ -247,7 +247,7 @@ const GeneralSettings = ({
                 value={form.language}
                 onChange={handleChange}
                 disabled={saving}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="en">English</option>
                 <option value="hi">Hindi</option>
@@ -257,7 +257,7 @@ const GeneralSettings = ({
         </div>
 
         {/* Platform Preferences */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Platform Preferences

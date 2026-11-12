@@ -5,16 +5,16 @@ const WishlistEmpty = ({
   onContinueShopping,
 }) => {
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-gray-200 bg-white px-5 py-12 text-center dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-4xl dark:bg-red-900/20">
-        ❤️
+    <div className="panel flex min-h-[360px] flex-col items-center justify-center px-5 py-12 text-center">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--soft)] text-4xl text-[var(--primary)]">
+        ♡
       </div>
 
-      <h2 className="mt-5 text-xl font-bold text-gray-900 dark:text-white">
+      <h2 className="mt-5 text-xl font-black text-[var(--text)]">
         {title}
       </h2>
 
-      <p className="mt-2 max-w-md text-sm leading-6 text-gray-500 dark:text-gray-400">
+      <p className="mt-2 max-w-md text-xs font-medium leading-6 text-[var(--muted)]">
         {message}
       </p>
 
@@ -22,7 +22,7 @@ const WishlistEmpty = ({
         <button
           type="button"
           onClick={onContinueShopping}
-          className="mt-6 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+          className="primarybtn mt-6"
         >
           {buttonText}
         </button>

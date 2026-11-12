@@ -34,7 +34,7 @@ const ProductFilters = ({
     <div className="space-y-6">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">
             Categories
           </h3>
 
@@ -47,7 +47,7 @@ const ProductFilters = ({
                   categories: [],
                 })
               }
-              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+              className="text-xs font-bold text-[var(--primary)] hover:underline"
             >
               Clear
             </button>
@@ -65,7 +65,7 @@ const ProductFilters = ({
             return (
               <label
                 key={value}
-                className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+                className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#65565c] hover:text-[var(--primary)]"
               >
                 <input
                   type="checkbox"
@@ -73,7 +73,7 @@ const ProductFilters = ({
                   onChange={() =>
                     toggleValue("categories", value, selectedCategories)
                   }
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-[var(--line)] accent-[var(--primary)]"
                 />
 
                 <span>{label}</span>
@@ -85,7 +85,7 @@ const ProductFilters = ({
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)]">
             Brands
           </h3>
 
@@ -98,7 +98,7 @@ const ProductFilters = ({
                   brands: [],
                 })
               }
-              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+              className="text-xs font-bold text-[var(--primary)] hover:underline"
             >
               Clear
             </button>
@@ -114,13 +114,13 @@ const ProductFilters = ({
             return (
               <label
                 key={value}
-                className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+                className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#65565c] hover:text-[var(--primary)]"
               >
                 <input
                   type="checkbox"
                   checked={selectedBrands.includes(value)}
                   onChange={() => toggleValue("brands", value, selectedBrands)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-[var(--line)] accent-[var(--primary)]"
                 />
 
                 <span>{label}</span>
@@ -131,7 +131,7 @@ const ProductFilters = ({
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--text)]">
           Price Range
         </h3>
 
@@ -147,7 +147,7 @@ const ProductFilters = ({
               })
             }
             placeholder="Min"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            className="field w-full text-xs"
           />
 
           <input
@@ -161,17 +161,17 @@ const ProductFilters = ({
               })
             }
             placeholder="Max"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            className="field w-full text-xs"
           />
         </div>
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--text)]">
           Availability
         </h3>
 
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#65565c] hover:text-[var(--primary)]">
           <input
             type="checkbox"
             checked={filters.inStock === true}
@@ -181,7 +181,7 @@ const ProductFilters = ({
                 inStock: event.target.checked ? true : undefined,
               })
             }
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[var(--line)] accent-[var(--primary)]"
           />
 
           <span>In Stock Only</span>
@@ -192,7 +192,7 @@ const ProductFilters = ({
         <button
           type="button"
           onClick={onReset}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="outlinebtn w-full py-2 text-xs"
         >
           Reset Filters
         </button>
@@ -202,8 +202,8 @@ const ProductFilters = ({
 
   return (
     <>
-      <div className="hidden w-full max-w-xs rounded-xl border border-gray-200 bg-white p-5 lg:block dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="mb-5 text-base font-semibold text-gray-900 dark:text-white">
+      <div className="panel hidden w-full max-w-xs p-5 lg:block">
+        <h2 className="mb-5 text-sm font-black uppercase tracking-wider text-[var(--text)]">
           Filters
         </h2>
 
@@ -214,7 +214,7 @@ const ProductFilters = ({
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-300"
+          className="outlinebtn text-xs"
         >
           Filters
         </button>
@@ -222,20 +222,20 @@ const ProductFilters = ({
         {mobileOpen && (
           <div className="fixed inset-0 z-50">
             <div
-              className="absolute inset-0 bg-black/40"
+              className="absolute inset-0 bg-[#1b0a11]/50 backdrop-blur-xs"
               onClick={() => setMobileOpen(false)}
             />
 
-            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm overflow-y-auto bg-white p-5 dark:bg-gray-900">
+            <div className="absolute left-0 top-0 h-full w-[85%] max-w-sm overflow-y-auto bg-white p-5">
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-base font-black text-[var(--text)]">
                   Filters
                 </h2>
 
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="btnsm"
                 >
                   ✕
                 </button>
@@ -251,3 +251,6 @@ const ProductFilters = ({
 };
 
 export default ProductFilters;
+
+
+

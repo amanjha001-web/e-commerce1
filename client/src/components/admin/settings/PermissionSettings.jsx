@@ -423,7 +423,7 @@ const PermissionSettings = ({
 
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* Roles */}
-        <aside className="h-fit rounded-2xl border border-border bg-background shadow-sm">
+        <aside className="h-fit rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4">
             <h3 className="font-semibold text-foreground">Roles</h3>
 
@@ -471,7 +471,7 @@ const PermissionSettings = ({
 
         {/* Permissions */}
         <div className="min-w-0 space-y-5">
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-background p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Editing permissions for
@@ -506,7 +506,7 @@ const PermissionSettings = ({
               return (
                 <div
                   key={group}
-                  className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-4 border-b border-border bg-muted/20 px-5 py-4 sm:px-6">
                     <div>

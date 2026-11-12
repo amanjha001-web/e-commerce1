@@ -152,7 +152,7 @@ const OrderDetails = ({
       case "confirmed":
       case "processing":
       case "shipped":
-        return "bg-blue-100 text-blue-700";
+        return "bg-primary text-primary-foreground";
 
       case "pending":
       case "placed":
@@ -164,7 +164,7 @@ const OrderDetails = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       default:
         return "bg-gray-100 text-gray-700";
@@ -187,7 +187,7 @@ const OrderDetails = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       default:
         return "bg-gray-100 text-gray-700";
@@ -219,7 +219,7 @@ const OrderDetails = ({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div>

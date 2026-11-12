@@ -63,7 +63,7 @@ const SecuritySettings = ({
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="rounded-2xl border border-border bg-background p-6"
+              className="rounded-2xl border border-border bg-white p-6"
             >
               <div className="h-5 w-40 animate-pulse rounded bg-muted" />
 
@@ -93,7 +93,7 @@ const SecuritySettings = ({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Authentication */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">Authentication</h3>
 
@@ -192,7 +192,7 @@ const SecuritySettings = ({
         </div>
 
         {/* Login Protection */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">Login Protection</h3>
 
@@ -220,7 +220,7 @@ const SecuritySettings = ({
                   value={form.sessionTimeout}
                   onChange={handleChange}
                   disabled={saving}
-                  className="w-full rounded-l-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-l-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 />
 
                 <span className="flex items-center rounded-r-xl border border-l-0 border-border bg-muted px-3 text-sm text-muted-foreground">
@@ -250,7 +250,7 @@ const SecuritySettings = ({
                 value={form.maxLoginAttempts}
                 onChange={handleChange}
                 disabled={saving}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
 
               <p className="mt-1 text-xs text-muted-foreground">
@@ -276,7 +276,7 @@ const SecuritySettings = ({
                   value={form.lockoutDuration}
                   onChange={handleChange}
                   disabled={saving}
-                  className="w-full rounded-l-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-l-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 />
 
                 <span className="flex items-center rounded-r-xl border border-l-0 border-border bg-muted px-3 text-sm text-muted-foreground">
@@ -292,7 +292,7 @@ const SecuritySettings = ({
         </div>
 
         {/* Password Policy */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">Password Policy</h3>
 
@@ -319,7 +319,7 @@ const SecuritySettings = ({
                 value={form.passwordMinLength}
                 onChange={handleChange}
                 disabled={saving}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Outlet } from "react-router-dom";
 
-import Header from "../components/layout/Header";
+import TopBar from "../components/layout/TopBar";
 import Navbar from "../components/layout/Navbar";
 import MobileMenu from "../components/layout/MobileMenu";
 import Footer from "../components/layout/Footer";
@@ -18,8 +18,8 @@ const MainLayout = () => {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
+    <div className="flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]">
+      <TopBar />
 
       <Navbar onMenuClick={openMobileMenu} />
 

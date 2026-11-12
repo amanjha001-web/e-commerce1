@@ -107,11 +107,13 @@ app.use("/api/v1/admin", adminRoutes);
 
 // Vendor
 app.use("/api/v1/vendors", vendorRoutes);
+app.use("/api/v1/vendor", vendorRoutes);
 
 app.use("/api/v1/vendor-requests", vendorRequestRoutes);
 
 // Address
 app.use("/api/v1/address", addressRoutes);
+app.use("/api/v1/addresses", addressRoutes);
 
 // Catalog
 app.use("/api/v1/brands", brandRoutes);

@@ -144,7 +144,7 @@ const NotificationSettings = ({
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="rounded-2xl border border-border bg-background p-6"
+            className="rounded-2xl border border-border bg-white p-6"
           >
             <div className="h-5 w-48 animate-pulse rounded bg-muted" />
 
@@ -174,7 +174,7 @@ const NotificationSettings = ({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Notification Channels */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Notification Channels
@@ -199,7 +199,7 @@ const NotificationSettings = ({
         </div>
 
         {/* Order & Account Notifications */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Order & Account Notifications
@@ -224,7 +224,7 @@ const NotificationSettings = ({
         </div>
 
         {/* Inventory */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Inventory Notifications
@@ -249,7 +249,7 @@ const NotificationSettings = ({
         </div>
 
         {/* Other Notifications */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Other Notifications
@@ -304,7 +304,7 @@ const NotificationSettings = ({
         </div>
 
         {/* Notification Recipients */}
-        <div className="rounded-2xl border border-border bg-background shadow-sm">
+        <div className="rounded-2xl border border-border bg-white shadow-sm">
           <div className="border-b border-border px-5 py-4 sm:px-6">
             <h3 className="font-semibold text-foreground">
               Notification Recipients
@@ -334,7 +334,7 @@ const NotificationSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="admin@example.com"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
@@ -355,7 +355,7 @@ const NotificationSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="notifications@example.com"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
@@ -376,7 +376,7 @@ const NotificationSettings = ({
                 onChange={handleChange}
                 disabled={saving}
                 placeholder="+91 9876543210"
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
           </div>

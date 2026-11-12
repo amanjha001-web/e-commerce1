@@ -1,6 +1,8 @@
 const EarningsCard = ({
   title = "Total Earnings",
   amount = 0,
+  value,
+  change,
   currency = "₹",
   period,
   trend,
@@ -10,62 +12,60 @@ const EarningsCard = ({
 }) => {
   const numericAmount = Number(amount) || 0;
 
-  const formattedAmount = new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 2,
-  }).format(numericAmount);
+  const formattedAmount =
+    value !== undefined
+      ? value
+      : `${currency}${new Intl.NumberFormat("en-IN", {
+          maximumFractionDigits: 2,
+        }).format(numericAmount)}`;
 
   if (loading) {
     return (
-      <div className="animate-pulse rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+      <div className="stat-card animate-pulse">
         <div className="flex items-center justify-between">
-          <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-
-          <div className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-32 rounded bg-[var(--soft)]" />
+          <div className="h-10 w-10 rounded-xl bg-[var(--soft)]" />
         </div>
-
-        <div className="mt-4 h-8 w-36 rounded bg-gray-200 dark:bg-gray-700" />
-
-        <div className="mt-3 h-3 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="mt-4 h-8 w-36 rounded bg-[var(--soft)]" />
+        <div className="mt-3 h-3 w-24 rounded bg-[var(--soft)]" />
       </div>
     );
   }
 
-  const isPositive = trendType === "up";
+  const effectiveTrend = trend !== undefined ? trend : change;
+  const isPositive = trendType === "up" || (change && !String(change).startsWith("-"));
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="stat-card">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <p className="text-xs font-bold text-[var(--muted)]">
             {title}
           </p>
 
-          <h3 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-            {currency}
+          <h3 className="mt-2 text-2xl font-black text-[var(--text)] dark:text-foreground">
             {formattedAmount}
           </h3>
 
-          {period && <p className="mt-1 text-xs text-gray-400">{period}</p>}
+          {period && <p className="mt-1 text-xs text-[var(--muted)]">{period}</p>}
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-xl dark:bg-green-900/20">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--soft)] text-xl text-[var(--primary)]">
           {icon}
         </div>
       </div>
 
-      {trend !== undefined && (
-        <div className="mt-4">
+      {effectiveTrend !== undefined && effectiveTrend !== null && (
+        <div className="mt-4 flex items-center">
           <span
-            className={`text-xs font-semibold ${
-              isPositive
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
+            className={`text-xs font-black ${
+              isPositive ? "text-[var(--green)]" : "text-[var(--red)]"
             }`}
           >
-            {isPositive ? "↑" : "↓"} {trend}
+            {isPositive ? "↑" : "↓"} {effectiveTrend}
           </span>
 
-          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="ml-2 text-[11px] font-medium text-[var(--muted)]">
             vs previous period
           </span>
         </div>

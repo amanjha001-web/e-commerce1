@@ -1,214 +1,128 @@
+import { useState } from "react";
+import { toast } from "sonner";
 
-import { useMemo, useState } from "react";
+const DEMO_INVENTORY = [
+  { name: "Classic Leather Tote", sku: "SS-300", available: 24, threshold: 10, status: "In stock", statusClass: "green" },
+  { name: "Aura Ceramic Table Lamp", sku: "SS-301", available: 8, threshold: 10, status: "In stock", statusClass: "green" },
+  { name: "Studio Wireless Headphones", sku: "SS-302", available: 36, threshold: 10, status: "In stock", statusClass: "green" },
+  { name: "Minimal Gold Watch", sku: "SS-303", available: 12, threshold: 10, status: "In stock", statusClass: "green" },
+  { name: "Botanical Skin Care Set", sku: "SS-304", available: 4, threshold: 10, status: "Low stock", statusClass: "amber" },
+  { name: "Everyday Sneakers", sku: "SS-305", available: 19, threshold: 10, status: "In stock", statusClass: "green" },
+];
 
-import InventoryTable from "../../components/vendor/InventoryTable";
-
-import Input from "../../components/common/Input";
-import Select from "../../components/common/Select";
-import Button from "../../components/common/Button";
-import EmptyState from "../../components/common/EmptyState";
-import Loader from "../../components/common/Loader";
-
-const Inventory = ({
-  products = [],
-  loading = false,
-  saving = false,
-
-  onUpdateStock,
-  onViewProduct,
-  onEditProduct,
-  onNavigate,
-}) => {
-  const [search, setSearch] = useState("");
-  const [stockFilter, setStockFilter] = useState("all");
-
-  const filteredProducts = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    return products.filter((product) => {
-      const name = String(product?.name || "").toLowerCase();
-      const sku = String(product?.sku || "").toLowerCase();
-
-      const stock = Number(
-        product?.stock ?? product?.quantity ?? 0
-      );
-
-      const matchesSearch =
-        !keyword ||
-        name.includes(keyword) ||
-        sku.includes(keyword);
-
-      let matchesStock = true;
-
-      if (stockFilter === "out") {
-        matchesStock = stock <= 0;
-      } else if (stockFilter === "low") {
-        matchesStock = stock > 0 && stock <= 10;
-      } else if (stockFilter === "in") {
-        matchesStock = stock > 10;
-      }
-
-      return matchesSearch && matchesStock;
-    });
-  }, [products, search, stockFilter]);
-
-  const getStock = (product) =>
-    Number(product?.stock ?? product?.quantity ?? 0);
-
-  const totalStock = products.reduce(
-    (total, product) => total + getStock(product),
-    0
-  );
-
-  const outOfStock = products.filter(
-    (product) => getStock(product) <= 0
-  ).length;
-
-  const lowStock = products.filter((product) => {
-    const stock = getStock(product);
-    return stock > 0 && stock <= 10;
-  }).length;
-
-  const handleStockUpdate = (product, value) => {
-    const stock = Number(value);
-
-    if (!Number.isFinite(stock) || stock < 0) {
-      return;
-    }
-
-    onUpdateStock?.(product, stock);
-  };
+const Inventory = () => {
+  const [updatingItem, setUpdatingItem] = useState(null);
+  const [qty, setQty] = useState(24);
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <main className="p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          {/* Page Header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
-                Inventory Management
-              </h1>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Keep track of stock levels across your store.
-              </p>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => onNavigate?.("products")}
-            >
-              Manage Products
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Total Products
-              </p>
-              <p className="mt-2 text-2xl font-bold text-foreground">
-                {products.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Total Stock
-              </p>
-              <p className="mt-2 text-2xl font-bold text-foreground">
-                {totalStock.toLocaleString("en-IN")}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Low Stock
-              </p>
-              <p className="mt-2 text-2xl font-bold text-warning">
-                {lowStock}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
-                Out of Stock
-              </p>
-              <p className="mt-2 text-2xl font-bold text-destructive">
-                {outOfStock}
-              </p>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-            <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-              <Input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search product name or SKU..."
-              />
-
-              <Select
-                value={stockFilter}
-                onChange={(event) =>
-                  setStockFilter(event.target.value)
-                }
-                options={[
-                  { label: "All Stock", value: "all" },
-                  { label: "In Stock", value: "in" },
-                  { label: "Low Stock", value: "low" },
-                  { label: "Out of Stock", value: "out" },
-                ]}
-              />
-            </div>
-          </div>
-
-          {/* Inventory Table */}
-          <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-5">
-              <h2 className="text-lg font-semibold text-foreground">
-                Product Inventory
-              </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Update stock quantities directly from the table.
-              </p>
-            </div>
-
-            {loading ? (
-              <div className="flex min-h-[300px] items-center justify-center">
-                <Loader />
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="p-8">
-                <EmptyState
-                  title="No products found"
-                  description={
-                    search || stockFilter !== "all"
-                      ? "Try changing your search or stock filter."
-                      : "You don't have any products in your inventory yet."
-                  }
-                />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <InventoryTable
-                  products={filteredProducts}
-                  saving={saving}
-                  onUpdateStock={handleStockUpdate}
-                  onViewProduct={onViewProduct}
-                  onEditProduct={onEditProduct}
-                />
-              </div>
-            )}
-          </section>
+    <div>
+      <div className="pagehead">
+        <div>
+          <div className="eyebrow">Seller centre</div>
+          <h1>Inventory</h1>
         </div>
-      </main>
+      </div>
+
+      <div className="stats">
+        {[
+          ["Total SKUs", "42"],
+          ["In stock", "35"],
+          ["Low stock", "5"],
+          ["Out of stock", "2"],
+        ].map((x) => (
+          <div key={x[0]} className="stat">
+            <span className="label">{x[0]}</span>
+            <strong>{x[1]}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="panel">
+        <h2>Inventory management</h2>
+
+        <div className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Available</th>
+                <th>Threshold</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DEMO_INVENTORY.map((item) => (
+                <tr key={item.sku}>
+                  <td>{item.name}</td>
+                  <td>{item.sku}</td>
+                  <td>{item.available}</td>
+                  <td>{item.threshold}</td>
+                  <td>
+                    <span className={`status ${item.statusClass}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btnsm"
+                      onClick={() => {
+                        setUpdatingItem(item);
+                        setQty(item.available);
+                      }}
+                    >
+                      Update
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {updatingItem && (
+        <div
+          className="modalback"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setUpdatingItem(null);
+          }}
+        >
+          <div className="modal">
+            <div className="modalhead">
+              <h2>Update stock</h2>
+              <button
+                type="button"
+                className="iconbtn"
+                onClick={() => setUpdatingItem(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <label>New quantity</label>
+            <div style={{ marginTop: "8px", display: "flex", gap: "8px" }}>
+              <input
+                className="field"
+                type="number"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+              />
+              <button
+                type="button"
+                className="primarybtn"
+                onClick={() => {
+                  setUpdatingItem(null);
+                  toast.success("Stock updated");
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

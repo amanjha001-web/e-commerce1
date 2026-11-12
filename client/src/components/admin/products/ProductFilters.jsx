@@ -41,7 +41,7 @@ const ProductFilters = ({
     currentFilters.sortBy !== "newest";
 
   return (
-    <div className="rounded-2xl border border-border bg-background p-4 sm:p-5">
+    <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -94,7 +94,7 @@ const ProductFilters = ({
             value={currentFilters.search}
             onChange={handleSearch}
             placeholder="Search by product name, SKU..."
-            className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
       </div>
@@ -115,7 +115,7 @@ const ProductFilters = ({
             value={currentFilters.status}
             onChange={(event) => handleChange("status", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active</option>
@@ -142,7 +142,7 @@ const ProductFilters = ({
             value={currentFilters.category}
             onChange={(event) => handleChange("category", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Categories</option>
             <option value="electronics">Electronics</option>
@@ -170,7 +170,7 @@ const ProductFilters = ({
             value={currentFilters.vendor}
             onChange={(event) => handleChange("vendor", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Vendors</option>
             <option value="active">Active Vendors</option>
@@ -194,7 +194,7 @@ const ProductFilters = ({
             value={currentFilters.stock}
             onChange={(event) => handleChange("stock", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Stock</option>
             <option value="in_stock">In Stock</option>
@@ -217,7 +217,7 @@ const ProductFilters = ({
             value={currentFilters.sortBy}
             onChange={(event) => handleChange("sortBy", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>

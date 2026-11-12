@@ -67,7 +67,7 @@ const SearchBar = ({
     <div className="relative w-full">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full items-center overflow-hidden rounded-xl border border-gray-300 bg-white transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900"
+        className="flex w-full items-center overflow-hidden rounded-xl border border-gray-300 bg-white transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-secondary/30 dark:border-gray-700 dark:bg-gray-900"
       >
         {/* Search Icon */}
         <span className="pl-3 text-gray-400">
@@ -105,7 +105,7 @@ const SearchBar = ({
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="m-1 rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           Search
         </button>
@@ -157,3 +157,5 @@ const SearchBar = ({
 };
 
 export default SearchBar;
+
+

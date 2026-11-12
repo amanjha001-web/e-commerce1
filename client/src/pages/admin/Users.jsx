@@ -40,7 +40,6 @@ const Users = () => {
   const [filters, setFilters] = useState(initialFilters);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  // Local state for user being viewed (avoids race condition with Redux state)
   const [viewingUser, setViewingUser] = useState(null);
   const [statusUser, setStatusUser] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -48,7 +47,6 @@ const Users = () => {
 
   const { page = 1, limit = 10, total = 0, totalPages = 0 } = pagination;
 
-  // Fetch users; debounce text search.
   useEffect(() => {
     const timer = setTimeout(
       () => {
@@ -120,15 +118,12 @@ const Users = () => {
   const handleViewUser = (user) => {
     setActionError("");
     setEditMode(false);
-    setViewingUser(user); // Set user immediately from clicked row
-    
-    // Open modal and fetch fresh data in background
+    setViewingUser(user);
     setDetailsOpen(true);
-    
+
     dispatch(fetchAdminUserById(user._id))
       .unwrap()
       .then((freshUser) => {
-        // Update from API response when available
         if (freshUser) {
           setViewingUser(freshUser);
         }
@@ -189,7 +184,10 @@ const Users = () => {
       ).unwrap();
 
       await dispatch(fetchAdminUsers(getCurrentParams())).unwrap();
-      await dispatch(fetchAdminUserById(user._id)).unwrap();
+      const updated = await dispatch(fetchAdminUserById(user._id)).unwrap();
+      if (updated) {
+        setViewingUser(updated);
+      }
 
       setEditMode(false);
     } catch (errorMessage) {
@@ -217,7 +215,10 @@ const Users = () => {
     try {
       await dispatch(deleteAdminUser(user._id)).unwrap();
 
-      // Refetch after deletion so pagination totals remain accurate.
+      if (detailsOpen) {
+        handleCloseDetails();
+      }
+
       const nextPage = users.length === 1 && page > 1 ? page - 1 : page;
 
       if (nextPage !== page) {
@@ -256,8 +257,11 @@ const Users = () => {
 
       await dispatch(fetchAdminUsers(getCurrentParams())).unwrap();
 
-      if (selectedUser?._id === user._id) {
-        await dispatch(fetchAdminUserById(user._id)).unwrap();
+      if (selectedUser?._id === user._id || viewingUser?._id === user._id) {
+        const refreshed = await dispatch(fetchAdminUserById(user._id)).unwrap();
+        if (refreshed) {
+          setViewingUser(refreshed);
+        }
       }
     } catch (errorMessage) {
       setActionError(
@@ -268,30 +272,41 @@ const Users = () => {
     }
   };
 
-  return (
-    <div className="space-y-5 p-4 sm:p-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Users
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage customer, vendor and admin accounts.
-          </p>
-        </div>
+  const customersCount = users.filter(
+    (u) => !u.role || String(u.role).toLowerCase() === "customer",
+  ).length;
+  const vendorsCount = users.filter(
+    (u) => String(u.role || "").toLowerCase() === "vendor",
+  ).length;
+  const blockedCount = users.filter((u) => Boolean(u.isBlocked)).length;
 
-        <div className="rounded-lg border border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-gray-950">
-          <p className="text-xs text-gray-500">Total users</p>
-          <p className="text-xl font-semibold text-gray-900 dark:text-white">
-            {total}
-          </p>
+  return (
+    <div>
+      <div className="pagehead">
+        <div>
+          <div className="eyebrow">ShopSphere administration</div>
+          <h1>Users</h1>
         </div>
+      </div>
+
+      <div className="stats">
+        {[
+          ["All users", total || users.length],
+          ["Customers", customersCount],
+          ["Vendors", vendorsCount],
+          ["Blocked", blockedCount],
+        ].map(([label, val]) => (
+          <div key={label} className="stat">
+            <span className="label">{label}</span>
+            <strong>{Number(val).toLocaleString("en-IN")}</strong>
+          </div>
+        ))}
       </div>
 
       {(error || actionError) && (
         <div
           role="alert"
-          className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-[#f3cbd0] bg-[#fff0f1] p-3 text-xs font-bold text-[var(--red)]"
         >
           <span>{actionError || error}</span>
 
@@ -301,57 +316,61 @@ const Users = () => {
               setActionError("");
               dispatch(clearAdminUsersError());
             }}
-            className="font-semibold"
+            className="cursor-pointer font-black"
           >
             ×
           </button>
         </div>
       )}
 
-      <UserFilters
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onReset={handleResetFilters}
-        loading={loading}
-      />
+      <div className="panel">
+        <UserFilters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onReset={handleResetFilters}
+          loading={loading}
+        />
 
-      <UserTable
-        users={users}
-        loading={loading}
-        onViewUser={handleViewUser}
-        onEditUser={handleEditUser}
-        onDeleteUser={handleDeleteUser}
-        onToggleStatus={handleStatusClick}
-      />
+        <UserTable
+          users={users}
+          loading={loading}
+          onViewUser={handleViewUser}
+          onEditUser={handleEditUser}
+          onDeleteUser={handleDeleteUser}
+          onToggleStatus={handleStatusClick}
+        />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500">
-          Page {page} of {Math.max(totalPages, 1)} · {total} users
-        </p>
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-bold text-[var(--muted)]">
+              Page {page} of {Math.max(totalPages, 1)} · {total} users
+            </p>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={page <= 1 || loading}
-            onClick={() => dispatch(setAdminUsersPage(page - 1))}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700"
-          >
-            Previous
-          </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page <= 1 || loading}
+                onClick={() => dispatch(setAdminUsersPage(page - 1))}
+                className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
 
-          <button
-            type="button"
-            disabled={
-              loading ||
-              (totalPages > 0 && page >= totalPages) ||
-              totalPages === 0
-            }
-            onClick={() => dispatch(setAdminUsersPage(page + 1))}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700"
-          >
-            Next
-          </button>
-        </div>
+              <button
+                type="button"
+                disabled={
+                  loading ||
+                  (totalPages > 0 && page >= totalPages) ||
+                  totalPages === 0
+                }
+                onClick={() => dispatch(setAdminUsersPage(page + 1))}
+                className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <UserDetails
@@ -363,6 +382,7 @@ const Users = () => {
         onClose={handleCloseDetails}
         onEdit={() => setEditMode(true)}
         onSave={handleSaveUser}
+        onDelete={handleDeleteUser}
         onToggleStatus={handleStatusClick}
       />
 

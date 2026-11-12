@@ -51,11 +51,11 @@ const SalesChart = ({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+      <div className="panel p-5">
         <div className="animate-pulse">
-          <div className="h-5 w-36 rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-5 w-36 rounded bg-[var(--soft)]" />
 
-          <div className="mt-5 h-[280px] rounded-lg bg-gray-100 dark:bg-gray-800" />
+          <div className="mt-5 h-[280px] rounded-lg bg-[var(--soft)]/50" />
         </div>
       </div>
     );
@@ -63,13 +63,13 @@ const SalesChart = ({
 
   if (!chartData.length) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white">
+      <div className="panel p-5">
+        <h2 className="text-base font-black text-[var(--text)]">
           {title}
         </h2>
 
         <div className="flex h-[280px] items-center justify-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs font-medium text-[var(--muted)]">
             No sales data available.
           </p>
         </div>
@@ -78,14 +78,14 @@ const SalesChart = ({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="panel p-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white">
+        <h2 className="text-base font-black text-[var(--text)]">
           {title}
         </h2>
 
-        <span className="text-xs text-gray-400">
+        <span className="pill">
           {chartData.length} periods
         </span>
       </div>
@@ -111,7 +111,7 @@ const SalesChart = ({
                 x2={chartWidth - paddingX}
                 y2={y}
                 stroke="currentColor"
-                className="text-gray-100 dark:text-gray-800"
+                className="text-[var(--line)]"
                 strokeWidth="1"
               />
             );
@@ -123,7 +123,7 @@ const SalesChart = ({
               chartHeight - paddingY
             } L ${points[0].x} ${chartHeight - paddingY} Z`}
             fill="currentColor"
-            className="text-blue-100/60 dark:text-blue-900/20"
+            className="text-[var(--soft)]"
           />
 
           {/* Line */}
@@ -131,7 +131,7 @@ const SalesChart = ({
             d={linePath}
             fill="none"
             stroke="currentColor"
-            className="text-blue-600"
+            className="text-[var(--primary)]"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -150,7 +150,7 @@ const SalesChart = ({
                 cy={point.y}
                 r={activeIndex === index ? 6 : 4}
                 fill="currentColor"
-                className="text-blue-600"
+                className="text-[var(--primary)]"
               />
 
               {activeIndex === index && (
@@ -161,14 +161,14 @@ const SalesChart = ({
                     width="110"
                     height="34"
                     rx="6"
-                    className="fill-gray-900 dark:fill-gray-100"
+                    className="fill-[#4C0519]"
                   />
 
                   <text
                     x={point.x}
                     y={point.y - 27}
                     textAnchor="middle"
-                    className="fill-white text-[11px] dark:fill-gray-900"
+                    className="fill-white text-[11px] font-bold"
                   >
                     {currency}
                     {point.value.toLocaleString("en-IN")}
@@ -185,7 +185,7 @@ const SalesChart = ({
               x={point.x}
               y={chartHeight - 2}
               textAnchor="middle"
-              className="fill-gray-400 text-[10px]"
+              className="fill-[var(--muted)] text-[10px] font-semibold"
             >
               {point.label}
             </text>
@@ -194,12 +194,12 @@ const SalesChart = ({
       </div>
 
       {/* Summary */}
-      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+      <div className="mt-3 flex items-center justify-between border-t border-[var(--line)] pt-3">
+        <span className="text-xs font-medium text-[var(--muted)]">
           Total Sales
         </span>
 
-        <span className="text-sm font-bold text-gray-900 dark:text-white">
+        <span className="text-sm font-black text-[var(--primary)]">
           {currency}
           {chartData
             .reduce((total, item) => total + item.value, 0)
@@ -211,3 +211,4 @@ const SalesChart = ({
 };
 
 export default SalesChart;
+

@@ -134,7 +134,7 @@ const ProductTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white">
         {/* Desktop Loading */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[1100px]">
@@ -231,7 +231,7 @@ const ProductTable = ({
 
   if (!products.length) {
     return (
-      <div className="rounded-2xl border border-border bg-background px-6 py-14 text-center">
+      <div className="rounded-2xl border border-border bg-white px-6 py-14 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
           📦
         </div>
@@ -248,7 +248,7 @@ const ProductTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white">
       {/* Desktop */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1100px]">

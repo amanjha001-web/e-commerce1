@@ -128,7 +128,7 @@ const UserReport = ({
           <select
             value={period}
             onChange={(event) => onPeriodChange?.(event.target.value)}
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+            className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           >
             <option value="Daily">Daily</option>
             <option value="Weekly">Weekly</option>
@@ -161,7 +161,7 @@ const UserReport = ({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-muted-foreground">
             Total Users
           </p>
@@ -173,7 +173,7 @@ const UserReport = ({
           <p className="mt-1 text-xs text-muted-foreground">Registered users</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-muted-foreground">New Users</p>
 
           <p className="mt-2 text-xl font-bold text-foreground">
@@ -185,7 +185,7 @@ const UserReport = ({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-muted-foreground">
             Active Users
           </p>
@@ -199,7 +199,7 @@ const UserReport = ({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           <p className="text-xs font-medium text-muted-foreground">Vendors</p>
 
           <p className="mt-2 text-xl font-bold text-foreground">
@@ -211,7 +211,7 @@ const UserReport = ({
       </div>
 
       {/* User Status */}
-      <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h3 className="text-sm font-semibold text-foreground">
             User Status Overview
@@ -270,7 +270,7 @@ const UserReport = ({
       </div>
 
       {/* User Growth */}
-      <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
         <div className="mb-5">
           <h3 className="text-sm font-semibold text-foreground">User Growth</h3>
 
@@ -329,7 +329,7 @@ const UserReport = ({
       </div>
 
       {/* Detailed Table */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
         <div className="flex flex-col gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-foreground">

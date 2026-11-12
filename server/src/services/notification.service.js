@@ -10,7 +10,7 @@ const getNotification = async (notificationId) => {
   const notification =
     await notificationRepository.getNotificationById(notificationId);
 
-  if (!notification) {
+  if (!notification || notification.isDeleted) {
     throw new ApiError(404, "Notification not found");
   }
 
@@ -18,7 +18,8 @@ const getNotification = async (notificationId) => {
 };
 
 const validateOwnership = (notification, userId) => {
-  if (notification.user._id.toString() !== userId.toString()) {
+  const notifUserId = notification.user?._id || notification.user;
+  if (!notifUserId || notifUserId.toString() !== userId.toString()) {
     throw new ApiError(
       403,
       "You are not authorized to access this notification",
@@ -110,7 +111,7 @@ const getMyNotifications = async (
     isDeleted: false,
   };
 
-  /*                       ilters                       /
+  /*                       Filters                      */
 
   if (type) {
     filter.type = type;
@@ -126,7 +127,7 @@ const getMyNotifications = async (
 
   if (isRead !== undefined) {
     filter.isRead =
-      isRead === "true";
+      isRead === "true" || isRead === true;
   }
 
   /*                        Sort                       */

@@ -6,57 +6,58 @@ const DashboardStats = () => {
   const cards = [
     {
       key: "totalUsers",
-      label: "Total Users",
+      label: "Total Customers",
       icon: "👥",
       value: stats.totalUsers ?? 0,
+      trend: "↗ +4.3% this month",
     },
     {
       key: "totalVendors",
-      label: "Total Vendors",
+      label: "Active Vendors",
       icon: "🏪",
       value: stats.totalVendors ?? 0,
+      trend: "Verified sellers",
     },
     {
       key: "totalProducts",
-      label: "Total Products",
+      label: "Catalog Products",
       icon: "📦",
       value: stats.totalProducts ?? 0,
+      trend: "Live in store",
     },
     {
       key: "totalOrders",
       label: "Total Orders",
       icon: "🛒",
       value: stats.totalOrders ?? 0,
+      trend: "↗ +8.2% this month",
     },
     {
       key: "pendingVendors",
       label: "Pending Vendors",
       icon: "⏳",
       value: stats.pendingVendors ?? 0,
+      trend: "Needs review",
+      alert: true,
     },
     {
       key: "pendingProducts",
-      label: "Pending Products",
+      label: "Pending Approvals",
       icon: "📝",
       value: stats.pendingProducts ?? 0,
+      trend: "Action required",
+      alert: true,
     },
   ];
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={index}
-            className="animate-pulse rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
-          >
-            <div className="flex items-center justify-between">
-              <div className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-800" />
-              <div className="h-4 w-16 rounded bg-gray-200 dark:bg-gray-800" />
-            </div>
-
-            <div className="mt-5 h-7 w-24 rounded bg-gray-200 dark:bg-gray-800" />
-            <div className="mt-2 h-3 w-28 rounded bg-gray-200 dark:bg-gray-800" />
+          <div key={index} className="stat animate-pulse">
+            <div className="h-3 w-20 rounded bg-[var(--soft)]" />
+            <div className="my-2 h-7 w-24 rounded bg-[var(--soft)]" />
+            <div className="h-2.5 w-28 rounded bg-[var(--soft)]" />
           </div>
         ))}
       </div>
@@ -64,25 +65,25 @@ const DashboardStats = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-3">
       {cards.map((card) => (
-        <div
-          key={card.key}
-          className="rounded-xl border border-gray-200 bg-white p-5 transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-lg dark:bg-blue-900/20">
-              {card.icon}
-            </div>
+        <div key={card.key} className="stat">
+          <div className="flex items-center justify-between">
+            <span className="label">{card.label}</span>
+            <span className="text-sm">{card.icon}</span>
           </div>
 
-          <p className="mt-5 text-2xl font-bold text-gray-900 dark:text-white">
-            {Number(card.value).toLocaleString("en-IN")}
-          </p>
+          <strong>{Number(card.value).toLocaleString("en-IN")}</strong>
 
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {card.label}
-          </p>
+          <span
+            className={`trend ${
+              card.alert && card.value > 0
+                ? "!text-[#b7791f]"
+                : "!text-[#16845b]"
+            }`}
+          >
+            {card.trend}
+          </span>
         </div>
       ))}
     </div>

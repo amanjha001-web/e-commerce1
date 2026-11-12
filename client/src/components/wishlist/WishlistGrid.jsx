@@ -9,20 +9,19 @@ const WishlistGrid = ({
 }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div
-            key={index}
-            className="animate-pulse overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
-          >
-            <div className="aspect-square bg-gray-200 dark:bg-gray-800" />
+      <div className="product-grid">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="product animate-pulse">
+            <div className="productvisual opacity-60" />
 
-            <div className="space-y-3 p-4">
-              <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-
-              <div className="h-5 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
-
-              <div className="h-10 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />
+            <div className="productbody space-y-2.5">
+              <div className="h-3 w-1/3 rounded bg-[var(--soft)]" />
+              <div className="h-4 w-3/4 rounded bg-[var(--soft)]" />
+              <div className="h-5 w-1/2 rounded bg-[var(--soft)]" />
+              <div className="mt-3 flex gap-2">
+                <div className="h-9 flex-1 rounded-xl bg-[var(--soft)]" />
+                <div className="h-9 flex-1 rounded-xl bg-[var(--soft)]" />
+              </div>
             </div>
           </div>
         ))}
@@ -35,7 +34,7 @@ const WishlistGrid = ({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="product-grid">
       {items.map((item, index) => {
         const product = item?.product || item;
 

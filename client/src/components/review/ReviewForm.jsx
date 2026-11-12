@@ -92,7 +92,7 @@ const ReviewForm = ({ onSubmit, loading = false, initialData = {} }) => {
           placeholder="Summarize your experience"
           maxLength={100}
           disabled={loading}
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
         />
       </div>
 
@@ -113,7 +113,7 @@ const ReviewForm = ({ onSubmit, loading = false, initialData = {} }) => {
           rows={5}
           maxLength={1000}
           disabled={loading}
-          className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
         />
 
         <div className="mt-1 text-right text-xs text-gray-400">
@@ -132,7 +132,7 @@ const ReviewForm = ({ onSubmit, loading = false, initialData = {} }) => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className="w-full rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
       >
         {loading ? "Submitting..." : "Submit Review"}
       </button>
@@ -141,3 +141,4 @@ const ReviewForm = ({ onSubmit, loading = false, initialData = {} }) => {
 };
 
 export default ReviewForm;
+

@@ -1,7 +1,7 @@
-
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 import ProductGrid from "../../components/product/ProductGrid";
 import Button from "../../components/common/Button";
@@ -11,6 +11,15 @@ import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
 
 import productService from "../../services/product.service";
+
+const DEFAULT_CATEGORIES = [
+  { name: "Fashion", icon: "👗", slug: "fashion" },
+  { name: "Electronics", icon: "🎧", slug: "electronics" },
+  { name: "Home & Living", icon: "🏡", slug: "home-living" },
+  { name: "Beauty", icon: "🌿", slug: "beauty" },
+  { name: "Accessories", icon: "⌚", slug: "accessories" },
+  { name: "Lifestyle", icon: "✨", slug: "lifestyle" },
+];
 
 const Home = ({
   user = null,
@@ -70,7 +79,7 @@ const Home = ({
         return;
       }
 
-      console.log("Product added to cart successfully");
+      toast.success("Added to cart");
     } catch (error) {
       console.error("Add to Cart failed:", error);
     }
@@ -155,9 +164,7 @@ const Home = ({
         });
 
       if (failedSections.length > 0) {
-        setSectionsError(
-          `Unable to load: ${failedSections.join(", ")}.`,
-        );
+        setSectionsError(`Unable to load: ${failedSections.join(", ")}.`);
       }
 
       setSectionsLoading(false);
@@ -185,16 +192,12 @@ const Home = ({
   }, [dispatch]);
 
   // =========================
-  // Featured Products
+  // Featured & Latest Products
   // =========================
 
   const featuredProducts = products.filter(
     (product) => product?.featured === true,
   );
-
-  // =========================
-  // Latest Products
-  // =========================
 
   const latestProducts = [...products].sort((a, b) => {
     return (
@@ -203,19 +206,11 @@ const Home = ({
     );
   });
 
-  // =========================
-  // Products To Display
-  // =========================
-
   const productsToShow =
-    featuredProducts.length > 0
-      ? featuredProducts
-      : latestProducts;
+    featuredProducts.length > 0 ? featuredProducts : latestProducts;
 
   const sectionTitle =
-    featuredProducts.length > 0
-      ? "Featured Products"
-      : "Latest Products";
+    featuredProducts.length > 0 ? "Featured products" : "Curated collection";
 
   // =========================
   // Navigation Handlers
@@ -226,7 +221,6 @@ const Home = ({
       onShopNow();
       return;
     }
-
     navigate("/products");
   };
 
@@ -234,46 +228,47 @@ const Home = ({
     navigate("/categories");
   };
 
-  const handleProducts = () => {
-    navigate("/products");
+  const handleCopyCoupon = () => {
+    navigator.clipboard?.writeText("WELCOME10");
+    toast.success("Coupon code WELCOME10 copied!");
   };
-
-  // =========================
-  // Active Hero Banner
-  // =========================
 
   const activeBanner = banners?.[0] || null;
 
-  // =========================
-  // Product Sections
-  // =========================
+  const displayCategories =
+    categories.length > 0 ? categories : DEFAULT_CATEGORIES;
 
   const productSections = [
     {
+      eyebrow: "Handpicked for you",
       title: sectionTitle,
       products: productsToShow,
       loading: productsLoading,
       error: productsError,
     },
     {
+      eyebrow: "Limited-time offers",
       title: "Flash Sale",
       products: homeSections.flashSale,
       loading: sectionsLoading,
       error: null,
     },
     {
+      eyebrow: "Customer favourites",
       title: "Trending Products",
       products: homeSections.trending,
       loading: sectionsLoading,
       error: null,
     },
     {
+      eyebrow: "Top rated pieces",
       title: "Best Sellers",
       products: homeSections.bestSellers,
       loading: sectionsLoading,
       error: null,
     },
     {
+      eyebrow: "Fresh in store",
       title: "New Arrivals",
       products: homeSections.newArrivals,
       loading: sectionsLoading,
@@ -282,242 +277,198 @@ const Home = ({
   ];
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="page">
       {/* =========================
-          Hero Section
+          Hero Section (Exact Reference .hero + .heroart)
       ========================= */}
-
-      <section className="relative overflow-hidden border-b border-border">
-        {activeBanner ? (
-          <div className="relative min-h-[420px] sm:min-h-[500px]">
-            {activeBanner.image && (
-              <img
-                src={activeBanner.image}
-                alt={activeBanner.title || "ShopSphere"}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            )}
-
-            <div className="absolute inset-0 bg-black/50" />
-
-            <div className="relative mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-16 sm:min-h-[500px] sm:px-6 lg:px-8">
-              <div className="max-w-2xl text-white">
-                {activeBanner.subtitle && (
-                  <p className="mb-3 text-sm font-semibold uppercase tracking-wider">
-                    {activeBanner.subtitle}
-                  </p>
-                )}
-
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                  {activeBanner.title ||
-                    "Everything You Need, All in One Place"}
-                </h1>
-
-                {activeBanner.description && (
-                  <p className="mt-5 max-w-xl text-base text-white/80 sm:text-lg">
-                    {activeBanner.description}
-                  </p>
-                )}
-
-                <div className="mt-8">
-                  <Button onClick={handleShopNow}>
-                    {activeBanner.buttonText || "Shop Now"}
-                  </Button>
-                </div>
-              </div>
-            </div>
+      <section className="hero">
+        <div>
+          <div className="eyebrow">
+            {activeBanner?.subtitle || "The curated collection · 2026"}
           </div>
-        ) : (
-          <div className="mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-16 sm:min-h-[500px] sm:px-6 lg:px-8">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-                Welcome to ShopSphere
-              </p>
 
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                Shop smarter.
+          <h1>
+            {activeBanner?.title || (
+              <>
+                Find your next
                 <br />
-                Live better.
-              </h1>
+                favourite thing.
+              </>
+            )}
+          </h1>
 
-              <p className="mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
-                Discover quality products from trusted sellers, all in one
-                marketplace.
-              </p>
+          <p>
+            {activeBanner?.description ||
+              "Discover thoughtful essentials, elevated everyday style and pieces made to make life feel a little more special."}
+          </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button onClick={handleShopNow}>Shop Now</Button>
-
-                <Button variant="outline" onClick={handleCategories}>
-                  Explore Categories
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* =========================
-          Categories Section
-      ========================= */}
-
-      {categories.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary">Explore</p>
-
-              <h2 className="mt-1 text-2xl font-bold">
-                Shop by Category
-              </h2>
-            </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleShopNow}
+              className="primarybtn goldbtn"
+            >
+              {activeBanner?.buttonText || "Explore collection →"}
+            </button>
 
             <button
               type="button"
-              onClick={handleCategories}
-              className="text-sm font-semibold text-primary hover:underline"
+              onClick={() => navigate("/products?deals=true")}
+              className="outlinebtn"
+              style={{
+                background: "#ffffff16",
+                color: "#ffffff",
+                borderColor: "#ffffff55",
+              }}
             >
-              View All
+              View offers
             </button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {categories.slice(0, 6).map((category, index) => {
-              const id = category?._id || category?.id || category?.name || index;
-
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onCategoryClick?.(category)}
-                  className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition hover:-translate-y-1 hover:border-primary/40"
-                >
-                  <div className="aspect-square overflow-hidden bg-muted">
-                    {category?.image ? (
-                      <img
-                        src={category.image}
-                        alt={category.name || "Category"}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-primary">
-                        {category?.name?.charAt(0)?.toUpperCase() || "C"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-3">
-                    <p className="truncate text-sm font-semibold">
-                      {category?.name || "Category"}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
+        {/* Right Hero Artwork (.heroart from reference) */}
+        <div className="heroart">
+          {activeBanner?.image ? (
+            <img
+              src={
+                typeof activeBanner.image === "string"
+                  ? activeBanner.image
+                  : activeBanner.image?.url
+              }
+              alt={activeBanner?.title || "Curated collection"}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            "🛍️"
+          )}
+        </div>
+      </section>
 
       {/* =========================
-          Home Product Sections
+          Categories Section (.sectionhead + .categorygrid + .category)
       ========================= */}
+      <div className="sectionhead">
+        <div>
+          <div className="eyebrow">Browse by style</div>
+          <h2>Shop categories</h2>
+        </div>
 
-      {productSections.map((section) => (
-        <section
-          key={section.title}
-          className="border-b border-border bg-muted/30"
+        <Link
+          to="/categories"
+          className="text-sm font-extrabold text-[var(--primary)] hover:underline"
         >
-          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-primary">
-                  ShopSphere Picks
-                </p>
+          View all →
+        </Link>
+      </div>
 
-                <h2 className="mt-1 text-2xl font-bold">
-                  {section.title}
-                </h2>
+      <div className="categorygrid">
+        {displayCategories.slice(0, 6).map((cat, idx) => {
+          const name = cat.name || cat;
+          const icon =
+            cat.icon || ["👗", "🎧", "🏡", "🌿", "⌚", "✨"][idx % 6];
+
+          return (
+            <div
+              key={name}
+              onClick={() => {
+                if (onCategoryClick) onCategoryClick(cat);
+                else
+                  navigate(
+                    `/products?category=${encodeURIComponent(cat.slug || name)}`,
+                  );
+              }}
+              className="category"
+            >
+              <div style={{ fontSize: "30px" }}>
+                {cat.image ? (
+                  <img
+                    src={
+                      typeof cat.image === "string"
+                        ? cat.image
+                        : cat.image?.url
+                    }
+                    alt={name}
+                    className="mx-auto h-9 w-9 rounded-full object-cover"
+                  />
+                ) : (
+                  icon
+                )}
+              </div>
+              <b>{name}</b>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* =========================
+          Product Sections (Featured, Flash Sale, Trending, Best Sellers, New Arrivals)
+      ========================= */}
+      {productSections.map((sec) => {
+        if (!sec.loading && sec.products.length === 0) return null;
+
+        return (
+          <section key={sec.title}>
+            <div className="sectionhead">
+              <div>
+                <div className="eyebrow">{sec.eyebrow}</div>
+                <h2>{sec.title}</h2>
               </div>
 
-              <button
-                type="button"
-                onClick={handleProducts}
-                className="text-sm font-semibold text-primary hover:underline"
+              <Link
+                to="/products"
+                className="text-sm font-extrabold text-[var(--primary)] hover:underline"
               >
-                View All
-              </button>
+                Shop all →
+              </Link>
             </div>
 
-            {section.loading ? (
-              <div className="flex min-h-[200px] items-center justify-center">
+            {sec.loading ? (
+              <div className="flex min-h-[180px] items-center justify-center">
                 <Loader />
               </div>
-            ) : section.error ? (
-              <div className="rounded-2xl border border-border bg-card p-8 text-center">
-                <p className="text-sm text-destructive">
-                  {typeof section.error === "string"
-                    ? section.error
-                    : "Unable to load products. Please try again."}
-                </p>
+            ) : sec.error ? (
+              <div className="panel text-center text-xs text-[var(--red)]">
+                {typeof sec.error === "string"
+                  ? sec.error
+                  : "Unable to load products."}
               </div>
-            ) : section.products.length > 0 ? (
+            ) : (
               <ProductGrid
-                products={section.products.slice(0, 8)}
+                products={sec.products.slice(0, 4)}
                 onAddToCart={handleAddToCart}
                 onWishlist={onToggleWishlist}
               />
-            ) : (
-              <div className="rounded-2xl border border-border bg-card p-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No products available in this section right now.
-                </p>
-              </div>
             )}
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
 
       {/* =========================
-          Home Sections API Error
+          Promo Offer Panel
       ========================= */}
-
-      {sectionsError && (
-        <div
-          role="status"
-          className="mx-auto max-w-7xl px-4 py-4 text-sm text-muted-foreground sm:px-6 lg:px-8"
-        >
-          {sectionsError}
-        </div>
-      )}
-
-      {/* =========================
-          CTA Section
-      ========================= */}
-
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-3xl bg-primary px-6 py-12 text-center text-primary-foreground shadow-xl sm:px-10 lg:px-16">
-          <p className="text-sm font-semibold uppercase tracking-wider opacity-80">
-            {user?.fullName
-              ? `Welcome back, ${user.fullName}`
-              : "ShopSphere Marketplace"}
-          </p>
-
-          <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-            Find something you'll love today.
+      <div
+        className="panel mt-7 flex flex-wrap items-center justify-between gap-4"
+        style={{ background: "var(--soft)" }}
+      >
+        <div>
+          <div className="eyebrow">A little something extra</div>
+          <h2 className="my-1 text-xl font-extrabold text-[var(--text)]">
+            Enjoy 10% off your first order
           </h2>
-
-          <p className="mx-auto mt-4 max-w-xl text-sm opacity-80 sm:text-base">
-            Explore thousands of products from trusted vendors and enjoy a
-            simple shopping experience.
+          <p className="muted m-0 text-sm">
+            Use code <b className="text-[var(--primary)]">WELCOME10</b> at
+            checkout.
           </p>
-
-          <div className="mt-7">
-            <Button variant="secondary" onClick={handleShopNow}>
-              Start Shopping
-            </Button>
-          </div>
         </div>
-      </section>
+
+        <button
+          type="button"
+          onClick={handleCopyCoupon}
+          className="primarybtn shrink-0"
+        >
+          Copy offer
+        </button>
+      </div>
     </main>
   );
 };

@@ -4,17 +4,16 @@ import { useNavigate } from "react-router-dom";
 
 import WishlistGrid from "../../components/wishlist/WishlistGrid";
 import WishlistEmpty from "../../components/wishlist/WishlistEmpty";
-
-import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
-import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
+import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 import {
   fetchWishlist,
   removeWishlistProduct,
   clearWishlistProducts,
 } from "../../store/slices/wishlistThunk.js";
+import { addCartProduct } from "../../store/slices/cartThunk.js";
 
 const Wishlist = () => {
   const dispatch = useDispatch();
@@ -41,11 +40,8 @@ const Wishlist = () => {
 
     return wishlist.filter((item) => {
       const product = item?.product || item;
-
       const name = product?.name || product?.title || "";
-
       const brand = product?.brand?.name || product?.brand || "";
-
       const category = product?.category?.name || product?.category || "";
 
       return (
@@ -56,165 +52,93 @@ const Wishlist = () => {
     });
   }, [wishlist, search]);
 
-  // =========================
-  // Remove Wishlist Product
-  // =========================
-
   const handleRemove = (item) => {
     const product = item?.product || item;
-
     const productId = product?._id || product?.id || item?.productId;
-
-    if (!productId) {
-      return;
-    }
-
+    if (!productId) return;
     dispatch(removeWishlistProduct(productId));
   };
 
-  // =========================
-  // Clear Entire Wishlist
-  // =========================
-
   const handleClearWishlist = () => {
-    if (!wishlist.length || actionLoading) {
-      return;
+    if (!wishlist.length || actionLoading) return;
+    if (window.confirm("Are you sure you want to clear your entire wishlist?")) {
+      dispatch(clearWishlistProducts());
     }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to clear your entire wishlist?",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    dispatch(clearWishlistProducts());
   };
-
-  // =========================
-  // Product Details
-  // =========================
 
   const handleProductClick = (product) => {
     const productId = product?._id || product?.id || product?.slug;
-
-    if (!productId) {
-      return;
+    if (productId) {
+      navigate(`/products/${productId}`);
     }
-
-    navigate(`/products/${productId}`);
   };
 
-  // =========================
-  // Add To Cart
-  // =========================
-  // Cart API integration baad me connect karenge.
-
-  const handleAddToCart = (product) => {
-    console.log("Add to cart:", product);
+  const handleAddToCart = async (product) => {
+    const productId = product?._id || product?.id;
+    if (!productId) return;
+    await dispatch(addCartProduct(productId, 1));
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-primary">Account</p>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            My Wishlist
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Save your favorite products and come back to them anytime.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/products")}
-            className="border-gray-300 bg-white px-5 py-2.5 text-gray-900 shadow-sm hover:bg-gray-100 hover:text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:hover:bg-gray-800"
-          >
-            Continue Shopping
-          </Button>
-
+    <CustomerWorkspace
+      title="My Wishlist"
+      eyebrow="Saved for later"
+      action={
+        <div className="flex gap-2">
           {wishlist.length > 0 && (
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={handleClearWishlist}
               disabled={actionLoading}
-              className="border-red-300 bg-red-50 px-5 py-2.5 text-red-600 shadow-sm hover:bg-red-100 hover:text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/50"
+              className="dangerbtn text-xs !py-1.5 !px-3"
             >
-              {actionLoading ? "Clearing..." : "Clear Wishlist"}
-            </Button>
+              Clear wishlist
+            </button>
           )}
+          <button
+            type="button"
+            onClick={() => navigate("/products")}
+            className="outlinebtn !py-1.5 !px-3 !text-xs"
+          >
+            Explore products
+          </button>
         </div>
-      </div>
-
-      {/* Summary */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Saved Products</p>
-
-          <p className="mt-2 text-2xl font-bold">{wishlist.length}</p>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Showing</p>
-
-          <p className="mt-2 text-2xl font-bold text-primary">
-            {filteredWishlist.length}
-          </p>
-        </div>
-      </div>
-
-      {/* Search */}
+      }
+    >
+      {/* Search toolbar */}
       {wishlist.length > 0 && (
-        <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="w-full sm:max-w-md">
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search wishlist..."
-              />
-            </div>
-
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="self-start text-sm font-medium text-primary hover:underline sm:self-auto"
-              >
-                Clear Search
-              </button>
-            )}
+        <div className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-xs dark:bg-card dark:border-line">
+          <div className="flex items-center justify-between gap-4">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search in your saved items..."
+              className="w-full sm:max-w-xs rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
+            />
+            <span className="pill shrink-0">
+              {filteredWishlist.length} saved
+            </span>
           </div>
         </div>
       )}
 
-      {/* Wishlist */}
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      {/* Grid */}
+      <section className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card dark:border-line">
         {loading ? (
-          <div className="flex min-h-[350px] items-center justify-center">
+          <div className="flex min-h-[300px] items-center justify-center">
             <Loader />
           </div>
         ) : wishlist.length === 0 ? (
           <WishlistEmpty onContinueShopping={() => navigate("/products")} />
         ) : filteredWishlist.length === 0 ? (
-          <div className="py-8">
+          <div className="p-8 text-center">
             <EmptyState
-              title="No products found"
-              description="No wishlist products match your search."
+              title="No items found"
+              message="No saved items match your search term."
+              action={() => setSearch("")}
+              actionText="Reset search"
             />
-
-            <div className="mt-5 flex justify-center">
-              <Button variant="outline" onClick={() => setSearch("")}>
-                Clear Search
-              </Button>
-            </div>
           </div>
         ) : (
           <WishlistGrid
@@ -226,26 +150,7 @@ const Wishlist = () => {
           />
         )}
       </section>
-
-      {/* Bottom Navigation */}
-      <div className="mt-8 flex flex-wrap justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          ← Back to Home
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate("/orders")}
-          className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          My Orders →
-        </button>
-      </div>
-    </main>
+    </CustomerWorkspace>
   );
 };
 

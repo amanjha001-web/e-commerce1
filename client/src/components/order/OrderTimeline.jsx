@@ -77,7 +77,7 @@ const OrderTimeline = ({ status = "pending", events = [] }) => {
               {!isLast && (
                 <div
                   className={`absolute left-[9px] top-6 h-full w-0.5 ${
-                    completed ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
+                    completed ? "bg-secondary" : "bg-gray-200 dark:bg-gray-700"
                   }`}
                 />
               )}
@@ -85,7 +85,7 @@ const OrderTimeline = ({ status = "pending", events = [] }) => {
               <div
                 className={`relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
                   completed
-                    ? "border-blue-600 bg-blue-600 text-white"
+                    ? "border-secondary bg-secondary text-white"
                     : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-900"
                 }`}
               >
@@ -130,3 +130,4 @@ const OrderTimeline = ({ status = "pending", events = [] }) => {
 };
 
 export default OrderTimeline;
+

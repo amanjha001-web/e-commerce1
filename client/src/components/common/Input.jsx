@@ -33,17 +33,16 @@ const Input = forwardRef(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+            className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]"
           >
             {label}
-
-            {required && <span className="ml-1 text-red-500">*</span>}
+            {required && <span className="ml-1 text-[var(--red)]">*</span>}
           </label>
         )}
 
         <div className="relative">
           {leftIcon && (
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]">
               {leftIcon}
             </span>
           )}
@@ -65,18 +64,18 @@ const Input = forwardRef(
             aria-describedby={
               error || helperText ? `${inputId}-message` : undefined
             }
-            className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 disabled:cursor-not-allowed disabled:bg-gray-100 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-800 ${
+            className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition placeholder:text-[var(--muted)]/70 disabled:cursor-not-allowed disabled:bg-gray-100 dark:bg-card dark:text-foreground ${
               leftIcon ? "pl-10" : ""
             } ${rightIcon ? "pr-10" : ""} ${
               error
-                ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-                : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700"
+                ? "border-[var(--red)] focus:border-[var(--red)] focus:ring-2 focus:ring-[#c0394b]/20"
+                : "border-[var(--line)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15"
             } ${inputClassName}`}
             {...props}
           />
 
           {rightIcon && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]">
               {rightIcon}
             </span>
           )}
@@ -86,7 +85,7 @@ const Input = forwardRef(
           <p
             id={`${inputId}-message`}
             className={`mt-1 text-xs ${
-              error ? "text-red-500" : "text-gray-500 dark:text-gray-400"
+              error ? "text-[var(--red)]" : "text-[var(--muted)]"
             }`}
           >
             {error || helperText}

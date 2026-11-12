@@ -42,7 +42,7 @@ const AddressCard = ({
     <div
       className={`relative rounded-xl border p-4 transition ${
         selected
-          ? "border-blue-600 bg-blue-50/50 shadow-sm dark:border-blue-500 dark:bg-blue-900/10"
+          ? "border-primary bg-primary/5 shadow-sm dark:border-primary dark:bg-primary/20"
           : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
       }`}
     >
@@ -57,7 +57,7 @@ const AddressCard = ({
           <span
             className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
               selected
-                ? "border-blue-600 bg-blue-600 dark:border-blue-500 dark:bg-blue-500"
+                ? "border-primary bg-primary dark:border-primary dark:bg-primary"
                 : "border-gray-300 dark:border-gray-600"
             }`}
           >
@@ -103,7 +103,7 @@ const AddressCard = ({
               <button
                 type="button"
                 onClick={() => onEdit(address)}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 dark:text-primary/80 dark:hover:bg-primary/20"
               >
                 Edit
               </button>
@@ -157,7 +157,7 @@ const AddressCard = ({
 
       {/* Selected indicator */}
       {selected && (
-        <div className="mt-3 flex items-center gap-1.5 pl-8 text-xs font-semibold text-blue-600 dark:text-blue-400">
+        <div className="mt-3 flex items-center gap-1.5 pl-8 text-xs font-semibold text-primary dark:text-primary/80">
           <span>✓</span>
           <span>Selected for delivery</span>
         </div>

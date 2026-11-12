@@ -83,7 +83,7 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
           <button
             type="button"
             onClick={onWriteReview}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
           >
             Write a Review
           </button>
@@ -181,7 +181,7 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
                       {reviewer.charAt(0).toUpperCase()}
                     </div>
 

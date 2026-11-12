@@ -21,8 +21,9 @@ const Register = () => {
           email: data?.email,
         },
       });
+
+      return true;
     } catch {
-      // Registration error is displayed through RegisterForm.
       return false;
     }
   };
@@ -30,10 +31,7 @@ const Register = () => {
   const handleSocialLogin = async (provider) => {
     try {
       setSocialLoading(true);
-
-      // Connect the existing social-login implementation here.
       console.info("Social login provider:", provider);
-
       return false;
     } finally {
       setSocialLoading(false);
@@ -41,39 +39,55 @@ const Register = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full rounded-2xl border border-[var(--line)] bg-white p-7 sm:p-9 shadow-xl dark:bg-card dark:border-line">
+      {/* Registration Heading */}
+      <div className="mb-6 text-center">
+        <Link to="/" className="inline-block text-2xl font-black text-[var(--primary)]">
+          Shop<span className="text-[var(--gold)]">Sphere</span>.
+        </Link>
+
+        <h1 className="mt-3 text-2xl font-black tracking-tight text-[var(--text)] dark:text-foreground">
+          Create your account
+        </h1>
+
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Join ShopSphere and discover curated everyday essentials.
+        </p>
+      </div>
+
+      {/* Registration Form */}
       <RegisterForm
         loading={loading || socialLoading}
         error={error}
         onSubmit={handleRegister}
       />
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-
-        <div className="relative flex justify-center">
-          <span className="bg-background px-3 text-sm text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
+      {/* Divider */}
+      <div className="relative my-6 flex items-center">
+        <div className="w-full border-t border-[var(--line)]" />
+        <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap bg-white px-3 text-[11px] font-bold text-[var(--muted)] dark:bg-card">
+          Or continue with
+        </span>
       </div>
 
+      {/* Social Registration */}
       <SocialLogin
         loading={loading || socialLoading}
         onLogin={handleSocialLogin}
       />
 
-      <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link
-          to="/login"
-          className="font-medium text-primary transition-colors hover:text-primary/80"
-        >
-          Sign in
-        </Link>
-      </p>
+      {/* Return to Login */}
+      <div className="mt-6 border-t border-[var(--line)] pt-5 text-center">
+        <p className="text-xs text-[var(--muted)]">
+          Already registered?{" "}
+          <Link
+            to="/login"
+            className="font-bold text-[var(--primary)] hover:underline"
+          >
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };

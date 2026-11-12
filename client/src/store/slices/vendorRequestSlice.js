@@ -1,37 +1,96 @@
-
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import vendorRequestService from "../../services/vendorRequest.service";
+import adminService from "../../services/admin.service";
 
-// Handle API envelope
-// { statusCode, data, message, success }
 const getPayloadData = (response) => response?.data ?? response;
 
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
 
-// Fetch all vendor requests
+// Fetch all vendor requests (combines /admin/vendor-requests and /vendor-requests)
 export const fetchVendorRequests = createAsyncThunk(
   "vendorRequests/fetchAll",
   async (params = {}, { rejectWithValue }) => {
     try {
-      const response =
-        await vendorRequestService.getAdminRequests(params);
+      const [vrRes, adminVrRes] = await Promise.allSettled([
+        vendorRequestService.getAdminRequests(params),
+        params?.onlyPending
+          ? adminService.getPendingVendorRequests(params)
+          : adminService.getVendorRequests(params),
+      ]);
 
+      const vrData =
+        vrRes.status === "fulfilled" ? getPayloadData(vrRes.value) : null;
+      const adminData =
+        adminVrRes.status === "fulfilled"
+          ? getPayloadData(adminVrRes.value)
+          : null;
+
+      const listA = Array.isArray(vrData?.requests)
+        ? vrData.requests
+        : Array.isArray(vrData)
+          ? vrData
+          : [];
+      const listB = Array.isArray(adminData?.requests)
+        ? adminData.requests.map((item) => ({ ...item, _source: "adminVendor" }))
+        : Array.isArray(adminData)
+          ? adminData.map((item) => ({ ...item, _source: "adminVendor" }))
+          : [];
+
+      const seen = new Set();
+      const merged = [];
+      for (const item of [...listA, ...listB]) {
+        const key = String(item?._id || item?.id || "");
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          merged.push(item);
+        }
+      }
+
+      if (
+        vrRes.status === "rejected" &&
+        adminVrRes.status === "rejected"
+      ) {
+        return rejectWithValue(
+          getErrorMessage(
+            vrRes.reason || adminVrRes.reason,
+            "Failed to fetch vendor requests.",
+          ),
+        );
+      }
+
+      return {
+        requests: merged,
+        pagination: vrData?.pagination || adminData?.pagination || {},
+      };
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error, "Failed to fetch vendor requests."),
+      );
+    }
+  },
+);
+
+// Fetch pending vendor requests (/admin/vendor-requests/pending)
+export const fetchPendingVendorRequests = createAsyncThunk(
+  "vendorRequests/fetchPending",
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const response = await adminService.getPendingVendorRequests(params);
       const result = getPayloadData(response);
-
       return {
         requests: result?.requests ?? [],
         pagination: result?.pagination ?? {},
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to fetch vendor requests.")
+        getErrorMessage(error, "Failed to fetch pending vendor requests."),
       );
     }
-  }
+  },
 );
 
-// Fetch vendor request by ID
+// Fetch vendor request by ID (/vendor-requests/:id or /admin/vendor-requests/:id)
 export const fetchVendorRequestById = createAsyncThunk(
   "vendorRequests/fetchById",
   async (requestId, { rejectWithValue }) => {
@@ -40,25 +99,39 @@ export const fetchVendorRequestById = createAsyncThunk(
         return rejectWithValue("Vendor request ID is required.");
       }
 
-      const response =
-        await vendorRequestService.getRequestById(requestId);
-
-      return getPayloadData(response);
+      try {
+        const response = await adminService.getVendorRequestById(requestId);
+        return getPayloadData(response);
+      } catch {
+        const response = await vendorRequestService.getRequestById(requestId);
+        return getPayloadData(response);
+      }
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to fetch request details.")
+        getErrorMessage(error, "Failed to fetch request details."),
       );
     }
-  }
+  },
 );
 
-// Approve vendor request
+// Approve vendor request (/admin/vendors/:id/approve or /vendor-requests/:id/approve)
 export const approveVendorRequest = createAsyncThunk(
   "vendorRequests/approve",
-  async (requestId, { rejectWithValue }) => {
+  async (requestId, { getState, rejectWithValue }) => {
     try {
-      const response =
-        await vendorRequestService.approveRequest(requestId);
+      const existing = getState()?.vendorRequests?.requests?.find(
+        (r) => r._id === requestId,
+      );
+      let response;
+      if (existing?._source === "adminVendor") {
+        response = await adminService.approveVendor(requestId);
+      } else {
+        try {
+          response = await vendorRequestService.approveRequest(requestId);
+        } catch {
+          response = await adminService.approveVendor(requestId);
+        }
+      }
 
       return {
         requestId,
@@ -66,22 +139,37 @@ export const approveVendorRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to approve request.")
+        getErrorMessage(error, "Failed to approve request."),
       );
     }
-  }
+  },
 );
 
-// Reject vendor request
-// Dispatch: { requestId, reason }
+// Reject vendor request (/admin/vendors/:id/reject or /vendor-requests/:id/reject)
 export const rejectVendorRequest = createAsyncThunk(
   "vendorRequests/reject",
-  async ({ requestId, reason }, { rejectWithValue }) => {
+  async ({ requestId, reason }, { getState, rejectWithValue }) => {
     try {
-      const response = await vendorRequestService.rejectRequest(
-        requestId,
-        reason
+      const safeReason =
+        reason && String(reason).trim().length >= 5
+          ? String(reason).trim()
+          : "Application rejected by administrator";
+      const existing = getState()?.vendorRequests?.requests?.find(
+        (r) => r._id === requestId,
       );
+      let response;
+      if (existing?._source === "adminVendor") {
+        response = await adminService.rejectVendor(requestId, safeReason);
+      } else {
+        try {
+          response = await vendorRequestService.rejectRequest(
+            requestId,
+            safeReason,
+          );
+        } catch {
+          response = await adminService.rejectVendor(requestId, safeReason);
+        }
+      }
 
       return {
         requestId,
@@ -89,21 +177,20 @@ export const rejectVendorRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to reject request.")
+        getErrorMessage(error, "Failed to reject request."),
       );
     }
-  }
+  },
 );
 
-// Review vendor request
-// Dispatch: { requestId, reviewData }
+// Review vendor request (/vendor-requests/:id/review)
 export const reviewVendorRequest = createAsyncThunk(
   "vendorRequests/review",
   async ({ requestId, reviewData }, { rejectWithValue }) => {
     try {
       const response = await vendorRequestService.reviewRequest(
         requestId,
-        reviewData
+        reviewData,
       );
 
       return {
@@ -112,19 +199,18 @@ export const reviewVendorRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to review request.")
+        getErrorMessage(error, "Failed to review request."),
       );
     }
-  }
+  },
 );
 
-// Restore vendor request
+// Restore vendor request (/vendor-requests/:id/restore)
 export const restoreVendorRequest = createAsyncThunk(
   "vendorRequests/restore",
   async (requestId, { rejectWithValue }) => {
     try {
-      const response =
-        await vendorRequestService.restoreRequest(requestId);
+      const response = await vendorRequestService.restoreRequest(requestId);
 
       return {
         requestId,
@@ -132,19 +218,30 @@ export const restoreVendorRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to restore request.")
+        getErrorMessage(error, "Failed to restore request."),
       );
     }
-  }
+  },
 );
 
-// Delete vendor request
+// Delete vendor request (/vendor-requests/:id or /admin/vendors/:id)
 export const deleteVendorRequest = createAsyncThunk(
   "vendorRequests/delete",
-  async (requestId, { rejectWithValue }) => {
+  async (requestId, { getState, rejectWithValue }) => {
     try {
-      const response =
-        await vendorRequestService.deleteRequest(requestId);
+      const existing = getState()?.vendorRequests?.requests?.find(
+        (r) => r._id === requestId,
+      );
+      let response;
+      if (existing?._source === "adminVendor") {
+        response = await adminService.deleteVendor(requestId);
+      } else {
+        try {
+          response = await vendorRequestService.deleteRequest(requestId);
+        } catch {
+          response = await adminService.deleteVendor(requestId);
+        }
+      }
 
       return {
         requestId,
@@ -152,10 +249,10 @@ export const deleteVendorRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        getErrorMessage(error, "Failed to delete request.")
+        getErrorMessage(error, "Failed to delete request."),
       );
     }
-  }
+  },
 );
 
 const initialState = {
@@ -196,59 +293,45 @@ const vendorRequestSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-      // ========================================
-      // FETCH ALL REQUESTS
-      // ========================================
       .addCase(fetchVendorRequests.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-
       .addCase(fetchVendorRequests.fulfilled, (state, action) => {
         state.loading = false;
         state.requests = action.payload.requests;
-
         state.pagination = {
           ...state.pagination,
           ...action.payload.pagination,
         };
       })
-
       .addCase(fetchVendorRequests.rejected, (state, action) => {
         state.loading = false;
-        state.error =
-          action.payload || "Failed to fetch requests.";
+        state.error = action.payload || "Failed to fetch requests.";
       })
-
-      // ========================================
-      // FETCH REQUEST DETAILS
-      // ========================================
+      .addCase(fetchPendingVendorRequests.fulfilled, (state, action) => {
+        state.loading = false;
+        state.requests = action.payload.requests;
+        state.pagination = {
+          ...state.pagination,
+          ...action.payload.pagination,
+        };
+      })
       .addCase(fetchVendorRequestById.pending, (state) => {
         state.detailsLoading = true;
         state.error = null;
       })
-
       .addCase(fetchVendorRequestById.fulfilled, (state, action) => {
         state.detailsLoading = false;
-
-        // Supports APIs returning { request: {...} }
-        state.selectedRequest =
-          action.payload?.request ?? action.payload;
+        state.selectedRequest = action.payload?.request ?? action.payload;
       })
-
       .addCase(fetchVendorRequestById.rejected, (state, action) => {
         state.detailsLoading = false;
-        state.error =
-          action.payload || "Failed to fetch details.";
+        state.error = action.payload || "Failed to fetch details.";
       })
-
-      // ========================================
-      // APPROVE REQUEST
-      // ========================================
       .addCase(approveVendorRequest.fulfilled, (state, action) => {
         state.saving = false;
-        state.successMessage =
-          "Vendor request approved successfully.";
+        state.successMessage = "Vendor request approved successfully.";
 
         const { requestId, result } = action.payload;
         const updated = result?.request ?? result;
@@ -257,32 +340,25 @@ const vendorRequestSlice = createSlice({
           request._id === requestId
             ? {
                 ...request,
-                ...(updated && typeof updated === "object"
-                  ? updated
-                  : {}),
+                ...(updated && typeof updated === "object" ? updated : {}),
                 status: "approved",
+                isApproved: true,
               }
-            : request
+            : request,
         );
 
         if (state.selectedRequest?._id === requestId) {
           state.selectedRequest = {
             ...state.selectedRequest,
-            ...(updated && typeof updated === "object"
-              ? updated
-              : {}),
+            ...(updated && typeof updated === "object" ? updated : {}),
             status: "approved",
+            isApproved: true,
           };
         }
       })
-
-      // ========================================
-      // REJECT REQUEST
-      // ========================================
       .addCase(rejectVendorRequest.fulfilled, (state, action) => {
         state.saving = false;
-        state.successMessage =
-          "Vendor request rejected successfully.";
+        state.successMessage = "Vendor request rejected successfully.";
 
         const { requestId, result } = action.payload;
         const updated = result?.request ?? result;
@@ -291,41 +367,32 @@ const vendorRequestSlice = createSlice({
           request._id === requestId
             ? {
                 ...request,
-                ...(updated && typeof updated === "object"
-                  ? updated
-                  : {}),
+                ...(updated && typeof updated === "object" ? updated : {}),
                 status: "rejected",
+                isApproved: false,
               }
-            : request
+            : request,
         );
 
         if (state.selectedRequest?._id === requestId) {
           state.selectedRequest = {
             ...state.selectedRequest,
-            ...(updated && typeof updated === "object"
-              ? updated
-              : {}),
+            ...(updated && typeof updated === "object" ? updated : {}),
             status: "rejected",
+            isApproved: false,
           };
         }
       })
-
-      // ========================================
-      // REVIEW REQUEST
-      // ========================================
       .addCase(reviewVendorRequest.fulfilled, (state, action) => {
         state.saving = false;
-        state.successMessage =
-          "Vendor request reviewed successfully.";
+        state.successMessage = "Vendor request reviewed successfully.";
 
         const { requestId, result } = action.payload;
         const updated = result?.request ?? result;
 
         if (updated && typeof updated === "object") {
           state.requests = state.requests.map((request) =>
-            request._id === requestId
-              ? { ...request, ...updated }
-              : request
+            request._id === requestId ? { ...request, ...updated } : request,
           );
 
           if (state.selectedRequest?._id === requestId) {
@@ -336,14 +403,9 @@ const vendorRequestSlice = createSlice({
           }
         }
       })
-
-      // ========================================
-      // RESTORE REQUEST
-      // ========================================
       .addCase(restoreVendorRequest.fulfilled, (state, action) => {
         state.saving = false;
-        state.successMessage =
-          "Vendor request restored successfully.";
+        state.successMessage = "Vendor request restored successfully.";
 
         const { requestId, result } = action.payload;
         const updated = result?.request ?? result;
@@ -356,7 +418,7 @@ const vendorRequestSlice = createSlice({
                   ...updated,
                   isDeleted: false,
                 }
-              : request
+              : request,
           );
 
           if (state.selectedRequest?._id === requestId) {
@@ -368,35 +430,22 @@ const vendorRequestSlice = createSlice({
           }
         }
       })
-
-      // ========================================
-      // DELETE REQUEST
-      // ========================================
       .addCase(deleteVendorRequest.fulfilled, (state, action) => {
         state.saving = false;
-        state.successMessage =
-          "Vendor request deleted successfully.";
+        state.successMessage = "Vendor request deleted successfully.";
 
         const { requestId } = action.payload;
 
         state.requests = state.requests.filter(
-          (request) => request._id !== requestId
+          (request) => request._id !== requestId,
         );
 
         if (state.selectedRequest?._id === requestId) {
           state.selectedRequest = null;
         }
 
-        state.pagination.total = Math.max(
-          0,
-          state.pagination.total - 1
-        );
+        state.pagination.total = Math.max(0, state.pagination.total - 1);
       })
-
-      // ========================================
-      // ALL ACTIONS: PENDING
-      // IMPORTANT: addMatcher comes AFTER all addCase calls.
-      // ========================================
       .addMatcher(
         (action) =>
           [
@@ -410,12 +459,8 @@ const vendorRequestSlice = createSlice({
           state.saving = true;
           state.error = null;
           state.successMessage = null;
-        }
+        },
       )
-
-      // ========================================
-      // ALL ACTIONS: REJECTED
-      // ========================================
       .addMatcher(
         (action) =>
           [
@@ -427,16 +472,13 @@ const vendorRequestSlice = createSlice({
           ].includes(action.type),
         (state, action) => {
           state.saving = false;
-          state.error =
-            action.payload || "Request action failed.";
-        }
+          state.error = action.payload || "Request action failed.";
+        },
       );
   },
 });
 
-export const {
-  clearVendorRequestMessages,
-  clearSelectedVendorRequest,
-} = vendorRequestSlice.actions;
+export const { clearVendorRequestMessages, clearSelectedVendorRequest } =
+  vendorRequestSlice.actions;
 
 export default vendorRequestSlice.reducer;

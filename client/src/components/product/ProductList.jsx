@@ -153,7 +153,7 @@ const ProductList = ({
                   type="button"
                   onClick={() => onAddToCart?.(product)}
                   disabled={loading || isOutOfStock}
-                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isOutOfStock ? "Out of Stock" : "Add to Cart"}
                 </button>

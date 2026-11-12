@@ -52,7 +52,7 @@ const ReviewList = ({
           <button
             type="button"
             onClick={onWriteReview}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
           >
             Write a Review
           </button>
@@ -99,3 +99,4 @@ const ReviewList = ({
 };
 
 export default ReviewList;
+

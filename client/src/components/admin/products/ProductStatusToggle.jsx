@@ -38,7 +38,7 @@ const ProductStatusToggle = ({
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div>
@@ -123,7 +123,7 @@ const ProductStatusToggle = ({
                   ? "Why are you deactivating this product?"
                   : "Add a note about activating this product..."
               }
-              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full resize-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
             <div className="mt-1 text-right text-[11px] text-muted-foreground">

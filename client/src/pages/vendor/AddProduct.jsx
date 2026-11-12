@@ -71,7 +71,7 @@ const AddProduct = ({
   }
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-[var(--bg)]">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <Breadcrumb
@@ -92,17 +92,18 @@ const AddProduct = ({
 
         {/* Page Header */}
         <div className="mb-8 mt-6">
-          <h1 className="text-2xl font-bold text-foreground">Add Product</h1>
+          <div className="eyebrow">Store Catalog</div>
+          <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">Add Product</h1>
 
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs font-medium text-[var(--muted)]">
             Add a new product to your store.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">
+          <section className="panel">
+            <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
               Basic Information
             </h2>
 
@@ -156,8 +157,8 @@ const AddProduct = ({
           </section>
 
           {/* Pricing & Inventory */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">
+          <section className="panel">
+            <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
               Pricing & Inventory
             </h2>
 
@@ -209,8 +210,8 @@ const AddProduct = ({
           </section>
 
           {/* Product Images */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">
+          <section className="panel">
+            <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
               Product Images
             </h2>
 
@@ -226,8 +227,8 @@ const AddProduct = ({
           </section>
 
           {/* Product Variants */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">
+          <section className="panel">
+            <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
               Product Variants
             </h2>
 
@@ -237,8 +238,8 @@ const AddProduct = ({
           </section>
 
           {/* Product Status */}
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">
+          <section className="panel">
+            <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
               Product Status
             </h2>
 
@@ -273,11 +274,12 @@ const AddProduct = ({
               variant="outline"
               onClick={() => onNavigate?.("/vendor/products")}
               disabled={saving}
+              className="outlinebtn"
             >
               Cancel
             </Button>
 
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="primarybtn">
               {saving ? "Creating..." : "Create Product"}
             </Button>
           </div>

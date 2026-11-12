@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import ProductFilters from "../../components/product/ProductFilters";
 import ProductGrid from "../../components/product/ProductGrid";
-import ProductSort from "../../components/product/ProductSort";
-
-import SearchBar from "../../components/search/SearchBar";
 
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
-
 import Pagination from "../../components/common/Pagination";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
@@ -27,6 +25,14 @@ import {
   removeWishlistProduct,
 } from "../../store/slices/wishlistThunk.js";
 
+const DEFAULT_CATEGORIES = [
+  "Fashion",
+  "Electronics",
+  "Home & Living",
+  "Beauty",
+  "Accessories",
+];
+
 const Products = ({
   categories = [],
   brands = [],
@@ -35,12 +41,19 @@ const Products = ({
   onNavigate,
 }) => {
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isDealsView = searchParams.get("deals") === "true";
 
   const handleAddToCart = async (product) => {
     const productId = product?._id || product?.id;
 
     if (!productId) {
       console.error("Product ID is missing");
+      return;
+    }
+
+    if (onAddToCart) {
+      await onAddToCart(product);
       return;
     }
 
@@ -51,7 +64,7 @@ const Products = ({
       return;
     }
 
-    console.log("Product added successfully");
+    toast.success("Added to cart");
   };
 
   const {
@@ -81,6 +94,16 @@ const Products = ({
       })
       .filter(Boolean);
   }, [wishlist]);
+
+  /*
+   * Sync category query param if present
+   */
+  useEffect(() => {
+    const urlCategory = searchParams.get("category");
+    if (urlCategory && urlCategory !== filters.category) {
+      dispatch(setFilter({ name: "category", value: urlCategory }));
+    }
+  }, [searchParams, dispatch, filters.category]);
 
   /*
    * Fetch Products
@@ -118,9 +141,6 @@ const Products = ({
 
   /*
    * Fetch Wishlist
-   *
-   * Page open hote hi current wishlist
-   * Redux me load ho jayegi.
    */
   useEffect(() => {
     dispatch(fetchWishlist());
@@ -138,6 +158,24 @@ const Products = ({
         value,
       }),
     );
+  };
+
+  /*
+   * Category Filter
+   */
+  const handleCategoryChange = (value) => {
+    const normalized = value === "All" ? "" : value;
+    dispatch(
+      setFilter({
+        name: "category",
+        value: normalized,
+      }),
+    );
+    if (!normalized && searchParams.has("category")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("category");
+      setSearchParams(next);
+    }
   };
 
   /*
@@ -186,8 +224,6 @@ const Products = ({
 
   /*
    * Wishlist
-   *
-   * ProductCard se complete product milega.
    */
   const handleWishlist = (product) => {
     const productId = product?._id || product?.id || product?.slug;
@@ -196,29 +232,45 @@ const Products = ({
       return;
     }
 
-    const isWishlisted = wishlistIds.includes(productId);
+    const isWishlisted = wishlistIds.some(
+      (id) => String(id) === String(productId),
+    );
 
     if (isWishlisted) {
       dispatch(removeWishlistProduct(productId));
+      toast.success("Removed from wishlist");
     } else {
       dispatch(addWishlistProduct(productId));
+      toast.success("Added to wishlist");
     }
   };
 
   const totalPages = pagination.totalPages || pagination.pages || 1;
-
   const currentPage = pagination.currentPage || pagination.page || 1;
+  const hasProductsError = error && !loading && products.length === 0;
+
+  const categoryOptions = useMemo(() => {
+    if (categories && categories.length > 0) {
+      return categories.map((cat) => ({
+        label: cat.name || cat.label || cat,
+        value: cat._id || cat.slug || cat.name || cat,
+      }));
+    }
+    return DEFAULT_CATEGORIES.map((name) => ({ label: name, value: name }));
+  }, [categories]);
 
   /*
    * Error
    */
-  if (error && !loading && products.length === 0) {
+  if (hasProductsError) {
     return (
-      <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 text-center">
-          <h2 className="text-xl font-semibold">Failed to load products</h2>
+      <main className="page">
+        <div className="panel py-14 text-center">
+          <h2 className="text-xl font-bold text-[var(--text)]">
+            Failed to load products
+          </h2>
 
-          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <p className="mt-2 text-sm text-[var(--muted)]">{error}</p>
 
           <Button
             className="mt-5"
@@ -239,177 +291,189 @@ const Products = ({
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-8 bg-background">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-primary">Shop</p>
+    <main className="page">
+      {/* Deals Hero (when ?deals=true, matching deals() in reference) */}
+      {isDealsView ? (
+        <section className="hero mb-6">
+          <div>
+            <div className="eyebrow">Limited-time offers</div>
+            <h1>
+              Little luxuries.
+              <br />
+              Better prices.
+            </h1>
+            <p>Discover special prices on customer favourites.</p>
+            <button
+              type="button"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("deals");
+                setSearchParams(next);
+              }}
+              className="primarybtn goldbtn mt-2"
+            >
+              Shop offers
+            </button>
+          </div>
+          <div className="heroart">🏷️</div>
+        </section>
+      ) : (
+        <>
+          {/* Breadcrumbs */}
+          <div className="mb-3.5 text-xs text-[var(--muted)]">
+            <Link to="/" className="hover:text-[var(--primary)]">
+              Home
+            </Link>{" "}
+            / <span>Shop</span>
+          </div>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            All Products
-          </h1>
+          {/* Page Header (matching shop() in reference) */}
+          <div className="pagehead">
+            <div>
+              <div className="eyebrow">The collection</div>
+              <h1>Shop all products</h1>
+              <p className="muted m-0 mt-1 text-sm">
+                Find pieces you'll love, curated for everyday living.
+              </p>
+            </div>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Discover products from trusted sellers across different categories.
-          </p>
-        </div>
+            <span className="pill">
+              {pagination.total || products.length} products
+            </span>
+          </div>
+        </>
+      )}
 
-        <Button variant="outline" onClick={() => onNavigate?.("/categories")}>
-          Browse Categories
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
-        <SearchBar
-          value={search}
-          onChange={handleSearch}
-          onSearch={handleSearch}
+      {/* Reference Toolbar: Search + Category + Sort + More Filters */}
+      <div className="toolbar">
+        <input
+          type="text"
+          className="field"
           placeholder="Search products..."
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
         />
+
+        <select
+          className="field"
+          value={filters.category || "All"}
+          onChange={(e) => handleCategoryChange(e.target.value)}
+        >
+          <option value="All">All</option>
+          {categoryOptions.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="field"
+          value={sort}
+          onChange={(e) => handleSort(e.target.value)}
+        >
+          <option value="latest">Sort: Featured</option>
+          <option value="price_asc">Price: Low to high</option>
+          <option value="price_desc">Price: High to low</option>
+          <option value="rating">Customer Rating</option>
+        </select>
+
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((prev) => !prev)}
+          className="outlinebtn"
+        >
+          {filtersOpen ? "Hide filters" : "More filters"}
+        </button>
+
+        {(filters.search ||
+          filters.category ||
+          filters.brand ||
+          filters.minPrice ||
+          filters.maxPrice ||
+          filters.rating) && (
+          <button
+            type="button"
+            onClick={() => {
+              dispatch(clearFilters());
+              setSearch("");
+              setSort("latest");
+            }}
+            className="btnsm"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
-      {/* Mobile Filter Button */}
-      <div className="mb-5 flex items-center justify-between lg:hidden">
-        <p className="text-sm text-muted-foreground">
-          {pagination.total || products.length} products
-        </p>
+      {/* Collapsible Advanced Filters Panel */}
+      {filtersOpen && (
+        <div className="panel mb-5">
+          <ProductFilters
+            categories={categories}
+            brands={brands}
+            onFilter={handleFilter}
+          />
+        </div>
+      )}
 
-        <Button
-          variant="outline"
-          onClick={() => setFiltersOpen((value) => !value)}
-        >
-          {filtersOpen ? "Hide Filters" : "Show Filters"}
-        </Button>
-      </div>
+      {/* Full-width 4-column Product Grid matching reference */}
+      <section className="min-w-0">
+        {loading ? (
+          <ProductGrid
+            products={[]}
+            loading={true}
+            onAddToCart={handleAddToCart}
+            onWishlist={handleWishlist}
+            wishlistIds={wishlistIds}
+          />
+        ) : products.length === 0 ? (
+          <div className="panel py-12 text-center">
+            <EmptyState
+              title="No products found"
+              description={
+                search
+                  ? "Try a different search term or change your filters."
+                  : "There are no products available for the selected filters."
+              }
+            />
 
-      <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-        {/* Filters */}
-        <aside
-          className={[filtersOpen ? "block" : "hidden", "lg:block"].join(" ")}
-        >
-          <div className="sticky top-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-semibold">Filters</h2>
-
-              <button
-                type="button"
+            <div className="mt-5 flex justify-center">
+              <Button
+                variant="outline"
                 onClick={() => {
                   dispatch(clearFilters());
                   setSearch("");
                   setSort("latest");
                 }}
-                className="text-xs font-medium text-primary hover:underline"
               >
-                Clear
-              </button>
-            </div>
-
-            <ProductFilters
-              categories={categories}
-              brands={brands}
-              onFilter={handleFilter}
-            />
-          </div>
-        </aside>
-
-        {/* Product Content */}
-        <section className="min-w-0">
-          {/* Toolbar */}
-          <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {pagination.total || products.length}{" "}
-                {(pagination.total || products.length) === 1
-                  ? "Product"
-                  : "Products"}
-              </p>
-
-              {search && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Search results for "{search}"
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-muted-foreground sm:block">
-                Sort by
-              </span>
-
-              <ProductSort value={sort} onChange={handleSort} />
+                Clear Filters
+              </Button>
             </div>
           </div>
+        ) : (
+          <ProductGrid
+            products={products}
+            onProductSelect={onProductSelect}
+            onAddToCart={handleAddToCart}
+            onWishlist={handleWishlist}
+            wishlistIds={wishlistIds}
+            loading={wishlistActionLoading}
+          />
+        )}
 
-          {/* Products */}
-          {loading ? (
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <ProductGrid
-                products={[]}
-                loading={true}
-                onAddToCart={handleAddToCart}
-                onWishlist={handleWishlist}
-                wishlistIds={wishlistIds}
-              />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-              <EmptyState
-                title="No products found"
-                description={
-                  search
-                    ? "Try a different search term or change your filters."
-                    : "There are no products available for the selected filters."
-                }
-              />
-
-              <div className="mt-5 flex justify-center">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    dispatch(clearFilters());
-
-                    setSearch("");
-                    setSort("latest");
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <ProductGrid
-              products={products}
-              onProductSelect={onProductSelect}
-              onAddToCart={onAddToCart}
-              onWishlist={handleWishlist}
-              wishlistIds={wishlistIds}
-              loading={wishlistActionLoading}
+        {/* Pagination */}
+        {!loading && products.length > 0 && totalPages > 1 && (
+          <div className="mt-8 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
             />
-          )}
-
-          {/* Pagination */}
-          {!loading && products.length > 0 && totalPages > 1 && (
-            <div className="mt-8 flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                page={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Back */}
-      <button
-        type="button"
-        onClick={() => onNavigate?.("/")}
-        className="mt-8 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Back to Home
-      </button>
+          </div>
+        )}
+      </section>
     </main>
   );
 };

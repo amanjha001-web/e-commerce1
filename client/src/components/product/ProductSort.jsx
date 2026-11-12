@@ -50,7 +50,7 @@ const ProductSort = ({
         id="product-sort"
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
-        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-secondary/30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
       >
         {sortOptions.map((option) => (
           <option key={option.value} value={option.value}>
@@ -63,3 +63,4 @@ const ProductSort = ({
 };
 
 export default ProductSort;
+

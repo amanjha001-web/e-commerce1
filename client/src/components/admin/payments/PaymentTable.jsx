@@ -107,7 +107,7 @@ const PaymentTable = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       case "partially_refunded":
         return "bg-indigo-100 text-indigo-700";
@@ -128,7 +128,7 @@ const PaymentTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px]">
             <thead>
@@ -187,7 +187,7 @@ const PaymentTable = ({
 
   if (!payments.length) {
     return (
-      <div className="rounded-2xl border border-border bg-background p-10 text-center shadow-sm">
+      <div className="rounded-2xl border border-border bg-white p-10 text-center shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-xl">
           💳
         </div>
@@ -204,7 +204,7 @@ const PaymentTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
       {/* Desktop Table */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1000px]">

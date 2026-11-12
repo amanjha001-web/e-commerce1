@@ -7,6 +7,10 @@ import {
   fetchPayments,
   fetchPaymentById,
   refundPayment,
+  reconcilePayment,
+  fetchVendorPayouts,
+  fetchVendorPayoutById,
+  updateVendorPayoutStatus,
 } from "../../store/slices/Admin/adminPaymentsSlice";
 
 const PaymentsContainer = () => {
@@ -15,6 +19,8 @@ const PaymentsContainer = () => {
   const {
     payments = [],
     selectedPayment,
+    vendorPayouts = [],
+    selectedPayout,
     loading,
     saving,
     detailsLoading,
@@ -32,75 +38,70 @@ const PaymentsContainer = () => {
 
   useEffect(() => {
     dispatch(fetchPayments(filters));
+    dispatch(fetchVendorPayouts({ limit: 20 }));
   }, [dispatch, filters]);
 
-  const handleFilterChange = useCallback(
-    (newFilters) => {
-      setFilters((prev) => ({
-        ...prev,
-        ...newFilters,
-        page: newFilters.page || 1,
-      }));
-    },
-    []
-  );
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters((prev) => ({
+      ...prev,
+      ...newFilters,
+      page: newFilters.page || 1,
+    }));
+  }, []);
 
   const handleViewPayment = useCallback(
     (payment) => {
-      dispatch(fetchPaymentById(payment._id));
-    },
-    [dispatch]
-  );
-
-  const handleDeletePayment = useCallback(
-    async (payment) => {
-      if (
-        !window.confirm(
-          `Delete payment for order ${payment?.orderId || payment?._id}? This cannot be undone.`
-        )
-      ) {
-        return;
-      }
-      // Payments cannot be deleted via API, only status can be changed
-      // This is a no-op placeholder
-    },
-    []
-  );
-
-  const handleStatusChange = useCallback(
-    async (payment, status, reason) => {
-      if (status === "refund") {
-        if (
-          !window.confirm(
-            `Request refund for payment ${payment?._id}? Reason: ${reason || "Not specified"}`
-          )
-        ) {
-          return;
-        }
-        dispatch(
-          refundPayment({
-            paymentId: payment._id,
-            amount: payment?.amount || 0,
-            reason: reason || "Customer request",
-          })
-        );
+      if (payment?._id) {
+        dispatch(fetchPaymentById(payment._id));
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
-  /* eslint-disable no-unused-vars */
-  const handleEditPayment = useCallback(
-    (_payment) => {
-      // Payments cannot be edited directly, only status can be changed
+  const handleRefundPayment = useCallback(
+    async (paymentId, amount, reason) => {
+      await dispatch(
+        refundPayment({
+          paymentId,
+          amount,
+          reason: reason || "Admin initiated refund",
+        }),
+      ).unwrap();
+      dispatch(fetchPayments(filters));
     },
-    []
+    [dispatch, filters],
   );
-  /* eslint-enable no-unused-vars */
+
+  const handleReconcilePayment = useCallback(
+    async (paymentId) => {
+      await dispatch(reconcilePayment(paymentId)).unwrap();
+      dispatch(fetchPayments(filters));
+    },
+    [dispatch, filters],
+  );
+
+  const handleViewPayout = useCallback(
+    (payoutId) => {
+      if (payoutId) {
+        dispatch(fetchVendorPayoutById(payoutId));
+      }
+    },
+    [dispatch],
+  );
+
+  const handleUpdatePayoutStatus = useCallback(
+    async (payoutId, status) => {
+      await dispatch(updateVendorPayoutStatus({ payoutId, status })).unwrap();
+      dispatch(fetchVendorPayouts({ limit: 20 }));
+    },
+    [dispatch],
+  );
 
   return (
     <Payments
       payments={payments}
+      vendorPayouts={vendorPayouts}
+      selectedPayout={selectedPayout}
       totalPayments={pagination?.total || payments.length}
       loading={loading}
       saving={saving}
@@ -110,9 +111,10 @@ const PaymentsContainer = () => {
       filters={filters}
       onFilterChange={handleFilterChange}
       onViewPayment={handleViewPayment}
-      onEditPayment={handleEditPayment}
-      onDeletePayment={handleDeletePayment}
-      onStatusChange={handleStatusChange}
+      onRefundPayment={handleRefundPayment}
+      onReconcilePayment={handleReconcilePayment}
+      onViewPayout={handleViewPayout}
+      onUpdatePayoutStatus={handleUpdatePayoutStatus}
       pagination={pagination}
     />
   );

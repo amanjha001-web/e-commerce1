@@ -31,7 +31,7 @@ const VendorStatusToggle = ({
       onClick={() => !loading && onClose?.()}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

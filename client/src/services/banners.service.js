@@ -1,47 +1,71 @@
 import api from "./api";
 
+const cleanParams = (params = {}) =>
+  Object.fromEntries(
+    Object.entries(params).filter(
+      ([, v]) =>
+        v !== undefined &&
+        v !== null &&
+        v !== "" &&
+        String(v).toLowerCase() !== "all",
+    ),
+  );
+
+// Note: Backend banner routes are mounted at /api/v1/banners (in server/src/routes/banner.routes.js)
 const bannersService = {
-  // ==================== Banners ====================
-
-  // Get all banners
+  // Get all banners (Admin: GET /banners)
   getAll: async (params = {}) => {
-    const response = await api.get("/admin/banners", { params });
+    const response = await api.get("/banners", { params: cleanParams(params) });
     return response.data;
   },
 
-  // Get banner by ID
+  // Get active banners (Public: GET /banners/active)
+  getActive: async (params = {}) => {
+    const response = await api.get("/banners/active", {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  // Get banner by slug (Public: GET /banners/slug/:slug)
+  getBySlug: async (slug) => {
+    const response = await api.get(`/banners/slug/${slug}`);
+    return response.data;
+  },
+
+  // Get banner by ID (Admin: GET /banners/:bannerId)
   getById: async (bannerId) => {
-    const response = await api.get(`/admin/banners/${bannerId}`);
+    const response = await api.get(`/banners/${bannerId}`);
     return response.data;
   },
 
-  // Create banner
+  // Create banner (Admin: POST /banners)
   create: async (bannerData) => {
-    const response = await api.post("/admin/banners", bannerData);
+    const response = await api.post("/banners", bannerData);
     return response.data;
   },
 
-  // Update banner
+  // Update banner (Admin: PATCH /banners/:bannerId)
   update: async (bannerId, bannerData) => {
-    const response = await api.patch(`/admin/banners/${bannerId}`, bannerData);
+    const response = await api.patch(`/banners/${bannerId}`, bannerData);
     return response.data;
   },
 
-  // Delete banner
+  // Delete banner (Admin: DELETE /banners/:bannerId)
   delete: async (bannerId) => {
-    const response = await api.delete(`/admin/banners/${bannerId}`);
+    const response = await api.delete(`/banners/${bannerId}`);
     return response.data;
   },
 
-  // Get banner stats
-  getStats: async () => {
-    const response = await api.get("/admin/banners/stats");
+  // Record impression (Public: PATCH /banners/:bannerId/impression)
+  incrementImpression: async (bannerId) => {
+    const response = await api.patch(`/banners/${bannerId}/impression`);
     return response.data;
   },
 
-  // Reorder banners
-  reorder: async (order) => {
-    const response = await api.patch("/admin/banners/reorder", { order });
+  // Record click (Public: PATCH /banners/:bannerId/click)
+  incrementClick: async (bannerId) => {
+    const response = await api.patch(`/banners/${bannerId}/click`);
     return response.data;
   },
 };

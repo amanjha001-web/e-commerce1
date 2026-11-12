@@ -78,7 +78,7 @@ const OrderStatus = ({
       case "confirmed":
       case "processing":
       case "shipped":
-        return "bg-blue-100 text-blue-700";
+        return "bg-primary text-primary-foreground";
 
       case "pending":
         return "bg-yellow-100 text-yellow-700";
@@ -87,7 +87,7 @@ const OrderStatus = ({
         return "bg-red-100 text-red-700";
 
       case "refunded":
-        return "bg-purple-100 text-purple-700";
+        return "bg-secondary text-secondary-foreground";
 
       default:
         return "bg-gray-100 text-gray-700";
@@ -111,7 +111,7 @@ const OrderStatus = ({
       className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div>
@@ -237,7 +237,7 @@ const OrderStatus = ({
                   ? "Enter the cancellation reason..."
                   : "Add a note about this status change..."
               }
-              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full resize-none rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
             />
 
             <div className="mt-1 text-right text-[11px] text-muted-foreground">
@@ -261,11 +261,11 @@ const OrderStatus = ({
 
           {/* Refund Warning */}
           {status === "refunded" && currentStatus !== "refunded" && (
-            <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 p-3">
+            <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--soft)] p-3">
               <div className="flex gap-2">
                 <span className="text-sm">💰</span>
 
-                <p className="text-xs leading-5 text-purple-700">
+                <p className="text-xs font-semibold leading-5 text-[var(--primary)]">
                   Make sure the payment has actually been refunded before
                   marking the order as refunded.
                 </p>

@@ -150,10 +150,10 @@ const RegisterForm = ({
   };
 
   const inputClass = (field) =>
-    `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
+    `field mt-1.5 w-full text-sm text-[var(--text)] ${
       errors[field]
-        ? "border-red-500"
-        : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
+        ? "border-[var(--red)]"
+        : "border-[var(--line)]"
     }`;
 
   // Local ya backend error ko display karne ke liye
@@ -169,7 +169,7 @@ const RegisterForm = ({
       <div>
         <label
           htmlFor="register-fullName"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Full Name
         </label>
@@ -185,7 +185,7 @@ const RegisterForm = ({
         />
 
         {errors.fullName && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">
             {errors.fullName}
           </p>
         )}
@@ -195,7 +195,7 @@ const RegisterForm = ({
       <div>
         <label
           htmlFor="register-username"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Username
         </label>
@@ -211,7 +211,7 @@ const RegisterForm = ({
         />
 
         {errors.username && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">
             {errors.username}
           </p>
         )}
@@ -221,7 +221,7 @@ const RegisterForm = ({
       <div>
         <label
           htmlFor="register-email"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Email Address
         </label>
@@ -238,7 +238,7 @@ const RegisterForm = ({
         />
 
         {errors.email && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">
             {errors.email}
           </p>
         )}
@@ -248,7 +248,7 @@ const RegisterForm = ({
       <div>
         <label
           htmlFor="register-password"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Password
         </label>
@@ -265,7 +265,7 @@ const RegisterForm = ({
         />
 
         {errors.password && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">
             {errors.password}
           </p>
         )}
@@ -275,7 +275,7 @@ const RegisterForm = ({
       <div>
         <label
           htmlFor="register-confirmPassword"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Confirm Password
         </label>
@@ -292,7 +292,7 @@ const RegisterForm = ({
         />
 
         {errors.confirmPassword && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">
             {errors.confirmPassword}
           </p>
         )}
@@ -303,7 +303,7 @@ const RegisterForm = ({
         <p
           role="alert"
           aria-live="polite"
-          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400"
+          className="rounded-xl border border-[#f3cbd0] bg-[#fff0f1] p-3 text-xs font-semibold text-[var(--red)]"
         >
           {submitError}
         </p>
@@ -313,7 +313,7 @@ const RegisterForm = ({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="primarybtn w-full py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading
           ? "Creating Account..."
@@ -322,13 +322,13 @@ const RegisterForm = ({
 
       {/* Login */}
       {onLogin && (
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-center text-xs font-medium text-[var(--muted)]">
           Already have an account?{" "}
 
           <button
             type="button"
             onClick={onLogin}
-            className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="font-bold text-[var(--primary)] hover:underline"
           >
             Sign In
           </button>

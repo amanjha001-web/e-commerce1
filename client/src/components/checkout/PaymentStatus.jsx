@@ -144,7 +144,7 @@ const PaymentStatus = ({
               <button
                 type="button"
                 onClick={onViewOrder}
-                className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 View Order
               </button>
@@ -169,7 +169,7 @@ const PaymentStatus = ({
               <button
                 type="button"
                 onClick={onRetry}
-                className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
               >
                 Try Again
               </button>
@@ -191,7 +191,7 @@ const PaymentStatus = ({
         {normalizedStatus === "pending" && (
           <div className="mt-6">
             <div className="mx-auto h-1.5 max-w-xs overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-              <div className="h-full w-1/2 animate-pulse rounded-full bg-blue-600" />
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
             </div>
 
             <p className="mt-3 text-xs text-gray-400">

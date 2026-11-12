@@ -1,67 +1,77 @@
 import { useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { NavLink, Link, Outlet, useLocation } from "react-router-dom";
 
-import VendorHeader from "../components/vendor/VendorHeader";
-import Sidebar from "../components/layout/Sidebar";
-import { logout } from "../store/slices/authSlice";
+import TopBar from "../components/layout/TopBar";
+import Navbar from "../components/layout/Navbar";
 
-const vendorItems = [
-  { label: "Dashboard", to: "/vendor/dashboard", icon: "📊", end: true },
-  { label: "Products", to: "/vendor/products", icon: "📦" },
-  { label: "Add Product", to: "/vendor/products/add", icon: "➕" },
-  { label: "Inventory", to: "/vendor/inventory", icon: "🗃️" },
-  { label: "Orders", to: "/vendor/orders", icon: "🛒" },
-  { label: "Earnings", to: "/vendor/earnings", icon: "💰" },
-  { label: "Payouts", to: "/vendor/payouts", icon: "💳" },
-  { label: "Coupons", to: "/vendor/coupons", icon: "🎟️" },
-  { label: "Reviews", to: "/vendor/reviews", icon: "⭐" },
-  {
-    label: "Store Settings",
-    to: "/vendor/store-settings",
-    icon: "⚙️",
-  },
-  { label: "Profile", to: "/vendor/profile", icon: "👤" },
+const vendorLinks = [
+  ["/vendor", "▦", "Dashboard"],
+  ["/vendor/products", "▣", "My products"],
+  ["/vendor/orders", "▥", "Orders"],
+  ["/vendor/inventory", "▤", "Inventory"],
+  ["/vendor/earnings", "₹", "Earnings"],
+  ["/vendor/profile", "♙", "Shop profile"],
+  ["/vendor/support", "✉", "Support"],
 ];
 
 const VendorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const user = useSelector((state) => state.auth?.user);
+  const location = useLocation();
 
-  const storeName = user?.storeName || user?.businessName || "My Store";
-
-  const handleLogout = async () => {
-    try {
-      await dispatch(logout()).unwrap();
-    } catch (error) {
-      console.error("Vendor logout failed:", error);
-    } finally {
-      navigate("/", { replace: true });
+  const isLinkActive = (path) => {
+    if (path === "/vendor") {
+      return (
+        location.pathname === "/vendor" ||
+        location.pathname === "/vendor/" ||
+        location.pathname === "/vendor/dashboard"
+      );
     }
+    return (
+      location.pathname === path || location.pathname.startsWith(`${path}/`)
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-      <VendorHeader vendor={user} onMenuClick={() => setSidebarOpen(true)} />
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <TopBar />
+      <Navbar onMenuClick={() => setSidebarOpen((prev) => !prev)} />
 
-      <div className="flex">
-        <Sidebar
-          variant="vendor"
-          logo={storeName}
-          sectionTitle="Store Management"
-          items={vendorItems}
-          user={user}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          onLogout={handleLogout}
-        />
+      <main className="page">
+        <div className="layout">
+          <aside
+            id="sideNav"
+            className={`sidebar ${sidebarOpen ? "open" : ""}`}
+          >
+            <div className="side-title">Vendor workspace</div>
 
-        <main className="min-w-0 flex-1 p-4 md:p-6">
-          <Outlet />
-        </main>
-      </div>
+            {vendorLinks.map(([path, icon, label]) => (
+              <NavLink
+                key={path}
+                to={path}
+                end={path === "/vendor"}
+                onClick={() => setSidebarOpen(false)}
+                className={`side-link ${isLinkActive(path) ? "active" : ""}`}
+              >
+                <span>{icon}</span>
+                {label}
+              </NavLink>
+            ))}
+
+            <Link
+              to="/"
+              onClick={() => setSidebarOpen(false)}
+              className="side-link"
+            >
+              <span>↗</span>
+              View storefront
+            </Link>
+          </aside>
+
+          <section className="content">
+            <Outlet />
+          </section>
+        </div>
+      </main>
     </div>
   );
 };

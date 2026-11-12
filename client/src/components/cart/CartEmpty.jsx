@@ -22,7 +22,7 @@ const CartEmpty = ({
 
       <Link
         to={buttonPath}
-        className="mt-6 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+        className="mt-6 rounded-lg bg-secondary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
       >
         {buttonText}
       </Link>
@@ -31,3 +31,4 @@ const CartEmpty = ({
 };
 
 export default CartEmpty;
+

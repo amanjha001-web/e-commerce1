@@ -28,7 +28,7 @@ const createOrder = asyncHandler(async (req, res) => {
 /*                              Get My Orders                                 */
 
 const getMyOrders = asyncHandler(async (req, res) => {
-  const orders = await orderService.getMyOrders(req.user._id);
+  const orders = await orderService.getMyOrders(req.user._id, req.query);
 
   return res
     .status(200)
@@ -38,18 +38,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 /*                         Get All Orders - Admin                         */
 
 const getAllOrders = asyncHandler(async (req, res) => {
-  const {
-    page = 1,
-    limit = 10,
-  } = req.query;
-
-  const orders = await orderService.getAllOrders(
-    {},
-    {
-      page: Number(page),
-      limit: Number(limit),
-    },
-  );
+  const orders = await orderService.getAllOrders(req.query);
 
   return res
     .status(200)
@@ -79,8 +68,7 @@ const getVendorOrders = asyncHandler(async (req, res) => {
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await orderService.getOrderById(
     req.params.id,
-    req.user._id,
-    req.user.role,
+    req.user,
   );
 
   return res
@@ -91,11 +79,39 @@ const getOrderById = asyncHandler(async (req, res) => {
 /*                              Cancel Order                                  */
 
 const cancelOrder = asyncHandler(async (req, res) => {
-  const order = await orderService.cancelOrder(req.params.id, req.user._id);
+  const order = await orderService.cancelOrder(
+    req.params.id,
+    req.user,
+    req.body?.reason,
+  );
 
   return res
     .status(200)
     .json(new ApiResponse(200, order, "Order cancelled successfully"));
+});
+
+/*                              Return Order                                  */
+
+const returnOrder = asyncHandler(async (req, res) => {
+  const order = await orderService.returnOrder(
+    req.params.id,
+    req.user,
+    req.body?.reason || req.body?.returnReason || "",
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, order, "Order return requested successfully"));
+});
+
+/*                              Track Order                                   */
+
+const trackOrder = asyncHandler(async (req, res) => {
+  const tracking = await orderService.trackOrder(req.params.id, req.user);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, tracking, "Order tracking fetched successfully"));
 });
 
 /*                          Update Order Status                               */
@@ -110,12 +126,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, order, "Order status updated successfully"));
 });
 
-export default{
+export default {
   createOrder,
   getMyOrders,
   getAllOrders,
   getVendorOrders,
   getOrderById,
   cancelOrder,
+  returnOrder,
+  trackOrder,
   updateOrderStatus,
 };

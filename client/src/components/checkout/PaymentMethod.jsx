@@ -64,7 +64,7 @@ const PaymentMethod = ({
               disabled={loading || method.disabled}
               className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition ${
                 isSelected
-                  ? "border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-900/10"
+                  ? "border-secondary bg-secondary/10 dark:border-secondary/50 dark:bg-secondary/30"
                   : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:bg-gray-800"
               } ${method.disabled ? "cursor-not-allowed opacity-50" : ""}`}
             >
@@ -72,7 +72,7 @@ const PaymentMethod = ({
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl ${
                   isSelected
-                    ? "bg-blue-100 dark:bg-blue-900/30"
+                    ? "bg-secondary/20 dark:bg-secondary/30"
                     : "bg-gray-100 dark:bg-gray-800"
                 }`}
               >
@@ -96,7 +96,7 @@ const PaymentMethod = ({
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
                   isSelected
-                    ? "border-blue-600 bg-blue-600 dark:border-blue-500 dark:bg-blue-500"
+                    ? "border-primary bg-primary dark:border-primary dark:bg-primary"
                     : "border-gray-300 dark:border-gray-600"
                 }`}
               >
@@ -144,7 +144,7 @@ const PaymentMethod = ({
             type="button"
             onClick={handleContinue}
             disabled={loading || !selectedMethod}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Processing..." : "Continue"}
           </button>

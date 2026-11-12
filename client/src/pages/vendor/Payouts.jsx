@@ -98,17 +98,17 @@ const Payouts = ({
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-[var(--bg)]">
       <main className="p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
           {/* Page Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+              <div className="eyebrow">Finances & Withdrawals</div>
+              <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
                 Payouts
               </h1>
-
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                 Withdraw your available earnings and review payout history.
               </p>
             </div>
@@ -118,6 +118,7 @@ const Payouts = ({
                 submitting || availableBalance <= 0
               }
               onClick={() => setModalOpen(true)}
+              className="primarybtn"
             >
               Request Payout
             </Button>
@@ -125,45 +126,45 @@ const Payouts = ({
 
           {/* Balance Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
+            <div className="stat-card">
+              <p className="text-xs font-bold text-[var(--muted)]">
                 Available Balance
               </p>
-              <p className="mt-2 text-2xl font-bold text-primary">
+              <p className="mt-2 text-2xl font-black text-[var(--primary)]">
                 ₹{availableBalance.toLocaleString("en-IN")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
+            <div className="stat-card">
+              <p className="text-xs font-bold text-[var(--muted)]">
                 Pending Balance
               </p>
-              <p className="mt-2 text-2xl font-bold text-warning">
+              <p className="mt-2 text-2xl font-black text-[var(--amber)]">
                 ₹{pendingBalance.toLocaleString("en-IN")}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
+            <div className="stat-card">
+              <p className="text-xs font-bold text-[var(--muted)]">
                 Total Payouts
               </p>
-              <p className="mt-2 text-2xl font-bold text-foreground">
+              <p className="mt-2 text-2xl font-black text-[var(--text)] dark:text-foreground">
                 {payouts.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">
+            <div className="stat-card">
+              <p className="text-xs font-bold text-[var(--muted)]">
                 Total Paid
               </p>
-              <p className="mt-2 text-2xl font-bold text-success">
+              <p className="mt-2 text-2xl font-black text-[var(--green)]">
                 ₹{totalPaid.toLocaleString("en-IN")}
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+          <div className="panel p-4">
             <div className="grid gap-4 md:grid-cols-[1fr_220px]">
               <Input
                 value={search}
@@ -190,13 +191,13 @@ const Payouts = ({
           </div>
 
           {/* Payout History */}
-          <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <div className="border-b border-border p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-foreground">
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
+            <div className="border-b border-[var(--line)] p-5 sm:p-6 bg-[#fcf9fa] dark:bg-card">
+              <h2 className="text-base font-black text-[var(--text)] dark:text-foreground">
                 Payout History
               </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-0.5 text-xs font-medium text-[var(--muted)]">
                 View all payout requests and their current status.
               </p>
             </div>
@@ -243,12 +244,12 @@ const Payouts = ({
           onSubmit={handleSubmit}
           className="space-y-5"
         >
-          <div className="rounded-xl border border-border bg-muted/40 p-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--soft)] p-4">
+            <p className="text-xs font-bold text-[var(--muted)]">
               Available balance
             </p>
 
-            <p className="mt-1 text-xl font-bold text-foreground">
+            <p className="mt-1 text-2xl font-black text-[var(--primary)]">
               ₹{availableBalance.toLocaleString("en-IN")}
             </p>
           </div>
@@ -266,11 +267,11 @@ const Payouts = ({
             required
           />
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] font-medium text-[var(--muted)]">
             You can request up to your current available balance.
           </p>
 
-          <div className="flex justify-end gap-3 border-t border-border pt-5">
+          <div className="flex justify-end gap-3 border-t border-[var(--line)] pt-5">
             <Button
               type="button"
               variant="outline"
@@ -279,6 +280,7 @@ const Payouts = ({
                 setModalOpen(false);
                 setAmount("");
               }}
+              className="outlinebtn"
             >
               Cancel
             </Button>
@@ -292,6 +294,7 @@ const Payouts = ({
                 Number(amount) <= 0 ||
                 Number(amount) > availableBalance
               }
+              className="primarybtn"
             >
               {submitting
                 ? "Submitting..."

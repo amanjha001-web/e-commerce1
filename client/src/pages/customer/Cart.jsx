@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -91,7 +90,7 @@ const Cart = () => {
         setApplyingCoupon(false);
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Remove coupon
@@ -118,12 +117,12 @@ const Cart = () => {
 
   const itemCount = cartItems.reduce(
     (count, item) => count + (Number(item?.quantity) || 0),
-    0
+    0,
   );
 
   if (loading && cartItems.length === 0) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-background text-foreground">
         <Loader />
       </div>
     );
@@ -131,25 +130,28 @@ const Cart = () => {
 
   if (cartItems.length === 0) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <p className="text-sm font-medium text-primary">
-            Shopping Cart
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
-            Your Cart
+      <main className="page">
+        <div className="mb-6">
+          <div className="eyebrow">Your bag</div>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-[var(--text)]">
+            Shopping cart
           </h1>
         </div>
 
         {error && (
-          <p role="alert" className="mb-4 text-sm text-red-600">
+          <p
+            role="alert"
+            className="mb-4 rounded-xl border border-[#f3cbd0] bg-[#ffeaec] px-4 py-3 text-sm font-bold text-[var(--red)]"
+          >
             {error}
           </p>
         )}
 
         {actionError && (
-          <p role="alert" className="mb-4 text-sm text-red-600">
+          <p
+            role="alert"
+            className="mb-4 rounded-xl border border-[#f3cbd0] bg-[#ffeaec] px-4 py-3 text-sm font-bold text-[var(--red)]"
+          >
             {actionError}
           </p>
         )}
@@ -160,19 +162,13 @@ const Cart = () => {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="page">
       {/* Page heading */}
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="pagehead">
         <div>
-          <p className="text-sm font-medium text-primary">
-            Shopping Cart
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            Your Cart
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
+          <div className="eyebrow">Your bag</div>
+          <h1>Shopping cart</h1>
+          <p className="muted mt-1 mb-0 text-sm">
             {itemCount} {itemCount === 1 ? "item" : "items"} in your cart
           </p>
         </div>
@@ -188,31 +184,28 @@ const Cart = () => {
       {(actionError || error) && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600"
+          className="mb-6 rounded-xl border border-[#f3cbd0] bg-[#ffeaec] px-4 py-3 text-sm font-bold text-[var(--red)]"
         >
           {actionError ||
-            (typeof error === "string"
-              ? error
-              : "Unable to load your cart.")}
+            (typeof error === "string" ? error : "Unable to load your cart.")}
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
         {/* Cart items and coupon */}
         <section className="min-w-0">
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            {/* No quantity or remove props required */}
-            <CartList
-              items={cartItems}
-              loading={loading || updating}
-            />
+          <div className="panel !p-0 overflow-hidden">
+            <CartList items={cartItems} loading={loading || updating} />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          {/* Coupon section */}
+          <div className="panel mt-5">
             <div className="mb-4">
-              <h2 className="font-semibold">Have a coupon?</h2>
+              <h2 className="text-base font-bold text-[var(--text)]">
+                Have a coupon?
+              </h2>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="muted mt-1 text-xs">
                 Apply your coupon code before checkout.
               </p>
             </div>
@@ -225,20 +218,21 @@ const Cart = () => {
             />
           </div>
 
+          {/* Continue shopping */}
           <button
             type="button"
             onClick={handleContinueShopping}
-            className="mt-6 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+            className="outlinebtn mt-4"
           >
-            ← Continue Shopping
+            ← Continue shopping
           </button>
         </section>
 
         {/* Order summary */}
         <aside className="lg:sticky lg:top-24 lg:h-fit">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="mb-5 text-lg font-semibold">
-              Order Summary
+          <div className="panel">
+            <h2 className="mb-4 text-lg font-bold text-[var(--text)]">
+              Order summary
             </h2>
 
             <CartSummary
@@ -253,17 +247,13 @@ const Cart = () => {
             <button
               type="button"
               onClick={() => navigate("/checkout")}
-              disabled={
-                updating ||
-                applyingCoupon ||
-                !cartItems.length
-              }
-              className="mt-6 w-full rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={updating || applyingCoupon || !cartItems.length}
+              className="primarybtn mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Proceed to Checkout
+              Proceed to checkout →
             </button>
 
-            <p className="mt-3 text-center text-xs text-muted-foreground">
+            <p className="muted mt-3 text-center text-xs leading-relaxed">
               Taxes and shipping are calculated according to your order details.
             </p>
           </div>

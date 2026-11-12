@@ -1,103 +1,129 @@
 import { Link } from "react-router-dom";
 
 const Footer = ({
-  logo = "ShopSphere",
-  description = "Your trusted destination for quality products at great prices.",
   className = "",
 }) => {
-  const shopLinks = [
-    { label: "All Products", to: "/products" },
-    { label: "Categories", to: "/categories" },
-    { label: "Deals", to: "/deals" },
-    { label: "New Arrivals", to: "/products?sort=newest" },
-  ];
-
-  const accountLinks = [
-    { label: "My Account", to: "/profile" },
-    { label: "My Orders", to: "/orders" },
-    { label: "Wishlist", to: "/wishlist" },
-    { label: "Cart", to: "/cart" },
-  ];
-
-  const supportLinks = [
-    { label: "Help & Support", to: "/support" },
-    { label: "Contact Us", to: "/contact" },
-    { label: "Shipping Policy", to: "/shipping-policy" },
-    { label: "Return Policy", to: "/return-policy" },
-  ];
-
   return (
-    <footer
-      className={`border-t border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950 ${className}`}
-    >
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+    <footer className={`mt-16 bg-[#2a101a] text-[#f9eaf0] ${className}`}>
+      <div className="mx-auto max-w-[1440px] px-4 py-11 sm:px-7">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Brand info */}
+          <div className="lg:col-span-2">
             <Link
               to="/"
-              className="text-xl font-bold text-gray-900 dark:text-white"
+              className="text-2xl font-black tracking-tight text-white"
             >
-              {logo}
+              Shop<span className="text-[var(--gold)]">Sphere</span>.
             </Link>
 
-            <p className="mt-4 max-w-xs text-sm leading-6 text-gray-600 dark:text-gray-400">
-              {description}
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#d9c4cc]">
+              A thoughtful shopping experience for everyday essentials and timeless finds. Curated quality, secure payments, and fast shipping.
+            </p>
+
+            <p className="mt-6 text-xs text-[#a8909b]">
+              © {new Date().getFullYear()} ShopSphere. All rights reserved.
             </p>
           </div>
 
-          <FooterColumn title="Shop" links={shopLinks} />
+          {/* Explore */}
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[var(--gold)]">
+              Explore
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs font-medium text-[#d9c4cc]">
+              <li>
+                <Link to="/products" className="transition hover:text-white hover:underline">
+                  Shop all products
+                </Link>
+              </li>
+              <li>
+                <Link to="/categories" className="transition hover:text-white hover:underline">
+                  Categories
+                </Link>
+              </li>
+              <li>
+                <Link to="/products?deals=true" className="transition hover:text-white hover:underline">
+                  Special offers
+                </Link>
+              </li>
+              <li>
+                <Link to="/become-seller" className="transition hover:text-white hover:underline">
+                  Sell on ShopSphere
+                </Link>
+              </li>
+            </ul>
+          </div>
 
-          <FooterColumn title="Account" links={accountLinks} />
+          {/* Customer Care */}
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[var(--gold)]">
+              Customer care
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs font-medium text-[#d9c4cc]">
+              <li>
+                <Link to="/support" className="transition hover:text-white hover:underline">
+                  Help & Support
+                </Link>
+              </li>
+              <li>
+                <Link to="/orders" className="transition hover:text-white hover:underline">
+                  Track order
+                </Link>
+              </li>
+              <li>
+                <Link to="/support?tab=returns" className="transition hover:text-white hover:underline">
+                  Returns & refunds
+                </Link>
+              </li>
+              <li>
+                <Link to="/chat" className="transition hover:text-white hover:underline">
+                  Live chat
+                </Link>
+              </li>
+            </ul>
+          </div>
 
-          <FooterColumn title="Support" links={supportLinks} />
+          {/* Your Account */}
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[var(--gold)]">
+              Your account
+            </h3>
+            <ul className="mt-4 space-y-2.5 text-xs font-medium text-[#d9c4cc]">
+              <li>
+                <Link to="/profile" className="transition hover:text-white hover:underline">
+                  My Profile
+                </Link>
+              </li>
+              <li>
+                <Link to="/wishlist" className="transition hover:text-white hover:underline">
+                  Saved wishlist
+                </Link>
+              </li>
+              <li>
+                <Link to="/cart" className="transition hover:text-white hover:underline">
+                  Shopping bag
+                </Link>
+              </li>
+              <li>
+                <Link to="/login" className="transition hover:text-white hover:underline">
+                  Sign in / Register
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            © {new Date().getFullYear()} {logo}. All rights reserved.
-          </p>
-
-          <div className="flex gap-4 text-sm">
-            <Link
-              to="/privacy-policy"
-              className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-            >
-              Privacy Policy
-            </Link>
-
-            <Link
-              to="/terms"
-              className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-            >
-              Terms & Conditions
-            </Link>
+        {/* Bottom Bar */}
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-[#462030] pt-6 sm:flex-row text-xs text-[#a8909b]">
+          <p>Designed with Burgundy Luxury theme.</p>
+          <div className="flex gap-6">
+            <Link to="/privacy-policy" className="hover:text-white">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white">Terms of Service</Link>
+            <Link to="/admin" className="text-[var(--gold)] hover:underline">Admin Console</Link>
           </div>
         </div>
       </div>
     </footer>
-  );
-};
-
-const FooterColumn = ({ title, links }) => {
-  return (
-    <div>
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-900 dark:text-white">
-        {title}
-      </h3>
-
-      <ul className="mt-4 space-y-3">
-        {links.map((link) => (
-          <li key={link.to}>
-            <Link
-              to={link.to}
-              className="text-sm text-gray-600 transition hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 };
 

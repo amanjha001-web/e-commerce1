@@ -77,7 +77,7 @@ const TrackOrder = ({ order, trackingNumber, carrier, trackingUrl }) => {
             href={externalTrackingUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="inline-flex rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
           >
             Track Shipment
           </a>
@@ -99,3 +99,4 @@ const TrackOrder = ({ order, trackingNumber, carrier, trackingUrl }) => {
 };
 
 export default TrackOrder;
+

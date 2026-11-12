@@ -5,7 +5,7 @@ const Tabs = ({
   activeTab,
   defaultTab,
   onChange,
-  variant = "underline",
+  variant = "pills",
   fullWidth = false,
   className = "",
 }) => {
@@ -22,38 +22,35 @@ const Tabs = ({
   };
 
   const variants = {
-    underline: {
-      container: "border-b border-gray-200 dark:border-gray-700",
-      active:
-        "border-b-2 border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400",
-      inactive:
-        "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
-    },
-
     pills: {
-      container: "rounded-lg bg-gray-100 p-1 dark:bg-gray-800",
+      container: "gap-2 pb-2",
       active:
-        "rounded-md bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white",
+        "bg-[var(--primary)] text-white border-[var(--primary)] shadow-sm font-bold",
       inactive:
-        "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+        "bg-white border-[var(--line)] text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[var(--soft)] font-semibold",
     },
-
-    boxed: {
-      container: "border-b border-gray-200 dark:border-gray-700",
+    underline: {
+      container: "border-b border-[var(--line)] gap-6",
       active:
-        "border border-b-white bg-white text-blue-600 dark:border-gray-700 dark:border-b-gray-900 dark:bg-gray-900 dark:text-blue-400",
+        "border-b-2 border-[var(--primary)] text-[var(--primary)] font-bold pb-2",
       inactive:
-        "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+        "text-[var(--muted)] hover:text-[var(--primary)] font-medium pb-2",
+    },
+    boxed: {
+      container: "gap-2",
+      active:
+        "bg-[var(--primary)] text-white border-[var(--primary)] font-bold",
+      inactive:
+        "bg-white border-[var(--line)] text-[var(--muted)] font-semibold",
     },
   };
 
-  const selectedVariant = variants[variant] || variants.underline;
-
+  const selectedVariant = variants[variant] || variants.pills;
   const selectedTab = tabs.find((tab) => tab.value === currentTab);
 
   return (
     <div className={className}>
-      <div className={`flex overflow-x-auto ${selectedVariant.container}`}>
+      <div className={`flex flex-wrap items-center overflow-x-auto ${selectedVariant.container}`}>
         {tabs.map((tab) => {
           const isActive = tab.value === currentTab;
 
@@ -61,22 +58,14 @@ const Tabs = ({
             <button
               key={tab.value}
               type="button"
-              onClick={() => !tab.disabled && handleChange(tab.value)}
-              disabled={tab.disabled}
-              className={`shrink-0 px-4 py-2.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
-                fullWidth ? "flex-1" : ""
-              } ${
+              onClick={() => handleChange(tab.value)}
+              className={`rounded-xl border px-3.5 py-2 text-xs transition-all duration-200 cursor-pointer ${
                 isActive ? selectedVariant.active : selectedVariant.inactive
-              }`}
-              role="tab"
-              aria-selected={isActive}
+              } ${fullWidth ? "flex-1 text-center" : ""}`}
             >
-              {tab.icon && <span className="mr-2">{tab.icon}</span>}
-
               {tab.label}
-
               {tab.count !== undefined && (
-                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
+                <span className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-[var(--soft)] text-[var(--primary)]"}`}>
                   {tab.count}
                 </span>
               )}
@@ -85,9 +74,7 @@ const Tabs = ({
         })}
       </div>
 
-      {selectedTab?.content && (
-        <div className="pt-4">{selectedTab.content}</div>
-      )}
+      {selectedTab?.content && <div className="mt-4">{selectedTab.content}</div>}
     </div>
   );
 };

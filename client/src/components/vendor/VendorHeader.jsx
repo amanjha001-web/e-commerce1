@@ -1,11 +1,9 @@
-
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Bell,
   ChevronDown,
-  ChevronUp,
   LogOut,
   Menu,
   UserRound,
@@ -27,7 +25,6 @@ const VendorHeader = ({
 
   const { user } = useSelector((state) => state.auth);
 
-  // Prefer vendor details, then logged-in user details.
   const currentVendor = vendor || user || {};
 
   const vendorName =
@@ -36,7 +33,6 @@ const VendorHeader = ({
     currentVendor?.businessName ||
     currentVendor?.fullName ||
     currentVendor?.name ||
-    currentVendor?.user?.fullName ||
     "Vendor";
 
   const vendorEmail =
@@ -45,12 +41,8 @@ const VendorHeader = ({
     "";
 
   const avatar =
-    currentVendor?.avatar ||
-    currentVendor?.avatarUrl ||
-    currentVendor?.profileImage ||
-    currentVendor?.user?.avatar ||
-    currentVendor?.user?.profileImage ||
-    "";
+    currentVendor?.avatar?.url ||
+    (typeof currentVendor?.avatar === "string" ? currentVendor.avatar : "");
 
   const handleProfileClick = () => {
     setShowProfileMenu(false);
@@ -64,7 +56,6 @@ const VendorHeader = ({
     setShowProfileMenu(false);
 
     try {
-      // authSlice clears local auth state even if the API fails.
       await dispatch(logout());
     } finally {
       navigate("/", { replace: true });
@@ -73,7 +64,7 @@ const VendorHeader = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white/95 backdrop-blur-md dark:border-line dark:bg-card/95">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
         {/* Left: Menu and Dashboard title */}
         <div className="flex min-w-0 items-center gap-3">
@@ -81,37 +72,38 @@ const VendorHeader = ({
             type="button"
             onClick={onMenuClick}
             aria-label="Open vendor menu"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--text)] transition hover:bg-[var(--soft)] lg:hidden"
           >
-            <Menu size={22} />
+            <Menu size={18} />
           </button>
 
           <div className="min-w-0">
-            <h1 className="truncate text-base font-bold text-gray-900 dark:text-white">
-              Vendor Dashboard
+            <div className="eyebrow hidden sm:block text-[10px]">Seller Centre</div>
+            <h1 className="truncate text-base font-black text-[var(--text)] dark:text-foreground">
+              {vendorName}
             </h1>
-
-            <p className="hidden truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
-              Manage your store and sales
-            </p>
           </div>
         </div>
 
-        {/* Right: Notifications and Profile */}
-        <div className="flex items-center gap-2">
-          {/* Notifications */}
+        {/* Right: Storefront, Notifications and Profile */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center gap-1 rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+          >
+            ↗ Storefront
+          </Link>
+
           <button
             type="button"
             onClick={onNotificationClick}
-            aria-label={`Notifications${
-              notificationCount > 0 ? ` (${notificationCount})` : ""
-            }`}
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+            aria-label="Notifications"
           >
-            <Bell size={21} />
+            <Bell size={17} />
 
             {notificationCount > 0 && (
-              <span className="absolute right-1 top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--primary)] text-[9px] font-bold text-white">
                 {notificationCount > 99 ? "99+" : notificationCount}
               </span>
             )}
@@ -121,131 +113,65 @@ const VendorHeader = ({
           <div className="relative">
             <button
               type="button"
-              onClick={() =>
-                setShowProfileMenu((previous) => !previous)
-              }
-              aria-expanded={showProfileMenu}
-              aria-haspopup="true"
-              aria-label="Toggle profile menu"
-              className="flex max-w-[220px] items-center gap-2 rounded-xl p-1.5 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={() => setShowProfileMenu((prev) => !prev)}
+              className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-white p-1.5 transition hover:bg-[var(--soft)] sm:px-3"
             >
-              {/* Avatar */}
               {avatar ? (
                 <img
                   src={avatar}
-                  alt={`${vendorName} avatar`}
-                  className="h-9 w-9 shrink-0 rounded-full border border-gray-200 object-cover dark:border-gray-700"
-                  onError={(event) => {
-                    event.currentTarget.style.display = "none";
-                  }}
+                  alt={vendorName}
+                  className="h-7 w-7 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-black text-white">
                   {vendorName.charAt(0).toUpperCase()}
                 </div>
               )}
 
-              {/* Name and email */}
-              <div className="hidden min-w-0 text-left sm:block">
-                <p className="max-w-[140px] truncate text-sm font-semibold text-gray-800 dark:text-white">
-                  {vendorName}
-                </p>
+              <span className="hidden max-w-28 truncate text-xs font-bold text-[var(--text)] sm:block">
+                {vendorName}
+              </span>
 
-                {vendorEmail && (
-                  <p className="max-w-[140px] truncate text-xs text-gray-500 dark:text-gray-400">
-                    {vendorEmail}
-                  </p>
-                )}
-              </div>
-
-              {showProfileMenu ? (
-                <ChevronUp
-                  size={16}
-                  className="shrink-0 text-gray-400"
-                />
-              ) : (
-                <ChevronDown
-                  size={16}
-                  className="shrink-0 text-gray-400"
-                />
-              )}
+              <ChevronDown
+                size={13}
+                className={`hidden text-[var(--muted)] transition-transform sm:block ${
+                  showProfileMenu ? "rotate-180" : ""
+                }`}
+              />
             </button>
 
             {showProfileMenu && (
-              <>
-                {/* Outside click overlay */}
-                <button
-                  type="button"
-                  aria-label="Close profile menu"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="fixed inset-0 z-40 cursor-default"
-                />
+              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xl dark:bg-card">
+                <div className="border-b border-[var(--line)] bg-[var(--soft)] px-4 py-3">
+                  <p className="truncate text-xs font-black text-[var(--primary)]">
+                    {vendorName}
+                  </p>
+                  <p className="truncate text-[11px] text-[var(--muted)]">
+                    {vendorEmail || "seller@shopsphere.demo"}
+                  </p>
+                </div>
 
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900"
-                >
-                  {/* Profile information */}
-                  <div className="border-b border-gray-100 px-4 py-4 dark:border-gray-800">
-                    <div className="flex items-center gap-3">
-                      {avatar ? (
-                        <img
-                          src={avatar}
-                          alt=""
-                          className="h-10 w-10 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                          {vendorName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                          {vendorName}
-                        </p>
-
-                        {vendorEmail && (
-                          <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
-                            {vendorEmail}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* My Profile */}
+                <div className="p-1">
                   <button
                     type="button"
-                    role="menuitem"
                     onClick={handleProfileClick}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
                   >
-                    <UserRound
-                      size={18}
-                      className="text-gray-500 dark:text-gray-400"
-                    />
-                    <span>My Profile</span>
+                    <UserRound size={14} />
+                    Shop Profile
                   </button>
 
-                  {/* Logout */}
-                  <div className="border-t border-gray-100 dark:border-gray-800">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                      disabled={loggingOut}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30"
-                    >
-                      <LogOut size={18} />
-
-                      <span>
-                        {loggingOut ? "Logging out..." : "Logout"}
-                      </span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-[var(--red)] transition hover:bg-[#fff0f1]"
+                  >
+                    <LogOut size={14} />
+                    {loggingOut ? "Logging out..." : "Logout"}
+                  </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

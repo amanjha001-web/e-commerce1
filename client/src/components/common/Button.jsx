@@ -16,32 +16,50 @@ const Button = forwardRef(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
+      "inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer";
+
+    const resolvedVariant =
+      variant !== "primary"
+        ? variant
+        : className.includes("outlinebtn") ||
+            (className.includes("btnsm") && !className.includes("primary"))
+          ? "outline"
+          : className.includes("dangerbtn")
+            ? "danger"
+            : className.includes("goldbtn")
+              ? "gold"
+              : variant;
 
     const variants = {
-      primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+      primary:
+        "bg-[var(--primary)] text-white shadow-md shadow-[#88133725] hover:bg-[var(--deep)] hover:text-white hover:-translate-y-0.5 focus:ring-[var(--primary)]",
+
+      gold:
+        "bg-[var(--gold)] text-white shadow-md shadow-[#b68d4025] hover:bg-[#a37c35] hover:text-white hover:-translate-y-0.5 focus:ring-[var(--gold)]",
 
       secondary:
-        "bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700",
+        "bg-[var(--soft)] text-[var(--primary)] hover:bg-[#edd8df] hover:text-[var(--primary)] focus:ring-[var(--primary)]",
 
-      danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+      danger:
+        "bg-[#fff0f1] text-[var(--red)] border border-[#f3cbd0] hover:bg-[#ffe3e6] hover:text-[var(--red)] focus:ring-[var(--red)]",
 
       success:
-        "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
+        "bg-[#e7f6ef] text-[var(--green)] border border-[#c3ebda] hover:bg-[#d8f2e6] hover:text-[var(--green)] focus:ring-[var(--green)]",
 
       outline:
-        "border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-400 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800",
+        "border border-[var(--line)] bg-white text-[var(--text)] hover:bg-[var(--soft)] hover:border-[var(--primary)] hover:text-[var(--primary)] focus:ring-[var(--primary)]",
 
       ghost:
-        "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-400 dark:text-gray-200 dark:hover:bg-gray-800",
+        "bg-transparent text-[var(--text)] hover:bg-[var(--soft)] hover:text-[var(--primary)] focus:ring-[var(--primary)]",
 
-      link: "bg-transparent text-blue-600 hover:text-blue-700 hover:underline focus:ring-0",
+      link: "bg-transparent text-[var(--primary)] hover:underline focus:ring-0 p-0",
     };
 
     const sizes = {
-      sm: "px-3 py-1.5 text-sm",
+      xs: "px-2.5 py-1 text-xs rounded-lg",
+      sm: "px-3 py-1.5 text-xs font-semibold rounded-lg",
       md: "px-4 py-2 text-sm",
-      lg: "px-5 py-3 text-base",
+      lg: "px-5 py-2.5 text-base",
       xl: "px-6 py-3.5 text-lg",
     };
 
@@ -52,7 +70,7 @@ const Button = forwardRef(
         ref={ref}
         type={type}
         disabled={disabled || loading}
-        className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${width} ${className}`}
+        className={`${baseStyles} ${variants[resolvedVariant] || variants.primary} ${sizes[size] || sizes.md} ${width} ${className}`}
         {...props}
       >
         {loading && (

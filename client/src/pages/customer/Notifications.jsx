@@ -1,12 +1,10 @@
-
 import { useMemo, useState } from "react";
 
 import NotificationList from "../../components/notification/NotificationList";
-
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
-import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
+import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Notifications = ({
   notifications = [],
@@ -21,12 +19,10 @@ const Notifications = ({
   const [filter, setFilter] = useState("all");
 
   const getIsRead = (notification) =>
-    notification?.read ??
-    notification?.isRead ??
-    false;
+    notification?.read ?? notification?.isRead ?? false;
 
   const unreadCount = notifications.filter(
-    (notification) => !getIsRead(notification)
+    (notification) => !getIsRead(notification),
   ).length;
 
   const filteredNotifications = useMemo(() => {
@@ -45,162 +41,102 @@ const Notifications = ({
       if (!keyword) return true;
 
       return (
-        notification?.title
-          ?.toLowerCase()
-          .includes(keyword) ||
-        notification?.message
-          ?.toLowerCase()
-          .includes(keyword) ||
-        notification?.description
-          ?.toLowerCase()
-          .includes(keyword)
+        notification?.title?.toLowerCase().includes(keyword) ||
+        notification?.message?.toLowerCase().includes(keyword) ||
+        notification?.description?.toLowerCase().includes(keyword)
       );
     });
   }, [notifications, search, filter]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-primary">
-            Account
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            Notifications
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            Stay updated with your orders, account and other
-            activities.
-          </p>
-        </div>
-
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
+    <CustomerWorkspace
+      title="Notifications"
+      eyebrow="Customer workspace"
+      action={
+        unreadCount > 0 ? (
+          <button
+            type="button"
             onClick={onMarkAllAsRead}
+            className="btnsm"
           >
-            Mark all as read
-          </Button>
-        )}
-      </div>
-
-      {/* Stats */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+            Mark all read
+          </button>
+        ) : null
+      }
+    >
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Total
-          </p>
-
-          <p className="mt-2 text-2xl font-bold">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[var(--text)] dark:text-foreground">
             {notifications.length}
-          </p>
+          </strong>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Unread
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-primary">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[var(--primary)]">
             {unreadCount}
-          </p>
+          </strong>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">
+        <div className="stat-card">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
             Read
-          </p>
-
-          <p className="mt-2 text-2xl font-bold">
+          </span>
+          <strong className="mt-1 block text-2xl font-black text-[#16845b]">
             {notifications.length - unreadCount}
-          </p>
+          </strong>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="w-full md:max-w-md">
-            <Input
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Search notifications..."
-            />
-          </div>
-
-          <div className="flex gap-2">
-            {["all", "unread", "read"].map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setFilter(item)}
-                className={[
-                  "rounded-xl px-4 py-2 text-sm font-medium capitalize transition",
-                  filter === item
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                ].join(" ")}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Filter Tabs */}
+      <div className="mb-6 flex gap-2">
+        {["all", "unread", "read"].map((tab) => {
+          const isActive = filter === tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFilter(tab)}
+              className={`rounded-xl border px-3.5 py-1.5 text-xs font-bold capitalize transition-all cursor-pointer ${
+                isActive
+                  ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                  : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
+              }`}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Notifications */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Notifications List Container */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:bg-card dark:border-line">
         {loading ? (
           <div className="flex min-h-[300px] items-center justify-center">
             <Loader />
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="p-8">
+          <div className="p-10 text-center">
             <EmptyState
-              title="No notifications found"
-              description={
-                search
-                  ? "Try changing your search or filter."
-                  : "You're all caught up."
-              }
+              title="No notifications"
+              message="You have no notifications in this category."
             />
           </div>
         ) : (
           <NotificationList
             notifications={filteredNotifications}
-            onRead={onMarkAsRead}
+            onMarkAsRead={onMarkAsRead}
             onDelete={onDeleteNotification}
-            onNavigate={onNavigate}
           />
         )}
       </div>
-
-      {/* Clear */}
-      {notifications.length > 0 && (
-        <div className="mt-5 flex justify-end">
-          <Button
-            variant="outline"
-            onClick={onClearAll}
-          >
-            Clear All Notifications
-          </Button>
-        </div>
-      )}
-
-      {/* Back */}
-      <button
-        type="button"
-        onClick={() => onNavigate?.("/")}
-        className="mt-8 text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Back to Home
-      </button>
-    </main>
+    </CustomerWorkspace>
   );
 };
 

@@ -1339,19 +1339,61 @@ export const getAllOrders = async (query = {}) => {
 
   const filter = {};
 
-  if (query.status) {
+  if (query.status && query.status !== "all") {
     filter.orderStatus = query.status;
   }
 
-  if (query.paymentStatus) {
+  if (query.paymentStatus && query.paymentStatus !== "all") {
     filter.paymentStatus = query.paymentStatus;
   }
 
-  if (query.paymentMethod) {
+  if (query.paymentMethod && query.paymentMethod !== "all") {
     filter.paymentMethod = query.paymentMethod;
   }
 
-  if (query.startDate || query.endDate) {
+  // Handle dateRange shortcuts
+  if (query.dateRange && query.dateRange !== "all") {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    switch (query.dateRange) {
+      case "today":
+        filter.createdAt = { $gte: todayStart, $lt: tomorrow };
+        break;
+      case "yesterday": {
+        const yesterday = new Date(todayStart);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setDate(yesterdayEnd.getDate() + 1);
+        filter.createdAt = { $gte: yesterday, $lt: yesterdayEnd };
+        break;
+      }
+      case "last7days":
+        const sevenDaysAgo = new Date(todayStart);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        filter.createdAt = { $gte: sevenDaysAgo, $lt: tomorrow };
+        break;
+      case "last30days":
+        const thirtyDaysAgo = new Date(todayStart);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        filter.createdAt = { $gte: thirtyDaysAgo, $lt: tomorrow };
+        break;
+      case "thisMonth":
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        filter.createdAt = { $gte: monthStart, $lt: nextMonth };
+        break;
+      case "lastMonth":
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+        filter.createdAt = { $gte: lastMonthStart, $lt: lastMonthEnd };
+        break;
+    }
+  }
+
+  if ((query.startDate || query.endDate) && !filter.createdAt) {
     filter.createdAt = {};
 
     if (query.startDate) {
@@ -1390,10 +1432,20 @@ export const getAllOrders = async (query = {}) => {
     ];
   }
 
+  const getSort = (sortParam) => {
+    const sortMap = {
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+      highest: { totalAmount: -1 },
+      lowest: { totalAmount: 1 },
+    };
+    return sortMap[sortParam] || sortMap.newest;
+  };
+
   const [orders, total] = await Promise.all([
     Order.find(filter)
       .populate("user", "fullName email username")
-      .sort({ createdAt: -1 })
+      .sort(getSort(query.sort))
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),

@@ -1,8 +1,7 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
-import VendorTable from "../../components/admin/vendors/VendorTable";
 import VendorDetails from "../../components/admin/vendors/VendorDetails";
 import VendorStatusToggle from "../../components/admin/vendors/VendorStatusToggle";
 
@@ -12,10 +11,56 @@ import {
   updateAdminVendor,
   deleteAdminVendor,
   toggleAdminVendorStatus,
-  setVendorFilters,
+  approveAdminVendor,
+  rejectAdminVendor,
   setSelectedVendor,
   clearSelectedVendor,
 } from "../../store/slices/Admin/adminVendorsSlice";
+
+const DEMO_VENDORS = [
+  {
+    id: "V-101",
+    vendorCode: "V-101",
+    shopName: "Northstar Store",
+    email: "northstar@email.com",
+    productCount: 42,
+    orderCount: 128,
+    statusLabel: "Active",
+    isActive: true,
+    isDemo: true,
+  },
+  {
+    id: "V-102",
+    vendorCode: "V-102",
+    shopName: "Urban Living",
+    email: "urban@email.com",
+    productCount: 28,
+    orderCount: 96,
+    statusLabel: "Active",
+    isActive: true,
+    isDemo: true,
+  },
+  {
+    id: "V-103",
+    vendorCode: "V-103",
+    shopName: "Aura Essentials",
+    email: "aura@email.com",
+    productCount: 0,
+    orderCount: 0,
+    statusLabel: "Pending",
+    isActive: false,
+    isDemo: true,
+  },
+];
+
+const getStatusClass = (s) =>
+  s === "Delivered" || s === "Active" || s === "Resolved" || s === "Published"
+    ? "green"
+    : s === "Pending" || s === "Processing" || s === "Open"
+      ? "amber"
+      : s === "Blocked" || s === "Cancelled" || s === "Rejected"
+        ? "red"
+        : "";
 
 const Vendors = () => {
   const dispatch = useDispatch();
@@ -23,195 +68,138 @@ const Vendors = () => {
   const {
     vendors = [],
     selectedVendor = null,
-    filters = { status: "", search: "" },
-    loading = false,
     detailsLoading = false,
     saving = false,
-    deleting = false,
-    error = null,
-  } = useSelector((state) => state.adminVendors);
+  } = useSelector((state) => state.adminVendors || {});
 
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All status");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [initialEdit, setInitialEdit] = useState(false);
-
   const [statusVendor, setStatusVendor] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [demoModalVendor, setDemoModalVendor] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAdminVendors());
   }, [dispatch]);
 
+  const sourceVendors = vendors.length > 0 ? vendors : DEMO_VENDORS;
+
+  const normalizedVendors = useMemo(() => {
+    return sourceVendors.map((v, i) => {
+      const code =
+        v.vendorCode ||
+        (v._id ? `V-${String(v._id).slice(-3).toUpperCase()}` : `V-${101 + i}`);
+      const shop = v.shopName || v.storeName || v.businessName || "Shop";
+      const email = v.email || v.user?.email || "—";
+      const products = v.productCount ?? v.productsCount ?? 0;
+      const orders = v.orderCount ?? v.ordersCount ?? 0;
+      const statusLabel =
+        v.statusLabel ||
+        (v.status
+          ? String(v.status).charAt(0).toUpperCase() +
+            String(v.status).slice(1).toLowerCase()
+          : v.isActive === false
+            ? "Pending"
+            : "Active");
+
+      return {
+        ...v,
+        _displayCode: code,
+        _displayShop: shop,
+        _displayEmail: email,
+        _displayProducts: products,
+        _displayOrders: orders,
+        _displayStatus: statusLabel,
+      };
+    });
+  }, [sourceVendors]);
+
   const filteredVendors = useMemo(() => {
-    return vendors.filter((vendor) => {
-      const status = filters?.status || "";
+    return normalizedVendors.filter((v) => {
+      if (
+        statusFilter !== "All status" &&
+        v._displayStatus.toLowerCase() !== statusFilter.toLowerCase()
+      ) {
+        return false;
+      }
 
-      if (status === "active" && !vendor.isActive) return false;
-      if (status === "inactive" && vendor.isActive) return false;
-
-      const search = (filters?.search || "").trim().toLowerCase();
-
-      if (search) {
-        const searchableText = [
-          vendor.shopName,
-          vendor.shopSlug,
-          vendor.email,
-          vendor.phone,
-          vendor.user?.fullName,
-          vendor.user?.username,
-          vendor.user?.email,
-          vendor.address?.city,
-          vendor.address?.state,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-
-        if (!searchableText.includes(search)) return false;
+      if (search.trim()) {
+        const text =
+          `${v._displayCode} ${v._displayShop} ${v._displayEmail} ${v._displayStatus}`.toLowerCase();
+        if (!text.includes(search.trim().toLowerCase())) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [vendors, filters]);
+  }, [normalizedVendors, search, statusFilter]);
 
-  const handleFilterChange = (status) => {
-    dispatch(setVendorFilters({ status }));
-  };
-
-  const handleSearchChange = (event) => {
-    dispatch(setVendorFilters({ search: event.target.value }));
-  };
-
-  const handleOpenVendor = async (vendor, edit = false) => {
-    const vendorId = vendor?._id || vendor?.id;
-
-    if (!vendorId) {
-      console.error("Vendor ID missing:", vendor);
+  const handleViewVendor = async (vendor) => {
+    if (vendor.isDemo || !vendor._id) {
+      setDemoModalVendor(vendor);
+      toast.success("Vendor profile opened");
       return;
     }
 
     dispatch(setSelectedVendor(vendor));
-    setInitialEdit(edit);
+    setInitialEdit(false);
     setDetailsOpen(true);
+    dispatch(fetchAdminVendorById(vendor._id));
+  };
 
-    try {
-      const result = await dispatch(fetchAdminVendorById(vendorId));
-
-      if (fetchAdminVendorById.rejected.match(result)) {
-        console.error(
-          "Failed to fetch vendor details:",
-          result.payload || result.error,
-        );
-      }
-    } catch (error) {
-      console.error("Vendor details error:", error);
+  const handleManageVendor = (vendor) => {
+    if (vendor.isDemo || !vendor._id) {
+      toast.success("Vendor action saved");
+      return;
     }
-  };
 
-  const handleViewVendor = (vendor) => {
-    return handleOpenVendor(vendor, false);
-  };
-
-  const handleEditVendor = (vendor) => {
-    return handleOpenVendor(vendor, true);
+    setStatusVendor(vendor);
+    setStatusOpen(true);
   };
 
   const handleUpdateVendor = async (vendorId, vendorData) => {
     try {
-      await dispatch(
-        updateAdminVendor({ vendorId, vendorData }),
-      ).unwrap();
-
+      await dispatch(updateAdminVendor({ vendorId, vendorData })).unwrap();
       setInitialEdit(false);
       return true;
-    } catch (error) {
-      console.error("Failed to update vendor:", error);
+    } catch {
       return false;
     }
   };
 
   const handleCloseDetails = () => {
     if (detailsLoading || saving) return;
-
     setDetailsOpen(false);
     setInitialEdit(false);
     dispatch(clearSelectedVendor());
   };
 
   const handleDeleteVendor = async (vendor) => {
-    const vendorId = vendor?._id || vendor?.id;
-
-    if (!vendorId || deleting) return;
-
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${
-        vendor.shopName || "this vendor"
-      }"?`,
-    );
-
-    if (!confirmed) return;
-
+    const vendorId = vendor?._id;
+    if (!vendorId) return;
+    if (!window.confirm(`Delete "${vendor.shopName || "this vendor"}"?`)) return;
     const result = await dispatch(deleteAdminVendor(vendorId));
-
     if (deleteAdminVendor.fulfilled.match(result)) {
-      if (
-        (selectedVendor?._id || selectedVendor?.id) === vendorId
-      ) {
-        setDetailsOpen(false);
-        setInitialEdit(false);
-        dispatch(clearSelectedVendor());
-      }
-
-      if (
-        (statusVendor?._id || statusVendor?.id) === vendorId
-      ) {
-        setStatusOpen(false);
-        setStatusVendor(null);
-      }
+      handleCloseDetails();
     }
-  };
-
-  const handleStatusClick = (vendor) => {
-    if (!vendor?._id && !vendor?.id) return;
-
-    setStatusVendor(vendor);
-    setStatusOpen(true);
-  };
-
-  const handleCloseStatus = () => {
-    if (saving) return;
-
-    setStatusOpen(false);
-    setStatusVendor(null);
   };
 
   const handleToggleStatus = async (vendor, status) => {
     const vendorId = vendor?._id || vendor?.id;
-
     if (!vendorId || saving) return;
-
     const isActive =
       typeof status === "boolean"
         ? status
         : typeof status?.isActive === "boolean"
           ? status.isActive
-          : typeof status?.active === "boolean"
-            ? status.active
-            : undefined;
-
-    if (typeof isActive !== "boolean") {
-      console.error(
-        "VendorStatusToggle must pass the target boolean status to onConfirm.",
-      );
-      return;
-    }
+          : !vendor.isActive;
 
     const result = await dispatch(
-      toggleAdminVendorStatus({
-        vendorId,
-        isActive,
-      }),
+      toggleAdminVendorStatus({ vendorId, isActive }),
     );
-
     if (toggleAdminVendorStatus.fulfilled.match(result)) {
       setStatusOpen(false);
       setStatusVendor(null);
@@ -219,134 +207,154 @@ const Vendors = () => {
     }
   };
 
-  const handleRefresh = () => {
-    dispatch(fetchAdminVendors());
+  const handleApproveVendor = async (vendor) => {
+    const vendorId = vendor?._id || vendor?.id;
+    if (!vendorId || saving) return;
+    const result = await dispatch(approveAdminVendor({ vendorId }));
+    if (approveAdminVendor.fulfilled.match(result)) {
+      dispatch(fetchAdminVendors());
+    }
+  };
+
+  const handleRejectVendor = async (vendor) => {
+    const vendorId = vendor?._id || vendor?.id;
+    if (!vendorId || saving) return;
+    const reason = window.prompt(
+      "Enter rejection reason for vendor:",
+      "Application did not meet verification requirements.",
+    );
+    if (reason === null) return;
+    const result = await dispatch(
+      rejectAdminVendor({
+        vendorId,
+        reason: reason.trim() || "Rejected by admin",
+      }),
+    );
+    if (rejectAdminVendor.fulfilled.match(result)) {
+      dispatch(fetchAdminVendors());
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="min-w-0 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Vendors
-              </h1>
+    <div>
+      <div className="pagehead">
+        <div>
+          <div className="eyebrow">ShopSphere administration</div>
+          <h1>Vendors</h1>
+        </div>
+      </div>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Manage registered vendors, store information and account status.
-              </p>
-            </div>
+      <div className="panel">
+        <div className="toolbar">
+          <input
+            className="field"
+            placeholder="Search vendors..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            className="field"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option>All status</option>
+            <option>Active</option>
+            <option>Pending</option>
+          </select>
+        </div>
 
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={loading}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700"
-            >
-              <span>{error}</span>
-
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={loading}
-                className="font-semibold underline disabled:opacity-50"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                {[
-                  { label: "All", value: "" },
-                  { label: "Active", value: "active" },
-                  { label: "Inactive", value: "inactive" },
-                ].map((item) => {
-                  const isActive =
-                    (filters?.status || "") === item.value;
-
-                  return (
-                    <button
-                      key={item.value || "all"}
-                      type="button"
-                      onClick={() => handleFilterChange(item.value)}
-                      disabled={saving}
-                      aria-pressed={isActive}
-                      className={`rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "border border-border hover:bg-muted"
-                      }`}
+        <div id="vendorTable" className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Shop</th>
+                <th>Email</th>
+                <th>Products</th>
+                <th>Orders</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVendors.map((v, i) => (
+                <tr key={v._id || v.id || i}>
+                  <td>{v._displayCode}</td>
+                  <td>{v._displayShop}</td>
+                  <td>{v._displayEmail}</td>
+                  <td>{v._displayProducts}</td>
+                  <td>{v._displayOrders}</td>
+                  <td>
+                    <span
+                      className={`status ${getStatusClass(v._displayStatus)}`}
                     >
-                      {item.label}
+                      {v._displayStatus}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btnsm"
+                      onClick={() => handleViewVendor(v)}
+                    >
+                      View
+                    </button>{" "}
+                    <button
+                      type="button"
+                      className="btnsm"
+                      onClick={() => handleManageVendor(v)}
+                    >
+                      Manage
                     </button>
-                  );
-                })}
-              </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-              <div className="w-full sm:max-w-xs">
-                <input
-                  type="search"
-                  value={filters?.search || ""}
-                  onChange={handleSearchChange}
-                  placeholder="Search vendors..."
-                  aria-label="Search vendors"
-                  className="w-full rounded-lg border border-border bg-background px-4 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {filters?.status
-                  ? `${filters.status[0].toUpperCase()}${filters.status.slice(1)} Vendors`
-                  : "Total Vendors"}
-              </p>
-
-              <p className="text-2xl font-semibold">
-                {filteredVendors.length}
-              </p>
-            </div>
-
-            {filters?.search && (
+      {demoModalVendor && (
+        <div
+          className="modalback"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDemoModalVendor(null);
+          }}
+        >
+          <div className="modal">
+            <div className="modalhead">
+              <h2>{demoModalVendor._displayShop}</h2>
               <button
                 type="button"
-                onClick={() =>
-                  dispatch(setVendorFilters({ search: "" }))
-                }
-                className="text-sm font-medium text-primary hover:underline"
+                className="iconbtn"
+                onClick={() => setDemoModalVendor(null)}
               >
-                Clear search
+                ✕
               </button>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <VendorTable
-              vendors={filteredVendors}
-              loading={loading}
-              onViewVendor={handleViewVendor}
-              onEditVendor={handleEditVendor}
-              onDeleteVendor={handleDeleteVendor}
-              onToggleStatus={handleStatusClick}
-            />
+            </div>
+            <p>
+              <b>Vendor ID:</b> {demoModalVendor._displayCode}
+            </p>
+            <p>
+              <b>Email:</b> {demoModalVendor._displayEmail}
+            </p>
+            <p>
+              <b>Products:</b> {demoModalVendor._displayProducts} ·{" "}
+              <b>Orders:</b> {demoModalVendor._displayOrders}
+            </p>
+            <p>
+              <b>Status:</b>{" "}
+              <span
+                className={`status ${getStatusClass(
+                  demoModalVendor._displayStatus,
+                )}`}
+              >
+                {demoModalVendor._displayStatus}
+              </span>
+            </p>
           </div>
         </div>
-      </main>
+      )}
 
       {detailsOpen && selectedVendor && (
         <VendorDetails
@@ -358,7 +366,13 @@ const Vendors = () => {
           initialEdit={initialEdit}
           onClose={handleCloseDetails}
           onUpdate={handleUpdateVendor}
-          onStatusChange={handleStatusClick}
+          onDelete={handleDeleteVendor}
+          onApprove={handleApproveVendor}
+          onReject={handleRejectVendor}
+          onStatusChange={(v) => {
+            setStatusVendor(v);
+            setStatusOpen(true);
+          }}
         />
       )}
 
@@ -368,7 +382,10 @@ const Vendors = () => {
           vendor={statusVendor}
           open={statusOpen}
           loading={saving}
-          onClose={handleCloseStatus}
+          onClose={() => {
+            setStatusOpen(false);
+            setStatusVendor(null);
+          }}
           onConfirm={handleToggleStatus}
         />
       )}

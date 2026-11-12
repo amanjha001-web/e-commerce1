@@ -85,7 +85,7 @@ const VendorSidebar = ({ isOpen = false, onClose, vendor, onLogout }) => {
         {/* Logo / Store */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-5 dark:border-gray-800">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xl text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-xl text-white">
               🏪
             </div>
 
@@ -125,7 +125,7 @@ const VendorSidebar = ({ isOpen = false, onClose, vendor, onLogout }) => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                     isActive
-                      ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                      ? "bg-secondary/10 text-secondary dark:bg-blue-900/20 dark:text-primary"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                   }`
                 }
@@ -157,3 +157,4 @@ const VendorSidebar = ({ isOpen = false, onClose, vendor, onLogout }) => {
 };
 
 export default VendorSidebar;
+

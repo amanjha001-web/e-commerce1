@@ -97,7 +97,7 @@ const TicketTable = ({
 
   const getStatusClasses = (status) => {
     const classes = {
-      open: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      open: "bg-blue-50 text-blue-700 ring-secondary/30",
       pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
       in_progress: "bg-purple-50 text-purple-700 ring-purple-600/20",
       resolved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -113,7 +113,7 @@ const TicketTable = ({
   const getPriorityClasses = (priority) => {
     const classes = {
       low: "bg-gray-100 text-gray-700 ring-gray-500/20",
-      medium: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      medium: "bg-blue-50 text-blue-700 ring-secondary/30",
       high: "bg-orange-50 text-orange-700 ring-orange-600/20",
       urgent: "bg-red-50 text-red-700 ring-red-600/20",
     };
@@ -153,7 +153,7 @@ const TicketTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
         <div className="hidden overflow-x-auto lg:block">
           <table className="min-w-full divide-y divide-border">
             <thead>
@@ -205,7 +205,7 @@ const TicketTable = ({
 
   if (!tickets.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-background px-6 py-16 text-center">
+      <div className="rounded-2xl border border-dashed border-border bg-white px-6 py-16 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-2xl">
           🎫
         </div>
@@ -222,7 +222,7 @@ const TicketTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
       {/* Desktop */}
       <div className="hidden overflow-x-auto lg:block">
         <table className="min-w-full divide-y divide-border">
@@ -534,3 +534,4 @@ const TicketTable = ({
 };
 
 export default TicketTable;
+

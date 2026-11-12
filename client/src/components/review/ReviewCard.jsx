@@ -41,7 +41,7 @@ const ReviewCard = ({ review, onHelpful, onReport }) => {
               className="h-10 w-10 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary font-semibold text-secondary-foreground dark:bg-primary dark:text-primary-foreground">
               {reviewer.charAt(0).toUpperCase()}
             </div>
           )}
@@ -117,7 +117,7 @@ const ReviewCard = ({ review, onHelpful, onReport }) => {
         <button
           type="button"
           onClick={() => onHelpful?.(review)}
-          className="text-xs font-medium text-gray-500 transition hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+          className="text-xs font-medium text-gray-500 transition hover:text-primary dark:text-gray-400 dark:hover:text-primary"
         >
           👍 Helpful
           {helpfulCount > 0 && ` (${helpfulCount})`}

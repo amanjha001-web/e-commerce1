@@ -69,32 +69,32 @@ const ResetPasswordForm = ({
   };
 
   const inputClass = (field) =>
-    `mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 pr-11 text-sm text-gray-900 outline-none transition dark:bg-gray-800 dark:text-white ${
+    `field mt-1.5 w-full pr-11 text-sm text-[var(--text)] ${
       errors[field]
-        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-        : "border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700"
+        ? "border-[var(--red)]"
+        : "border-[var(--line)]"
     }`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header */}
       <div className="mb-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-2xl dark:bg-blue-900/20">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--soft)] text-2xl text-[var(--primary)]">
           🔐
         </div>
 
-        <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">
+        <h2 className="mt-4 text-xl font-bold text-[var(--text)]">
           Reset Password
         </h2>
 
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xs font-medium text-[var(--muted)]">
           Create a new password for your account.
         </p>
       </div>
 
       {/* Backend Error */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-xl border border-[#f3cbd0] bg-[#fff0f1] p-3 text-xs font-semibold text-[var(--red)]">
           {error}
         </div>
       )}
@@ -103,7 +103,7 @@ const ResetPasswordForm = ({
       <div>
         <label
           htmlFor="reset-password"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           New Password
         </label>
@@ -126,14 +126,14 @@ const ResetPasswordForm = ({
             onClick={() => setShowPassword((prev) => !prev)}
             disabled={loading}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-200"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] transition hover:text-[var(--primary)] disabled:cursor-not-allowed"
           >
             {showPassword ? "🙈" : "👁️"}
           </button>
         </div>
 
         {errors.password && (
-          <p className="mt-1 text-xs text-red-500">{errors.password}</p>
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">{errors.password}</p>
         )}
       </div>
 
@@ -141,7 +141,7 @@ const ResetPasswordForm = ({
       <div>
         <label
           htmlFor="reset-confirmPassword"
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="text-xs font-bold uppercase tracking-wider text-[var(--text)]"
         >
           Confirm Password
         </label>
@@ -168,14 +168,14 @@ const ResetPasswordForm = ({
                 ? "Hide confirm password"
                 : "Show confirm password"
             }
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-gray-200"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] transition hover:text-[var(--primary)] disabled:cursor-not-allowed"
           >
             {showConfirmPassword ? "🙈" : "👁️"}
           </button>
         </div>
 
         {errors.confirmPassword && (
-          <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>
+          <p className="mt-1 text-xs font-semibold text-[var(--red)]">{errors.confirmPassword}</p>
         )}
       </div>
 
@@ -183,7 +183,7 @@ const ResetPasswordForm = ({
       <button
         type="submit"
         disabled={loading || !form.password || !form.confirmPassword}
-        className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="primarybtn w-full py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? "Resetting..." : "Reset Password"}
       </button>
@@ -194,7 +194,7 @@ const ResetPasswordForm = ({
           type="button"
           onClick={onBackToLogin}
           disabled={loading}
-          className="w-full rounded-lg border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="outlinebtn w-full py-2.5 text-xs disabled:opacity-50"
         >
           Back to Login
         </button>

@@ -36,7 +36,7 @@ const Radio = forwardRef(
             disabled={disabled}
             required={required}
             aria-invalid={Boolean(error)}
-            className="mt-0.5 h-4 w-4 cursor-pointer border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
+            className="mt-0.5 h-4 w-4 cursor-pointer border-gray-300 text-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
             {...props}
           />
 

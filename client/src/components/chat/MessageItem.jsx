@@ -32,17 +32,18 @@ const MessageItem = ({ message, isOwn = false, currentUserId }) => {
         )}
 
         <div
-          className={`rounded-2xl px-4 py-2.5 ${
-            ownMessage
-              ? "rounded-br-md bg-blue-600 text-white"
-              : "rounded-bl-md bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-          }`}
+
+        className={`rounded-2xl px-4 py-2.5 ${
+          ownMessage
+            ? "rounded-br-md bg-primary text-primary-foreground"
+            : "rounded-bl-md bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+        }`}
         >
           {message.replyTo && (
             <div
               className={`mb-2 rounded-lg border-l-2 px-2 py-1 text-xs ${
                 ownMessage
-                  ? "border-blue-200 bg-blue-700/50 text-blue-100"
+                  ? "border-primary/30 bg-primary/10 text-primary-foreground"
                   : "border-gray-400 bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
               }`}
             >
@@ -73,8 +74,8 @@ const MessageItem = ({ message, isOwn = false, currentUserId }) => {
               rel="noreferrer"
               className={`mt-2 block text-xs font-medium underline ${
                 ownMessage
-                  ? "text-blue-100"
-                  : "text-blue-600 dark:text-blue-400"
+                  ? "text-primary-foreground"
+                  : "text-primary dark:text-primary/80"
               }`}
             >
               📎 {message.file.name || "Attachment"}
@@ -83,7 +84,7 @@ const MessageItem = ({ message, isOwn = false, currentUserId }) => {
 
           <div
             className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
-              ownMessage ? "text-blue-100" : "text-gray-400"
+              ownMessage ? "text-primary-foreground/50" : "text-gray-400"
             }`}
           >
             {timestamp && (
@@ -96,7 +97,7 @@ const MessageItem = ({ message, isOwn = false, currentUserId }) => {
             )}
 
             {ownMessage && (
-              <span className={message.read ? "text-blue-200" : ""}>
+              <span className={message.read ? "text-primary-foreground/30" : ""}>
                 {message.read ? "✓✓" : "✓"}
               </span>
             )}

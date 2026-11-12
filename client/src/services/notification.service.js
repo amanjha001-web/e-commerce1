@@ -28,7 +28,7 @@ const notificationService = {
   },
 
   markAllAsRead: async () => {
-    const response = await api.patch("/notifications/read-all");
+    const response = await api.patch("/notifications/mark-all-read");
 
     return response.data;
   },
@@ -40,7 +40,7 @@ const notificationService = {
   },
 
   clearNotifications: async () => {
-    const response = await api.delete("/notifications");
+    const response = await api.delete("/notifications/clear");
 
     return response.data;
   },

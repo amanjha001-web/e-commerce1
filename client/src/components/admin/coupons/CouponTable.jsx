@@ -123,7 +123,7 @@ const CouponTable = ({
 
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
         {/* Desktop Loading */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[950px]">
@@ -181,7 +181,7 @@ const CouponTable = ({
 
   if (!coupons.length) {
     return (
-      <div className="rounded-2xl border border-border bg-background p-10 text-center shadow-sm">
+      <div className="rounded-2xl border border-border bg-white p-10 text-center shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-xl">
           🎟️
         </div>
@@ -198,7 +198,7 @@ const CouponTable = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
       {/* Desktop */}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[950px]">

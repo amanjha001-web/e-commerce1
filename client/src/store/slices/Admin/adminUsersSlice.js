@@ -14,7 +14,6 @@ const fetchAdminUsers = createAsyncThunk(
         return rejectWithValue(response.message || "Failed to fetch users");
       }
 
-      // API shape: { success, data: { users, pagination } }
       return response?.data ?? response;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -58,6 +57,26 @@ const updateAdminUser = createAsyncThunk(
   },
 );
 
+const updateAdminUserStatus = createAsyncThunk(
+  "adminUsers/updateUserStatus",
+  async ({ userId, status }, { rejectWithValue }) => {
+    try {
+      const response = await adminService.updateUserStatus(userId, status);
+
+      if (response?.success === false) {
+        return rejectWithValue(
+          response.message || "Failed to update user status",
+        );
+      }
+
+      const data = response?.data ?? response;
+      return data?.user ?? data;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
 const deleteAdminUser = createAsyncThunk(
   "adminUsers/deleteUser",
   async (userId, { rejectWithValue }) => {
@@ -87,8 +106,6 @@ const toggleAdminUserStatus = createAsyncThunk(
         );
       }
 
-      // Don't guess the new isBlocked value.
-      // The component will refetch the list after success.
       return userId;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
@@ -127,7 +144,6 @@ const adminUsersSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // LIST
       .addCase(fetchAdminUsers.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -144,8 +160,6 @@ const adminUsersSlice = createSlice({
         state.loading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // DETAILS
       .addCase(fetchAdminUserById.pending, (state) => {
         state.detailsLoading = true;
         state.error = null;
@@ -158,8 +172,6 @@ const adminUsersSlice = createSlice({
         state.detailsLoading = false;
         state.error = action.payload || action.error.message;
       })
-
-      // UPDATE
       .addCase(updateAdminUser.pending, (state) => {
         state.saving = true;
         state.error = null;
@@ -182,8 +194,25 @@ const adminUsersSlice = createSlice({
         state.saving = false;
         state.error = action.payload || action.error.message;
       })
-
-      // DELETE
+      .addCase(updateAdminUserStatus.pending, (state) => {
+        state.saving = true;
+        state.error = null;
+      })
+      .addCase(updateAdminUserStatus.fulfilled, (state, action) => {
+        state.saving = false;
+        const updatedUser = action.payload;
+        if (!updatedUser?._id) return;
+        state.users = state.users.map((user) =>
+          user._id === updatedUser._id ? { ...user, ...updatedUser } : user,
+        );
+        if (state.selectedUser?._id === updatedUser._id) {
+          state.selectedUser = { ...state.selectedUser, ...updatedUser };
+        }
+      })
+      .addCase(updateAdminUserStatus.rejected, (state, action) => {
+        state.saving = false;
+        state.error = action.payload || action.error.message;
+      })
       .addCase(deleteAdminUser.pending, (state) => {
         state.saving = true;
         state.error = null;
@@ -204,8 +233,6 @@ const adminUsersSlice = createSlice({
         state.saving = false;
         state.error = action.payload || action.error.message;
       })
-
-      // BLOCK / UNBLOCK
       .addCase(toggleAdminUserStatus.pending, (state) => {
         state.saving = true;
         state.error = null;
@@ -227,6 +254,7 @@ export {
   fetchAdminUsers,
   fetchAdminUserById,
   updateAdminUser,
+  updateAdminUserStatus,
   deleteAdminUser,
   toggleAdminUserStatus,
 };

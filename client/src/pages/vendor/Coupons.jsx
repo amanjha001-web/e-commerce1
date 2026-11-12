@@ -257,14 +257,7 @@ const Coupons = ({
           ).toLowerCase() === "active";
 
         return (
-          <span
-            className={[
-              "rounded-full px-2.5 py-1 text-xs font-medium",
-              active
-                ? "bg-success/10 text-success"
-                : "bg-muted text-muted-foreground",
-            ].join(" ")}
-          >
+          <span className={active ? "status-badge green" : "status-badge"}>
             {active ? "Active" : "Inactive"}
           </span>
         );
@@ -274,11 +267,11 @@ const Coupons = ({
       key: "actions",
       label: "Actions",
       render: (coupon) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={() => openEditModal(coupon)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/10"
+            className="btnsm primary"
           >
             Edit
           </button>
@@ -286,7 +279,7 @@ const Coupons = ({
           <button
             type="button"
             onClick={() => handleToggle(coupon)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted"
+            className="btnsm"
           >
             {String(
               coupon?.status || "active"
@@ -298,7 +291,7 @@ const Coupons = ({
           <button
             type="button"
             onClick={() => handleDelete(coupon)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/10"
+            className="btnsm text-[var(--red)] border-[#f3cbd0] hover:bg-[#fff0f1]"
           >
             Delete
           </button>
@@ -308,29 +301,28 @@ const Coupons = ({
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      
-
+    <div className="min-h-screen bg-[var(--bg)]">
       <div>
-
         <main className="p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl space-y-6">
             {/* Page Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+                <div className="eyebrow">Promotions & Marketing</div>
+                <h1 className="text-2xl font-black text-[var(--text)] dark:text-foreground">
                   Store Coupons
                 </h1>
 
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                   Manage discounts and promotional offers.
                 </p>
               </div>
 
               <Button
                 onClick={openCreateModal}
+                className="primarybtn"
               >
-                Create Coupon
+                + Create Coupon
               </Button>
             </div>
 
@@ -353,7 +345,7 @@ const Coupons = ({
             </div>
 
             {/* Filters */}
-            <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+            <div className="panel p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="w-full md:max-w-md">
                   <Input
@@ -395,7 +387,7 @@ const Coupons = ({
             </div>
 
             {/* Table */}
-            <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-xs dark:border-line dark:bg-card">
               {loading ? (
                 <div className="flex min-h-[300px] items-center justify-center">
                   <Loader />

@@ -9,19 +9,19 @@ const statusConfig = {
     label: "Pending Review",
     description: "Your seller application is awaiting admin review.",
     icon: "⏳",
-    badge: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+    badge: "status-badge status-badge-pending",
   },
   approved: {
     label: "Approved",
     description: "Your seller application has been approved.",
     icon: "✓",
-    badge: "border-green-500/30 bg-green-500/10 text-green-300",
+    badge: "status-badge status-badge-delivered",
   },
   rejected: {
     label: "Rejected",
     description: "Your seller application was not approved.",
     icon: "!",
-    badge: "border-red-500/30 bg-red-500/10 text-red-300",
+    badge: "status-badge status-badge-cancelled",
   },
 };
 
@@ -40,16 +40,16 @@ const formatDate = (value) => {
 
 const Detail = ({ label, value }) => (
   <div className="min-w-0">
-    <dt className="text-xs text-slate-400">{label}</dt>
-    <dd className="mt-1 break-words text-sm font-medium text-white">
+    <dt className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">{label}</dt>
+    <dd className="mt-1 break-words text-xs font-semibold text-[var(--text)] dark:text-foreground">
       {value || "Not provided"}
     </dd>
   </div>
 );
 
 const Section = ({ title, children }) => (
-  <section className="mt-6 rounded-2xl border border-slate-800 bg-[#0e1422] p-5 sm:p-7">
-    <h2 className="mb-5 text-lg font-semibold text-white">{title}</h2>
+  <section className="panel mt-6 p-5 sm:p-7">
+    <h2 className="mb-5 border-b border-[var(--line)] pb-3 text-sm font-black uppercase tracking-wider text-[var(--text)] dark:text-foreground dark:border-line">{title}</h2>
     <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">{children}</dl>
   </section>
 );
@@ -128,26 +128,30 @@ const SellerRequestStatus = () => {
   const config = statusConfig[status] || statusConfig.pending;
 
   return (
-    <main className="min-h-screen bg-[#070b14] px-4 py-10 text-white sm:px-6">
+    <main className="min-h-screen bg-[var(--bg)] px-4 py-10 text-[var(--text)] transition-colors duration-300 sm:px-6 dark:bg-background dark:text-foreground">
       <div className="mx-auto max-w-4xl">
-        <nav className="mb-6 text-sm text-slate-400">
-          <Link to="/" className="hover:text-blue-400">
+        <nav className="mb-6 flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
+          <Link to="/" className="transition-colors hover:text-[var(--primary)]">
             Home
           </Link>
-          <span className="mx-2">/</span>
-          <Link to="/become-seller" className="hover:text-blue-400">
+          <span>/</span>
+          <Link
+            to="/become-seller"
+            className="transition-colors hover:text-[var(--primary)]"
+          >
             Become a Seller
           </Link>
-          <span className="mx-2">/</span>
-          <span className="text-white">Request Status</span>
+          <span>/</span>
+          <span className="text-[var(--text)] dark:text-foreground font-bold">Request Status</span>
         </nav>
 
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <span className="eyebrow">Application Status</span>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-[var(--text)] dark:text-foreground">
               Seller Request Status
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
+            <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--muted)]">
               Track the review progress of your seller application.
             </p>
           </div>
@@ -163,27 +167,27 @@ const SellerRequestStatus = () => {
               }
             }}
             disabled={loading}
-            className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btnsm outlinebtn disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Refreshing..." : "Refresh Status"}
           </button>
         </header>
 
         {loading ? (
-          <div className="mt-8 animate-pulse rounded-2xl border border-slate-800 bg-[#0e1422] p-8">
-            <div className="h-6 w-52 rounded bg-slate-700" />
-            <div className="mt-4 h-4 w-72 max-w-full rounded bg-slate-800" />
-            <div className="mt-8 h-28 rounded-xl bg-slate-800" />
+          <div className="mt-8 panel animate-pulse p-8">
+            <div className="h-6 w-52 rounded bg-black/5 dark:bg-white/5" />
+            <div className="mt-4 h-4 w-72 max-w-full rounded bg-black/5 dark:bg-white/5" />
+            <div className="mt-8 h-28 rounded-xl bg-black/5 dark:bg-white/5" />
           </div>
         ) : error || !application ? (
-          <section className="mt-8 rounded-2xl border border-slate-800 bg-[#0e1422] p-6 text-center sm:p-9">
+          <section className="panel mt-8 p-6 text-center shadow-sm sm:p-9">
             <div className="text-4xl">📄</div>
 
-            <h2 className="mt-4 text-xl font-semibold">
+            <h2 className="mt-4 text-lg font-bold text-[var(--text)] dark:text-foreground">
               No Request Details Available
             </h2>
 
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
+            <p className="mx-auto mt-2 max-w-lg text-xs font-medium leading-relaxed text-[var(--muted)]">
               {error ||
                 "We couldn't find a seller application for your account."}
             </p>
@@ -199,14 +203,14 @@ const SellerRequestStatus = () => {
                     setLoading(false);
                   }
                 }}
-                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold hover:opacity-90"
+                className="primarybtn"
               >
                 Try Again
               </button>
 
               <Link
                 to="/become-seller"
-                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                className="outlinebtn"
               >
                 Become a Seller
               </Link>
@@ -214,24 +218,24 @@ const SellerRequestStatus = () => {
           </section>
         ) : (
           <>
-            <section className="mt-8 rounded-2xl border border-slate-800 bg-[#0e1422] p-5 sm:p-8">
+            <section className="panel mt-8 p-5 sm:p-8">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#070b14] text-2xl">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--primary)]/20 bg-[var(--soft)] text-2xl text-[var(--primary)]">
                     {config.icon}
                   </div>
 
                   <div>
-                    <h2 className="text-xl font-semibold">
+                    <h2 className="text-lg font-black text-[var(--text)] dark:text-foreground">
                       {application.shopName || application.businessName}
                     </h2>
 
-                    <p className="mt-1 text-sm text-slate-400">
+                    <p className="mt-1 text-xs font-medium text-[var(--muted)]">
                       {application.businessName}
                     </p>
 
                     <span
-                      className={`mt-3 inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold ${config.badge}`}
+                      className={`mt-3 inline-flex ${config.badge}`}
                     >
                       {config.label}
                     </span>
@@ -239,21 +243,25 @@ const SellerRequestStatus = () => {
                 </div>
 
                 <div className="sm:text-right">
-                  <p className="text-xs text-slate-400">Application ID</p>
-                  <p className="mt-1 break-all text-xs text-slate-300">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                    Application ID
+                  </p>
+                  <p className="mt-1 break-all text-xs font-semibold text-[var(--text)] dark:text-foreground">
                     {application._id}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-xl border border-slate-800 bg-[#070b14] p-4">
-                <p className="text-sm leading-6 text-slate-300">
+              <div className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--soft)]/50 p-4 dark:border-line">
+                <p className="text-xs font-semibold leading-relaxed text-[var(--text)] dark:text-foreground">
                   {config.description}
                 </p>
               </div>
 
               <div className="mt-8">
-                <h3 className="text-sm font-semibold">Application Progress</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text)] dark:text-foreground">
+                  Application Progress
+                </h3>
 
                 <div className="mt-4 grid grid-cols-3 gap-3">
                   {["Submitted", "Under Review", "Decision"].map(
@@ -270,11 +278,13 @@ const SellerRequestStatus = () => {
                       return (
                         <div key={step}>
                           <div
-                            className={`h-1.5 rounded-full ${
-                              completed ? "bg-blue-500" : "bg-slate-700"
+                            className={`h-2 rounded-full transition-colors ${
+                              completed ? "bg-[var(--primary)]" : "bg-black/10 dark:bg-white/10"
                             }`}
                           />
-                          <p className="mt-2 text-xs text-slate-400">{step}</p>
+                          <p className="mt-2 text-[11px] font-semibold text-[var(--muted)]">
+                            {step}
+                          </p>
                         </div>
                       );
                     },
@@ -282,7 +292,7 @@ const SellerRequestStatus = () => {
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-5 border-t border-slate-800 pt-6 sm:grid-cols-2">
+              <div className="mt-8 grid grid-cols-1 gap-5 border-t border-[var(--line)] pt-6 sm:grid-cols-2 dark:border-line">
                 <Detail
                   label="Submitted On"
                   value={formatDate(application.createdAt)}
@@ -364,9 +374,9 @@ const SellerRequestStatus = () => {
         <div className="mt-8 text-center">
           <Link
             to="/"
-            className="text-sm font-medium text-blue-400 hover:text-blue-300"
+            className="text-xs font-bold text-[var(--primary)] hover:underline dark:text-rose-400"
           >
-            ← Back to ShopSphere
+            ← Back to ShopSphere Storefront
           </Link>
         </div>
       </div>

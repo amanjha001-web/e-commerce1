@@ -48,7 +48,7 @@ const ProductImages = ({ images = [], productName = "Product" }) => {
               aria-label={`View image ${index + 1}`}
               className={`aspect-square overflow-hidden rounded-lg border-2 bg-gray-50 transition dark:bg-gray-800 ${
                 currentIndex === index
-                  ? "border-blue-600"
+                  ? "border-secondary"
                   : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
@@ -73,3 +73,4 @@ const ProductImages = ({ images = [], productName = "Product" }) => {
 };
 
 export default ProductImages;
+

@@ -40,7 +40,7 @@ const OrderFilters = ({
     currentFilters.sort !== "newest";
 
   return (
-    <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
         {/* Search */}
         <div className="relative md:col-span-2 lg:col-span-2">
@@ -63,7 +63,7 @@ const OrderFilters = ({
             onChange={(event) => handleChange("search", event.target.value)}
             disabled={loading}
             placeholder="Search order, customer, email..."
-            className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
@@ -73,7 +73,7 @@ const OrderFilters = ({
             value={currentFilters.status}
             onChange={(event) => handleChange("status", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
@@ -94,7 +94,7 @@ const OrderFilters = ({
               handleChange("paymentStatus", event.target.value)
             }
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Payments</option>
             <option value="pending">Pending</option>
@@ -111,7 +111,7 @@ const OrderFilters = ({
             value={currentFilters.dateRange}
             onChange={(event) => handleChange("dateRange", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="all">All Dates</option>
             <option value="today">Today</option>
@@ -129,7 +129,7 @@ const OrderFilters = ({
             value={currentFilters.sort}
             onChange={(event) => handleChange("sort", event.target.value)}
             disabled={loading}
-            className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>

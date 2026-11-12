@@ -12,15 +12,13 @@ const DashboardCard = ({
 
   if (loading) {
     return (
-      <div className="animate-pulse rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+      <div className="stat-card animate-pulse">
         <div className="flex items-center justify-between">
-          <div className="h-4 w-28 rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-28 rounded bg-[var(--soft)]" />
+          <div className="h-10 w-10 rounded-xl bg-[var(--soft)]" />
         </div>
-
-        <div className="mt-4 h-8 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-
-        <div className="mt-2 h-3 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="mt-4 h-8 w-24 rounded bg-[var(--soft)]" />
+        <div className="mt-2 h-3 w-32 rounded bg-[var(--soft)]" />
       </div>
     );
   }
@@ -29,17 +27,17 @@ const DashboardCard = ({
     <>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-gray-500 dark:text-gray-400">
+          <p className="truncate text-xs font-bold text-[var(--muted)]">
             {title}
           </p>
 
-          <h3 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+          <h3 className="mt-2 text-2xl font-black text-[var(--text)] dark:text-foreground">
             {value ?? "—"}
           </h3>
         </div>
 
         {icon && (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl dark:bg-blue-900/20">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--soft)] text-xl text-[var(--primary)]">
             {icon}
           </div>
         )}
@@ -49,10 +47,10 @@ const DashboardCard = ({
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {trend !== undefined && (
             <span
-              className={`text-xs font-semibold ${
+              className={`text-xs font-black ${
                 isPositive
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
+                  ? "text-[var(--green)]"
+                  : "text-[var(--red)]"
               }`}
             >
               {isPositive ? "↑" : "↓"} {trend}
@@ -60,7 +58,7 @@ const DashboardCard = ({
           )}
 
           {subtitle && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-medium text-[var(--muted)]">
               {subtitle}
             </span>
           )}
@@ -74,7 +72,7 @@ const DashboardCard = ({
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-xl border border-gray-200 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-blue-700"
+        className="stat-card w-full text-left transition hover:-translate-y-0.5 hover:border-[var(--primary)] cursor-pointer"
       >
         {CardContent}
       </button>
@@ -82,7 +80,7 @@ const DashboardCard = ({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="stat-card">
       {CardContent}
     </div>
   );

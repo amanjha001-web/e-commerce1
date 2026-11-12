@@ -155,7 +155,7 @@ const ProductDetails = ({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
       onMouseDown={handleBackdropClick}
     >
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -483,7 +483,7 @@ const ProductDetails = ({
                           <div
                             key={key}
                             className={`grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-2 ${
-                              index % 2 === 0 ? "bg-muted/20" : "bg-background"
+                              index % 2 === 0 ? "bg-muted/20" : "bg-white"
                             }`}
                           >
                             <span className="text-sm font-medium capitalize text-foreground">
