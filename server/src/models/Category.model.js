@@ -1,20 +1,13 @@
-import mongoose from "mongoose";
-
-
-/*                             Category Schema                                */
-
+import mongoose from 'mongoose';
 
 const categorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
-      unique: true,
+      required: [true, 'Category name is required'],
       trim: true,
-      minlength: 2,
-      maxlength: 100,
+      unique: true,
     },
-
     slug: {
       type: String,
       required: true,
@@ -22,98 +15,34 @@ const categorySchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-
     description: {
       type: String,
-      default: "",
-      trim: true,
-      maxlength: 1000,
+      default: '',
     },
-
     image: {
-      url: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-        trim: true,
-      },
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
-
-    parentCategory: {
+    parent: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+      ref: 'Category',
       default: null,
     },
-
-    level: {
-      type: Number,
-      default: 1,
-      min: 1,
-    },
-
-    isFeatured: {
-      type: Boolean,
-      default: false,
-    },
-
-    sortOrder: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
     isActive: {
       type: Boolean,
       default: true,
     },
-
-    deletedAt: {
-      type: Date,
-      default: null,
+    sortOrder: {
+      type: Number,
+      default: 0,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+categorySchema.index({ isActive: 1 });
 
-/*                                  Indexes                                   */
-
-
-
-
-categorySchema.index({
-  parentCategory: 1,
-});
-
-categorySchema.index({
-  isActive: 1,
-});
-
-categorySchema.index({
-  isFeatured: 1,
-});
-
-categorySchema.index({
-  sortOrder: 1,
-});
-
-categorySchema.index({
-  name: "text",
-  description: "text",
-});
-
-
-/*                                   Model                                    */
-
-
-const Category =
-  mongoose.models.Category || mongoose.model("Category", categorySchema);
-
+export const Category = mongoose.model('Category', categorySchema);
 export default Category;

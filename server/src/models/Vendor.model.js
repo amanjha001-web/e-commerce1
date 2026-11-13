@@ -1,357 +1,97 @@
-import mongoose from "mongoose";
-
-
-/*                             Social Links                                   */
-
-
-const socialLinksSchema = new mongoose.Schema(
-  {
-    facebook: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    instagram: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    twitter: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    youtube: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
-
-/*                              Bank Details                                  */
-
-
-const bankDetailsSchema = new mongoose.Schema(
-  {
-    accountHolderName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    accountNumber: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    ifscCode: {
-      type: String,
-      default: "",
-      uppercase: true,
-      trim: true,
-    },
-
-    bankName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
-
-/*                              Vendor Schema                                 */
-
+import mongoose from 'mongoose';
+import { VENDOR_STATUS, VENDOR_STATUS_LIST } from '../constants/vendorStatus.constant.js';
 
 const vendorSchema = new mongoose.Schema(
   {
-    
-    /*                                User                                    */
-    
-
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       unique: true,
-      index: true,
     },
-
-    
-    /*                              Shop Info                                 */
-    
-
-    shopName: {
+    storeName: {
       type: String,
-      required: true,
+      required: [true, 'Store name is required'],
       trim: true,
-      minlength: 3,
-      maxlength: 120,
     },
-
-    shopSlug: {
+    slug: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
-
-    shopDescription: {
+    description: {
       type: String,
-      default: "",
-      trim: true,
-      maxlength: 1000,
+      default: '',
     },
-
-    
-    /*                                Logo                                    */
-    
-
     logo: {
-      url: {
-        type: String,
-        default: "",
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-      },
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
-
-    
-    /*                               Banner                                   */
-    
-
     banner: {
-      url: {
-        type: String,
-        default: "",
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-      },
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
-
-    
-    /*                            Contact Info                                */
-    
-
-    website: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     phone: {
       type: String,
-      required: true,
-      trim: true,
+      default: '',
     },
-
     email: {
       type: String,
-      required: true,
       lowercase: true,
       trim: true,
     },
-
-    
-    /*                           Business Info                                */
-    
-
-    gstNumber: {
-      type: String,
-      default: "",
-      uppercase: true,
-      trim: true,
-    },
-
-    panNumber: {
-      type: String,
-      default: "",
-      uppercase: true,
-      trim: true,
-    },
-
-    
-    /*                              Address                                   */
-    
-
     address: {
-      country: {
-        type: String,
-        default: "India",
-        trim: true,
-      },
-
-      state: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      city: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      postalCode: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      addressLine1: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      addressLine2: {
-        type: String,
-        default: "",
-        trim: true,
+      street: String,
+      city: String,
+      state: String,
+      postalCode: String,
+      country: String,
+    },
+    businessDetails: {
+      taxNumber: String,
+      businessLicense: String,
+      bankAccount: {
+        accountHolderName: String,
+        accountNumber: String,
+        bankName: String,
+        ifscCode: String,
+        routingNumber: String,
       },
     },
-
-    
-    /*                            Statistics                                  */
-    
-
-    averageRating: {
+    commissionRate: {
       type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
+      default: 10, // percentage e.g. 10%
     },
-
-    totalReviews: {
-      type: Number,
-      default: 0,
-      min: 0,
+    status: {
+      type: String,
+      enum: VENDOR_STATUS_LIST,
+      default: VENDOR_STATUS.PENDING,
     },
-
-    totalProducts: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    totalOrders: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    totalSales: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    totalEarnings: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    
-    /*                           Social Links                                 */
-    
-
-    socialLinks: {
-      type: socialLinksSchema,
-      default: () => ({}),
-    },
-
-    
-    /*                            Bank Details                                */
-    
-
-    bankDetails: {
-      type: bankDetailsSchema,
-      default: () => ({}),
-    },
-
-    
-    /*                              Status                                    */
-    
-
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-
-    isApproved: {
-      type: Boolean,
-      default: false,
-    },
-
     isActive: {
       type: Boolean,
       default: true,
     },
-
-    
-    /*                            Soft Delete                                 */
-    
-
-    deletedAt: {
-      type: Date,
-      default: null,
+    rating: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
+    },
+    rejectionReason: {
+      type: String,
+      default: '',
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+vendorSchema.index({ status: 1 });
 
-/*                                  Indexes                                   */
-
-
-vendorSchema.index({
-  isApproved: 1,
-});
-
-vendorSchema.index({
-  isVerified: 1,
-});
-
-vendorSchema.index({
-  isActive: 1,
-});
-
-vendorSchema.index({
-  averageRating: -1,
-});
-
-vendorSchema.index({
-  createdAt: -1,
-});
-
-
-/*                                   Model                                    */
-
-
-const Vendor = mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
-
+export const Vendor = mongoose.model('Vendor', vendorSchema);
 export default Vendor;

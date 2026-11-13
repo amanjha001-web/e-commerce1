@@ -1,53 +1,56 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { REFUND_STATUS, REFUND_STATUS_LIST } from '../constants/refundStatus.constant.js';
 
 const refundSchema = new mongoose.Schema(
   {
-    order: {
+    orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: 'Order',
+      required: true,
+      index: true,
+    },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment',
+      required: true,
+      index: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
     },
-
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
     amount: {
       type: Number,
       required: true,
+      min: 0,
     },
-
-    paymentId: String,
-
-    refundId: String,
-
-    reason: String,
-
+    reason: {
+      type: String,
+      required: true,
+    },
     status: {
       type: String,
-      enum: ["PENDING", "PROCESSING", "SUCCESS", "FAILED"],
-      default: "PENDING",
+      enum: REFUND_STATUS_LIST,
+      default: REFUND_STATUS.PENDING,
+      index: true,
     },
-
+    razorpayRefundId: {
+      type: String,
+      sparse: true,
+    },
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
     },
-
-    processedAt: Date,
-
-    failureReason: String,
+    processedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-refundSchema.index({
-  order: 1,
-  status: 1,
-});
-
-export default mongoose.model("Refund", refundSchema);
+export const Refund = mongoose.model('Refund', refundSchema);
+export default Refund;

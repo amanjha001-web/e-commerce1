@@ -1,206 +1,80 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { VENDOR_STATUS, VENDOR_STATUS_LIST } from '../constants/vendorStatus.constant.js';
 
-const { Schema } = mongoose;
-
-
-/*                          Vendor Request Schema                             */
-
-
-const vendorRequestSchema = new Schema(
+const vendorRequestSchema = new mongoose.Schema(
   {
-    
-    /* User                                                                    */
-    
-
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
-      unique: true,
-      index: true,
     },
-
-    
-    /* Business Information                                                    */
-    
-
-    shopName: {
+    storeName: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 120,
     },
-
-    businessName: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 120,
-    },
-
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-    },
-
-    logo: {
-      url: String,
-      publicId: String,
-    },
-
-    banner: {
-      url: String,
-      publicId: String,
-    },
-
-    
-    /* Contact                                                                 */
-    
-
     email: {
       type: String,
       required: true,
-      lowercase: true,
       trim: true,
+      lowercase: true,
     },
-
     phone: {
       type: String,
       required: true,
       trim: true,
     },
-
-    website: {
+    description: {
       type: String,
-      trim: true,
+      default: '',
     },
-
-    
-    /* Address                                                                 */
-    
-
-    address: {
-      country: String,
-      state: String,
+    businessAddress: {
+      street: String,
       city: String,
+      state: String,
       postalCode: String,
-      addressLine1: String,
-      addressLine2: String,
+      country: String,
     },
-
-    
-    /* Documents                                                               */
-    
-
-    documents: [
-      {
-        type: {
-          type: String,
-          enum: ["gst", "pan", "aadhaar", "shop_license", "other"],
-        },
-
-        number: String,
-
-        url: String,
-
-        publicId: String,
-      },
-    ],
-
-    
-    /* Bank Details                                                            */
-    
-
-    bankDetails: {
-      accountHolderName: String,
-      accountNumber: String,
-      ifscCode: String,
-      bankName: String,
-      branchName: String,
-      upiId: String,
+    businessType: {
+      type: String,
+      default: 'individual',
     },
-
-    
-    /* Status                                                                  */
-    
-
+    taxId: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
-      enum: ["pending", "under_review", "approved", "rejected"],
-      default: "pending",
-      index: true,
+      enum: VENDOR_STATUS_LIST,
+      default: VENDOR_STATUS.PENDING,
     },
-
-    
-    /* Review                                                                  */
-    
-
-    reviewedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
+    reviewNotes: {
+      type: String,
+      default: '',
     },
-
-    reviewedAt: {
-      type: Date,
-      default: null,
-    },
-
     rejectionReason: {
       type: String,
-      trim: true,
-      maxlength: 500,
+      default: '',
     },
-
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
-
-    
-    /* Soft Delete                                                             */
-    
-
+    reviewedAt: {
+      type: Date,
+    },
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+vendorRequestSchema.index({ userId: 1, status: 1 });
+vendorRequestSchema.index({ status: 1 });
 
-/*                                  Indexes                                   */
-
-
-vendorRequestSchema.index({
-  user: 1,
-  status: 1,
-});
-
-vendorRequestSchema.index({
-  shopName: "text",
-  businessName: "text",
-});
-
-vendorRequestSchema.index({
-  createdAt: -1,
-});
-
-
-/*                                 Export                                     */
-
-
-const VendorRequest = mongoose.model("VendorRequest", vendorRequestSchema);
-
+export const VendorRequest = mongoose.model('VendorRequest', vendorRequestSchema);
 export default VendorRequest;

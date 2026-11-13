@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const shippingZoneSchema = new mongoose.Schema(
   {
@@ -7,60 +7,41 @@ const shippingZoneSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-
     countries: [
       {
         type: String,
+        default: 'India',
       },
     ],
-
     states: [
       {
         type: String,
       },
     ],
-
-    pincodes: [
+    postalCodes: [
       {
         type: String,
       },
     ],
-
-    shippingCharge: {
+    rate: {
       type: Number,
-      default: 0,
+      required: true,
+      min: 0,
     },
-
-    freeShippingAbove: {
+    freeShippingThreshold: {
       type: Number,
-      default: 0,
+      default: 0, // 0 means no free shipping
     },
-
-    estimatedDays: {
-      min: {
-        type: Number,
-        default: 2,
-      },
-
-      max: {
-        type: Number,
-        default: 7,
-      },
-    },
-
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-shippingZoneSchema.index({
-  states: 1,
-  isActive: 1,
-});
-
-export default mongoose.model("ShippingZone", shippingZoneSchema);
+export const ShippingZone = mongoose.model('ShippingZone', shippingZoneSchema);
+export default ShippingZone;

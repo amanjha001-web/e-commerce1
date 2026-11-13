@@ -1,59 +1,59 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const vendorPayoutSchema = new mongoose.Schema(
   {
-    vendor: {
+    vendorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Vendor",
+      ref: 'Vendor',
       required: true,
+      index: true,
     },
-
-    transactions: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Transaction",
-      },
-    ],
-
     amount: {
       type: Number,
       required: true,
+      min: [1, 'Payout amount must be greater than 0'],
     },
-
-    commission: {
-      type: Number,
-      default: 0,
-    },
-
-    finalAmount: {
-      type: Number,
-      required: true,
-    },
-
-    paymentMethod: {
+    currency: {
       type: String,
-      enum: ["BANK_TRANSFER", "UPI"],
-      default: "BANK_TRANSFER",
+      default: 'INR',
     },
-
     status: {
       type: String,
-      enum: ["PENDING", "PROCESSING", "PAID", "FAILED"],
-      default: "PENDING",
+      enum: ['PENDING', 'PROCESSING', 'PAID', 'REJECTED', 'CANCELLED'],
+      default: 'PENDING',
     },
-
-    payoutId: String,
-
-    paidAt: Date,
+    paymentMethod: {
+      type: String,
+      default: 'BANK_TRANSFER',
+    },
+    bankDetails: {
+      accountHolderName: String,
+      accountNumber: String,
+      bankName: String,
+      ifscCode: String,
+    },
+    transactionReference: {
+      type: String,
+      default: '',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+    processedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    processedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-vendorPayoutSchema.index({
-  vendor: 1,
-  status: 1,
-});
+vendorPayoutSchema.index({ vendorId: 1, status: 1 });
 
-export default mongoose.model("VendorPayout", vendorPayoutSchema);
+export const VendorPayout = mongoose.model('VendorPayout', vendorPayoutSchema);
+export default VendorPayout;

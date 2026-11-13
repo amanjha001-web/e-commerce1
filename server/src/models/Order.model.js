@@ -1,417 +1,150 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { ORDER_STATUS, ORDER_STATUS_LIST } from '../constants/orderStatus.constant.js';
+import { PAYMENT_STATUS, PAYMENT_STATUS_LIST, PAYMENT_METHODS } from '../constants/paymentStatus.constant.js';
 
-
-/*                            Order Item Schema                               */
-
-
-const orderItemSchema = new mongoose.Schema(
-  {
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-
-    vendor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200,
-    },
-
-    image: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    sku: {
-      type: String,
-      default: "",
-      trim: true,
-      uppercase: true,
-    },
-
-    priceAtPurchase: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-
-    totalPrice: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    vendorAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    platformCommission: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+const orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
   },
-  {
-    _id: false,
+  variant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariant',
   },
-);
-
-
-/*                         Shipping Address Schema                            */
-
-
-const shippingAddressSchema = new mongoose.Schema(
-  {
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    phone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    addressLine1: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    addressLine2: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    state: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    country: {
-      type: String,
-      default: "India",
-      trim: true,
-    },
-
-    postalCode: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    required: true,
   },
-  {
-    _id: false,
-  },
-);
-
-
-/*                              Order Schema                                  */
-
+  name: { type: String, required: true },
+  image: { type: String, default: '' },
+  price: { type: Number, required: true },
+  quantity: { type: Number, required: true, min: 1 },
+  total: { type: Number, required: true },
+});
 
 const orderSchema = new mongoose.Schema(
   {
     orderNumber: {
       type: String,
+      required: true,
       unique: true,
+      index: true,
     },
-
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
+      index: true,
     },
-
-    items: {
-      type: [orderItemSchema],
-      required: true,
-      validate: {
-        validator: (items) => items.length > 0,
-        message: "Order must contain at least one item.",
-      },
-    },
-
+    items: [orderItemSchema],
     shippingAddress: {
-      type: shippingAddressSchema,
-      required: true,
+      fullName: String,
+      phone: String,
+      street: String,
+      apartment: String,
+      city: String,
+      state: String,
+      postalCode: String,
+      country: String,
     },
-    /*                   Pricing                                   */
-
+    paymentMethod: {
+      type: String,
+      enum: Object.values(PAYMENT_METHODS),
+      default: PAYMENT_METHODS.RAZORPAY,
+    },
+    paymentStatus: {
+      type: String,
+      enum: PAYMENT_STATUS_LIST,
+      default: PAYMENT_STATUS.PENDING,
+      index: true,
+    },
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment',
+    },
+    orderStatus: {
+      type: String,
+      enum: ORDER_STATUS_LIST,
+      default: ORDER_STATUS.PENDING,
+      index: true,
+    },
     subtotal: {
       type: Number,
       required: true,
-      min: 0,
+      default: 0,
     },
-
-    discount: {
+    taxPrice: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
-    shippingCharge: {
+    shippingPrice: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
-    tax: {
+    discountAmount: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
     totalAmount: {
       type: Number,
       required: true,
-      min: 0,
+      default: 0,
     },
-
-    /*                    Coupon                   -- */
-
     coupon: {
-      code: {
-        type: String,
-        default: "",
-        trim: true,
-        uppercase: true,
-      },
-
-      discountType: {
-        type: String,
-        default: "",
-      },
-
-      discountValue: {
-        type: Number,
-        default: 0,
-        min: 0,
-      },
+      code: String,
+      discount: Number,
     },
-
-    /*                 Payment                 */
-
-    paymentMethod: {
-      type: String,
-      enum: ["COD", "RAZORPAY", "UPI", "CARD", "NETBANKING", "WALLET", "EMI"],
-      default: "COD",
+    isPaid: {
+      type: Boolean,
+      default: false,
     },
-
-    paymentStatus: {
-      type: String,
-      enum: ["Pending", "Paid", "Failed", "Refunded"],
-      default: "Pending",
-    },
-
-    razorpayOrderId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    razorpayPaymentId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    razorpaySignature: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     paidAt: {
       type: Date,
-      default: null,
     },
-
-    /*                    Refund                   -- */
-
-    refundAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
+    isDelivered: {
+      type: Boolean,
+      default: false,
     },
-
-    refundReason: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    refundedAt: {
-      type: Date,
-      default: null,
-    },
-
-    /*                         Order Status                         */
-
-    orderStatus: {
-      type: String,
-      enum: [
-        "Pending",
-        "Confirmed",
-        "Processing",
-        "Shipped",
-        "Out For Delivery",
-        "Delivered",
-        "Cancelled",
-        "Returned",
-        "Refunded",
-      ],
-      default: "Pending",
-    },
-
-    notes: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 1000,
-    },
-    /*                  Shipping Info                         */
-
-    trackingNumber: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    courierPartner: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    expectedDeliveryDate: {
-      type: Date,
-      default: null,
-    },
-
     deliveredAt: {
       type: Date,
-      default: null,
     },
-
-    cancelledAt: {
-      type: Date,
-      default: null,
+    tracking: {
+      carrier: String,
+      trackingNumber: String,
+      trackingUrl: String,
+      estimatedDeliveryDate: Date,
     },
-
-    /* -------------------------- Status History                         */
-
+    cancellation: {
+      reason: String,
+      cancelledAt: Date,
+      cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    },
+    returnRequest: {
+      reason: String,
+      status: { type: String, enum: ['none', 'requested', 'approved', 'rejected'], default: 'none' },
+      requestedAt: Date,
+      actionedAt: Date,
+      actionedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      rejectionReason: String,
+    },
     statusHistory: [
       {
-        status: {
-          type: String,
-          required: true,
-        },
-
-        updatedAt: {
-          type: Date,
-          default: Date.now,
-        },
-
-        note: {
-          type: String,
-          default: "",
-          trim: true,
-        },
+        status: { type: String, required: true },
+        note: { type: String, default: '' },
+        updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        timestamp: { type: Date, default: Date.now },
       },
     ],
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+orderSchema.index({ userId: 1, createdAt: -1 });
+orderSchema.index({ 'items.vendorId': 1 });
 
-/*                                  Indexes                                   */
-
-
-
-
-orderSchema.index({
-  user: 1,
-});
-
-orderSchema.index({
-  orderStatus: 1,
-});
-
-orderSchema.index({
-  paymentStatus: 1,
-});
-
-orderSchema.index({
-  createdAt: -1,
-});
-
-orderSchema.index({
-  "items.vendor": 1,
-});
-
-orderSchema.index({
-  razorpayOrderId: 1,
-});
-
-orderSchema.index({
-  razorpayPaymentId: 1,
-});
-
-orderSchema.index({
-  trackingNumber: 1,
-});
-
-
-/*                         Generate Order Number                              */
-
-
-orderSchema.pre("save", function (next) {
-  if (!this.orderNumber) {
-    this.orderNumber =
-      "ORD-" + Date.now() + "-" + Math.floor(1000 + Math.random() * 9000);
-
-    this.statusHistory.push({
-      status: this.orderStatus,
-      note: "Order created",
-    });
-  }
-
-  next();
-});
-
-
-/*                                   Model                                    */
-
-
-const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
-
+export const Order = mongoose.model('Order', orderSchema);
 export default Order;

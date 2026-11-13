@@ -1,104 +1,59 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-
-/*                            Cart Item Schema                                */
-
-
-const cartItemSchema = new mongoose.Schema(
-  {
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-
-    quantity: {
-      type: Number,
-      required: true,
-      default: 1,
-      min: 1,
-    },
-
-    // Snapshot price when added to cart
-    priceAtPurchase: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
+const cartItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true,
   },
-  {
-    _id: false,
+  variant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductVariant',
+    default: null,
   },
-);
-
-
-/*                               Cart Schema                                  */
-
+  quantity: {
+    type: Number,
+    required: true,
+    min: [1, 'Quantity must be at least 1'],
+    default: 1,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+});
 
 const cartSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       unique: true,
     },
-
-    items: {
-      type: [cartItemSchema],
-      default: [],
-      validate: {
-        validator: function (items) {
-          const productIds = items.map((item) => item.product.toString());
-
-          return productIds.length === new Set(productIds).size;
-        },
-        message: "Duplicate products are not allowed in cart.",
-      },
+    items: [cartItemSchema],
+    coupon: {
+      code: String,
+      discount: { type: Number, default: 0 },
+      discountType: { type: String, enum: ['percentage', 'fixed'] },
     },
-
-    totalItems: {
+    totalAmount: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
-    subtotal: {
+    discountAmount: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
-    discount: {
+    finalAmount: {
       type: Number,
       default: 0,
-      min: 0,
-    },
-
-    totalPrice: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    couponCode: {
-      type: String,
-      default: "",
-      trim: true,
-      uppercase: true,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-
-
-
-/*                                   Model                                    */
-
-
-const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
-
+export const Cart = mongoose.model('Cart', cartSchema);
 export default Cart;

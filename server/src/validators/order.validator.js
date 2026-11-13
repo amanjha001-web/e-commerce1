@@ -1,100 +1,30 @@
-import { z } from "zod";
-
-import { objectId } from "./common.validator.js";
-
-/*                               Enums                                        */
-
-const paymentMethod = z.enum(["COD", "RAZORPAY"]);
-
-const orderStatus = z.enum([
-  "Pending",
-  "Confirmed",
-  "Processing",
-  "Packed",
-  "Shipped",
-  "Out For Delivery",
-  "Delivered",
-  "Cancelled",
-  "Returned",
-  "Refunded",
-]);
-
-/*                           Create Order                                     */
+import { z } from 'zod';
 
 export const createOrderSchema = z.object({
-  body: z.object({
-    addressId: objectId,
-
-    paymentMethod: paymentMethod.default("COD"),
-
-    couponCode: z.string().trim().optional().or(z.literal("")),
-
-    notes: z.string().trim().max(500).optional().or(z.literal("")),
-  }),
+  shippingAddress: z.object({
+    fullName: z.string().min(2),
+    phone: z.string().min(6),
+    street: z.string().min(3),
+    apartment: z.string().optional(),
+    city: z.string().min(2),
+    state: z.string().min(2),
+    postalCode: z.string().min(4),
+    country: z.string().default('India'),
+  }).optional(),
+  addressId: z.string().optional(),
+  paymentMethod: z.enum(['razorpay', 'cod', 'wallet']).default('razorpay'),
+  couponCode: z.string().optional(),
 });
-
-/*                         Update Order Status                                */
 
 export const updateOrderStatusSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
-
-  body: z.object({
-    status: orderStatus,
-
-    trackingNumber: z.string().trim().max(100).optional().or(z.literal("")),
-
-    courier: z.string().trim().max(100).optional().or(z.literal("")),
-
-    remark: z.string().trim().max(500).optional().or(z.literal("")),
-  }),
+  status: z.string().min(1, 'Order status is required'),
+  note: z.string().optional(),
 });
-
-/*                           Cancel Order                                     */
 
 export const cancelOrderSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
-
-  body: z.object({
-    reason: z
-      .string()
-      .trim()
-      .min(5, "Cancellation reason is required")
-      .max(500),
-  }),
+  reason: z.string().min(3, 'Cancellation reason is required'),
 });
-
-/*                           Return Order                                     */
 
 export const returnOrderSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
-
-  body: z.object({
-    reason: z.string().trim().min(5).max(500),
-  }),
-});
-
-/*                           Refund Order                                     */
-
-export const refundOrderSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
-
-  body: z.object({
-    reason: z.string().trim().min(5).max(500),
-  }),
-});
-
-/*                              Order Id                                      */
-
-export const orderIdSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
+  reason: z.string().min(3, 'Return reason is required'),
 });

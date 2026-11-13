@@ -1,39 +1,29 @@
-import { ZodError } from "zod";
-import ApiError from "../utils/ApiError.js";
+import { ApiError } from '../utils/apiError.js';
 
-const validate = (schema) => {
-  return async (req, res, next) => {
+export const validate = (schema) => {
+  return (req, res, next) => {
     try {
-      // Handle multipart/form-data values
-      if (req.is("multipart/form-data")) {
-        Object.keys(req.body).forEach((key) => {
-          const value = req.body[key];
-
-          if (value === "true") {
-            req.body[key] = true;
-          } else if (value === "false") {
-            req.body[key] = false;
-          }
-        });
+      if (schema.body && req.body) {
+        req.body = schema.body.parse(req.body);
       }
-
-      await schema.parseAsync({
-        body: req.body,
-        params: req.params,
-        query: req.query,
-      });
-
+      if (schema.query && req.query) {
+        req.query = schema.query.parse(req.query);
+      }
+      if (schema.params && req.params) {
+        req.params = schema.params.parse(req.params);
+      }
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        return next(
-          new ApiError(400, error.issues?.[0]?.message || "Validation failed"),
-        );
+      if (error.errors) {
+        const formattedErrors = error.errors.map((err) => ({
+          field: err.path.join('.'),
+          message: err.message,
+        }));
+        return next(ApiError.unprocessableEntity('Validation failed', formattedErrors));
       }
-
-      return next(error);
+      return next(ApiError.badRequest(error.message));
     }
   };
 };
 
-export { validate };
+export default validate;

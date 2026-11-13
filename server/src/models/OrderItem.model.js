@@ -1,80 +1,52 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema(
   {
-    order: {
+    orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: 'Order',
       required: true,
       index: true,
     },
-
-    product: {
+    productId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
+      ref: 'Product',
       required: true,
+      index: true,
     },
-
-    vendor: {
+    variantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Vendor",
-      required: true,
+      ref: 'ProductVariant',
+      default: null,
     },
-
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+      index: true,
+    },
     name: {
       type: String,
       required: true,
-      trim: true,
     },
-
-    image: {
-      url: String,
-      publicId: String,
+    price: {
+      type: Number,
+      required: true,
     },
-
     quantity: {
       type: Number,
       required: true,
       min: 1,
     },
-
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    discount: {
-      type: Number,
-      default: 0,
-    },
-
     total: {
       type: Number,
       required: true,
     },
-
-    status: {
-      type: String,
-      enum: [
-        "PENDING",
-        "CONFIRMED",
-        "SHIPPED",
-        "DELIVERED",
-        "CANCELLED",
-        "RETURNED",
-      ],
-      default: "PENDING",
-    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-orderItemSchema.index({
-  order: 1,
-  vendor: 1,
-});
-
-export default mongoose.model("OrderItem", orderItemSchema);
+export const OrderItem = mongoose.model('OrderItem', orderItemSchema);
+export default OrderItem;

@@ -1,121 +1,67 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const addressSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
-      index: true,
     },
-
-    type: {
-      type: String,
-      enum: ["HOME", "WORK", "OTHER"],
-      default: "HOME",
-    },
-
     fullName: {
       type: String,
       required: true,
       trim: true,
     },
-
     phone: {
       type: String,
       required: true,
       trim: true,
     },
-
-    alternatePhone: {
-      type: String,
-      trim: true,
-    },
-
-    addressLine1: {
+    street: {
       type: String,
       required: true,
       trim: true,
     },
-
-    addressLine2: {
+    apartment: {
       type: String,
-      trim: true,
+      default: '',
     },
-
-    landmark: {
-      type: String,
-      trim: true,
-    },
-
     city: {
       type: String,
       required: true,
       trim: true,
     },
-
     state: {
       type: String,
       required: true,
       trim: true,
     },
-
-    country: {
-      type: String,
-      default: "India",
-      trim: true,
-    },
-
-    pincode: {
+    postalCode: {
       type: String,
       required: true,
       trim: true,
     },
-
-    coordinates: {
-      latitude: {
-        type: Number,
-      },
-
-      longitude: {
-        type: Number,
-      },
+    country: {
+      type: String,
+      required: true,
+      default: 'India',
     },
-
-    isDefaultShipping: {
+    addressType: {
+      type: String,
+      enum: ['home', 'work', 'other'],
+      default: 'home',
+    },
+    isDefault: {
       type: Boolean,
       default: false,
-    },
-
-    isDefaultBilling: {
-      type: Boolean,
-      default: false,
-    },
-
-    isDeleted: {
-      type: Boolean,
-      default: false,
-    },
-
-    deletedAt: {
-      type: Date,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-// One user can quickly fetch addresses
-addressSchema.index({
-  user: 1,
-  isDeleted: 1,
-});
+addressSchema.index({ userId: 1, isDefault: 1 });
 
-// Default address lookup optimization
-addressSchema.index({
-  user: 1,
-  isDefaultShipping: 1,
-});
-
-export default mongoose.model("Address", addressSchema);
+export const Address = mongoose.model('Address', addressSchema);
+export default Address;

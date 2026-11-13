@@ -1,178 +1,68 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-
-import { helmet as helmetConfig, cors as corsOptions } from "./config/index.js";
-
-import {
-  requestLogger,
-  globalErrorHandler,
-  compressionMiddleware,
-  apiLimiter,
-  notFound,
-} from "./middlewares/index.js";
-
-/*                                  Routes                                    */
-
-import {
-  authRoutes,
-  userRoutes,
-  adminRoutes,
-  vendorRoutes,
-  vendorRequestRoutes,
-  addressRoutes,
-  brandRoutes,
-  categoryRoutes,
-  productRoutes,
-  productVariantRoutes,
-  cartRoutes,
-  wishlistRoutes,
-  orderRoutes,
-  paymentRoutes,
-  couponRoutes,
-  bannerRoutes,
-  reviewRoutes,
-  chatRoutes,
-  notificationRoutes,
-  
-  searchRoutes,
-  reportRoutes,
-  supportRoutes,
-  settingRoutes,
-  shipmentRoutes,
-  taxRoutes,
-  conversationRoutes,
-  messageRoutes,
-
-  fileRoutes,
-} from "./routes/index.js";
-
-
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import compression from 'compression';
+import morgan from 'morgan';
+import { env } from './config/env.js';
+import corsOptions from './config/cors.js';
+import { helmetConfig, apiRateLimiter } from './config/security.js';
+import { notFoundHandler } from './middlewares/notFound.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
+import routes from './routes/index.js';
 
 const app = express();
 
-/*                          Global Middlewares                                */
-
+// Security HTTP headers
 app.use(helmetConfig);
 
+// CORS configuration
 app.use(cors(corsOptions));
 
-app.use(requestLogger);
+// HTTP Request logging
+if (env.NODE_ENV !== 'test') {
+  app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+}
 
-app.use(compressionMiddleware);
+// Compress response bodies
+app.use(compression());
 
+// Parse JSON request body with rawBody capture for payment webhooks
 app.use(
   express.json({
-    limit: "20kb",
-  }),
+    limit: '10mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  })
 );
 
-app.use(
-  express.urlencoded({
-    extended: true,
-    limit: "20kb",
-  }),
-);
+// Parse URL-encoded request bodies
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use(cookieParser());
+// Cookie parsing
+app.use(cookieParser(env.COOKIE_SECRET));
 
-app.use(express.static("public"));
+// Global API rate limiting
+app.use(apiRateLimiter);
 
-/*                              Rate Limiting                                 */
-
-app.use("/api", apiLimiter);
-
-/*                              Health Check                                  */
-
-app.get("/health", (req, res) => {
-  return res.status(200).json({
+// Root health check
+app.get('/', (req, res) => {
+  res.status(200).json({
     success: true,
-    status: "OK",
-    message: "ShopSphere API is running",
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
+    message: 'Welcome to ShopSphere API Gateway',
+    version: '1.0.0',
+    docs: '/api/v1/health',
   });
 });
 
-/*                               API Routes                                   */
+// Mount modular API routes under API prefix (e.g. /api/v1)
+app.use(env.API_PREFIX, routes);
 
-// Auth
-app.use("/api/v1/auth", authRoutes);
+// Handle unknown routes (404)
+app.use(notFoundHandler);
 
-// User
-app.use("/api/v1/users", userRoutes);
+// Centralized error handling
+app.use(errorHandler);
 
-// Admin
-app.use("/api/v1/admin", adminRoutes);
-
-// Vendor
-app.use("/api/v1/vendors", vendorRoutes);
-app.use("/api/v1/vendor", vendorRoutes);
-
-app.use("/api/v1/vendor-requests", vendorRequestRoutes);
-
-// Address
-app.use("/api/v1/address", addressRoutes);
-app.use("/api/v1/addresses", addressRoutes);
-
-// Catalog
-app.use("/api/v1/brands", brandRoutes);
-
-app.use("/api/v1/categories", categoryRoutes);
-
-app.use("/api/v1/products", productRoutes);
-
-app.use("/api/v1", productVariantRoutes);
-
-// Customer
-app.use("/api/v1/cart", cartRoutes);
-
-app.use("/api/v1/wishlist", wishlistRoutes);
-
-// Order & Payment
-app.use("/api/v1/orders", orderRoutes);
-
-app.use("/api/v1/payments", paymentRoutes);
-
-// Marketing
-app.use("/api/v1/coupons", couponRoutes);
-
-app.use("/api/v1/banners", bannerRoutes);
-
-// Review
-app.use("/api/v1/reviews", reviewRoutes);
-
-// Communication
-app.use("/api/v1/chat", chatRoutes);
-app.use("/api/v1/conversations", conversationRoutes);
-app.use("/api/v1/messages", messageRoutes);
-app.use("/api/v1/notifications", notificationRoutes);
-
-
-// Files
-
-app.use("/api/v1/files", fileRoutes);
-
-
-// Search
-app.use("/api/v1/search", searchRoutes);
-
-// Reports & Support
-app.use("/api/v1/reports", reportRoutes);
-
-app.use("/api/v1/support", supportRoutes);
-
-// System
-app.use("/api/v1/settings", settingRoutes);
-
-app.use("/api/v1/shipments", shipmentRoutes);
-
-app.use("/api/v1/taxes", taxRoutes);
-
-/*                              Error Handling                                */
-
-app.use(notFound);
-
-app.use(globalErrorHandler);
-
+export { app };
 export default app;

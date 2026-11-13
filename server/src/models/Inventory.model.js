@@ -1,54 +1,51 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const inventorySchema = new mongoose.Schema(
   {
-    product: {
+    productId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
+      ref: 'Product',
       required: true,
       unique: true,
+      index: true,
     },
-
-    stock: {
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ProductVariant',
+      default: null,
+    },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+      index: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: [0, 'Quantity cannot be negative'],
+    },
+    reservedQuantity: {
       type: Number,
       default: 0,
       min: 0,
     },
-
-    reservedStock: {
+    lowStockThreshold: {
       type: Number,
-      default: 0,
-      min: 0,
+      default: 10,
     },
-
-    soldStock: {
-      type: Number,
-      default: 0,
-    },
-
-    lowStockLimit: {
-      type: Number,
-      default: 5,
-    },
-
-    warehouse: {
-      type: String,
-      default: "MAIN",
-    },
-
-    status: {
-      type: String,
-      enum: ["AVAILABLE", "OUT_OF_STOCK"],
-      default: "AVAILABLE",
+    isOutOfStock: {
+      type: Boolean,
+      default: false,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-inventorySchema.index({
-  product: 1,
-});
+inventorySchema.index({ quantity: 1 });
 
-export default mongoose.model("Inventory", inventorySchema);
+export const Inventory = mongoose.model('Inventory', inventorySchema);
+export default Inventory;

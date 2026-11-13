@@ -1,21 +1,23 @@
-import ApiError from "../utils/ApiError.js";
+import { ApiError } from '../utils/apiError.js';
+import { ROLES } from '../constants/roles.constant.js';
 
-const authorizeRoles = (...roles) => {
-  const normalizedRoles = roles.map((r) => String(r).toLowerCase());
-  if (normalizedRoles.includes("admin") && !normalizedRoles.includes("super_admin")) {
-    normalizedRoles.push("super_admin");
-  }
-
+export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return next(new ApiError(401, "Please login to access this resource"));
+      return next(ApiError.unauthorized('Authentication required.'));
     }
 
-    const userRole = String(req.user.role || "").toLowerCase();
+    const userRole = req.user.role;
 
-    if (!normalizedRoles.includes(userRole)) {
+    // Normalize roles (handle 'user' and 'customer' synonym)
+    const allowedRoles = roles.map((r) => (r === 'customer' ? 'user' : r));
+    const effectiveUserRole = userRole === 'customer' ? 'user' : userRole;
+
+    if (!allowedRoles.includes(effectiveUserRole)) {
       return next(
-        new ApiError(403, "You are not authorized to access this resource"),
+        ApiError.forbidden(
+          `Forbidden: Role '${userRole}' does not have permission to access this resource.`
+        )
       );
     }
 
@@ -23,4 +25,9 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-export { authorizeRoles };
+export const requireSuperAdmin = authorize(ROLES.SUPER_ADMIN);
+export const requireAdmin = authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN);
+export const requireVendor = authorize(ROLES.VENDOR);
+export const requireCustomer = authorize(ROLES.USER);
+
+export default { authorize, requireSuperAdmin, requireAdmin, requireVendor, requireCustomer };

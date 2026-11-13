@@ -1,19 +1,23 @@
-import Razorpay from "razorpay";
-import ApiError from "../utils/ApiError.js";
+import Razorpay from 'razorpay';
+import { env } from './env.js';
+import logger from './logger.js';
 
-const keyId = process.env.RAZORPAY_KEY_ID;
-const keySecret = process.env.RAZORPAY_KEY_SECRET;
+let razorpayInstance = null;
 
-if (!keyId || !keySecret) {
-  throw new ApiError(
-    500,
-    "Razorpay credentials are missing in environment variables",
-  );
+if (env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET) {
+  try {
+    razorpayInstance = new Razorpay({
+      key_id: env.RAZORPAY_KEY_ID,
+      key_secret: env.RAZORPAY_KEY_SECRET,
+    });
+    logger.info('Razorpay client initialized.');
+  } catch (err) {
+    logger.warn(`Razorpay initialization warning: ${err.message}`);
+  }
+} else {
+  logger.info('Razorpay credentials not set. Simulated payment flow will be used if test orders created.');
 }
 
-const razorpay = new Razorpay({
-  key_id: keyId,
-  key_secret: keySecret,
-});
-
-export default razorpay;
+export const getRazorpayInstance = () => razorpayInstance;
+export { razorpayInstance };
+export default razorpayInstance;

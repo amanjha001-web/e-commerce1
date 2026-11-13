@@ -1,205 +1,80 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+
+const ticketMessageSchema = new mongoose.Schema({
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  message: {
+    type: String,
+    required: true,
+  },
+  attachments: [
+    {
+      url: String,
+      publicId: String,
+    },
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
 const supportTicketSchema = new mongoose.Schema(
   {
-    /*                                  User                                      */
-
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
-      default: null,
-      index: true,
-    },
-
-    ticketNumber: {
+    ticketId: {
       type: String,
       required: true,
       unique: true,
-      uppercase: true,
-      trim: true,
       index: true,
     },
-
-    /*                               Ticket Info                                  */
-
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     subject: {
       type: String,
       required: true,
       trim: true,
-      minlength: 5,
-      maxlength: 150,
     },
-
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 10,
-      maxlength: 5000,
-    },
-
     category: {
       type: String,
-      enum: [
-        "ORDER",
-        "PAYMENT",
-        "DELIVERY",
-        "RETURN",
-        "ACCOUNT",
-        "PRODUCT",
-        "TECHNICAL",
-        "OTHER",
-      ],
-      default: "OTHER",
-      index: true,
+      enum: ['order', 'payment', 'product', 'account', 'general'],
+      default: 'general',
     },
-
     priority: {
       type: String,
-      enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
-      default: "MEDIUM",
-      index: true,
+      enum: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium',
     },
-
     status: {
       type: String,
-      enum: [
-        "OPEN",
-        "IN_PROGRESS",
-        "WAITING_FOR_CUSTOMER",
-        "RESOLVED",
-        "CLOSED",
-      ],
-      default: "OPEN",
+      enum: ['open', 'in_progress', 'resolved', 'closed'],
+      default: 'open',
       index: true,
     },
-
-    /*                             Assignment                                     */
-
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
+      ref: 'User',
     },
-
-    /*                             Resolution                                     */
-
+    messages: [ticketMessageSchema],
     resolution: {
       type: String,
-      default: null,
-      maxlength: 3000,
+      default: '',
     },
-
-    resolvedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
     resolvedAt: {
       type: Date,
-      default: null,
-    },
-
-    closedAt: {
-      type: Date,
-      default: null,
-    },
-
-    /*                              Attachments                                   */
-
-    attachments: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "File",
-      },
-    ],
-
-    /*                              Replies                                      */
-
-    replies: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-
-        message: {
-          type: String,
-          required: true,
-          trim: true,
-          minlength: 1,
-          maxlength: 5000,
-        },
-
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-
-    /*                              Internal Notes                               */
-
-    adminNote: {
-      type: String,
-      default: null,
-      maxlength: 3000,
-    },
-
-    /*                              Soft Delete                                  */
-
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
     },
   },
   {
     timestamps: true,
-    versionKey: false,
-  },
+  }
 );
 
+supportTicketSchema.index({ userId: 1, status: 1 });
 
-/*                                   Indexes                                  */
-
-
-supportTicketSchema.index({
-  user: 1,
-  createdAt: -1,
-});
-
-supportTicketSchema.index({
-  status: 1,
-  priority: 1,
-});
-
-supportTicketSchema.index({
-  assignedTo: 1,
-  status: 1,
-});
-
-supportTicketSchema.index({
-  category: 1,
-  createdAt: -1,
-});
-
-const SupportTicket =
-  mongoose.models.SupportTicket ||
-  mongoose.model("SupportTicket", supportTicketSchema);
-
+export const SupportTicket = mongoose.model('SupportTicket', supportTicketSchema);
 export default SupportTicket;

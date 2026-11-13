@@ -1,226 +1,67 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const bannerSchema = new mongoose.Schema(
   {
-    
-    /*                               Banner Info                                 */
-    
-
     title: {
       type: String,
-      required: true,
+      required: [true, 'Banner title is required'],
       trim: true,
-      minlength: 2,
-      maxlength: 150,
     },
-
     slug: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+      trim: true,
       lowercase: true,
-      trim: true,
-      index: true,
     },
-
-    description: {
+    subtitle: {
       type: String,
-      trim: true,
-      maxlength: 1000,
-      default: "",
+      default: '',
     },
-
-    
-    /*                                   Images                                  */
-    
-
-    desktopImage: {
-      url: {
-        type: String,
-        required: true,
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-      },
+    image: {
+      url: { type: String, required: true },
+      publicId: { type: String, default: '' },
     },
-
-    mobileImage: {
-      url: {
-        type: String,
-        default: "",
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-      },
-    },
-
-    tabletImage: {
-      url: {
-        type: String,
-        default: "",
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-      },
-    },
-
-    
-    /*                               Redirect                                     */
-    
-
-    redirectType: {
+    link: {
       type: String,
-      enum: [
-        "PRODUCT",
-        "CATEGORY",
-        "BRAND",
-        "COLLECTION",
-        "SHOP",
-        "EXTERNAL",
-        "NONE",
-      ],
-      default: "NONE",
-      index: true,
+      default: '',
     },
-
-    redirectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-
-    redirectUrl: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    
-    /*                                 Display                                   */
-    
-
     position: {
+      type: String,
+      enum: ['home_hero', 'home_middle', 'home_bottom', 'category_top', 'sidebar'],
+      default: 'home_hero',
+    },
+    sortOrder: {
       type: Number,
       default: 0,
-      min: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
       index: true,
     },
-
-    section: {
-      type: String,
-      enum: [
-        "HOME_HERO",
-        "HOME_MIDDLE",
-        "HOME_BOTTOM",
-        "CATEGORY",
-        "PRODUCT",
-        "APP",
-      ],
-      default: "HOME_HERO",
-      index: true,
-    },
-
-    device: {
-      type: String,
-      enum: ["ALL", "DESKTOP", "MOBILE", "TABLET"],
-      default: "ALL",
-    },
-
-    
-    /*                                  Status                                   */
-    
-
-    status: {
-      type: String,
-      enum: ["ACTIVE", "INACTIVE", "SCHEDULED"],
-      default: "ACTIVE",
-      index: true,
-    },
-
     startDate: {
       type: Date,
-      default: null,
+      default: Date.now,
     },
-
     endDate: {
       type: Date,
-      default: null,
     },
-
-    
-    /*                               Analytics                                   */
-    
-
-    clickCount: {
+    impressions: {
       type: Number,
       default: 0,
     },
-
-    impressionCount: {
+    clicks: {
       type: Number,
       default: 0,
-    },
-
-    
-    /*                                  Audit                                    */
-    
-
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    
-    /*                              Soft Delete                                  */
-    
-
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
     },
   },
   {
     timestamps: true,
-    versionKey: false,
-  },
+  }
 );
 
+bannerSchema.index({ isActive: 1, position: 1 });
 
-/*                                   Indexes                                  */
-
-
-bannerSchema.index({
-  status: 1,
-  section: 1,
-  position: 1,
-});
-
-bannerSchema.index({
-  startDate: 1,
-  endDate: 1,
-});
-
-bannerSchema.index({
-  isDeleted: 1,
-  status: 1,
-});
-
-export default mongoose.model("Banner", bannerSchema);
+export const Banner = mongoose.model('Banner', bannerSchema);
+export default Banner;

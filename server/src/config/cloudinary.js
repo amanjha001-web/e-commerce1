@@ -1,15 +1,18 @@
-import dotenv from "dotenv";
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary } from 'cloudinary';
+import { env } from './env.js';
+import logger from './logger.js';
 
-// Load environment variables
-dotenv.config();
+if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: env.CLOUDINARY_CLOUD_NAME,
+    api_key: env.CLOUDINARY_API_KEY,
+    api_secret: env.CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+  logger.info('Cloudinary configured.');
+} else {
+  logger.info('Cloudinary credentials not provided. Media uploads will use local/mock storage if invoked.');
+}
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
-
-
+export { cloudinary };
 export default cloudinary;

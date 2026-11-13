@@ -1,89 +1,83 @@
-import dotenv from "dotenv";
+import http from 'http';
+import app from './app.js';
+import { env, validateEnv } from './config/env.js';
+import { connectDatabase, disconnectDatabase } from './config/database.js';
+import { initRedis } from './config/redis.js';
+import { initSocket } from './config/socket.js';
+import { createDatabaseIndexes } from './database/indexes.js';
+import logger from './config/logger.js';
 
-dotenv.config({
-  path: "./.env",
-});
+validateEnv();
 
-import app from "./app.js";
-import connectDB from "./db/index.js";
-import mongoose from "mongoose";
+const server = http.createServer(app);
 
-const PORT = Number(process.env.PORT) || 5000;
-
-/*                              Start Server                                  */
+// Initialize Socket.IO
+const io = initSocket(server);
 
 const startServer = async () => {
   try {
-    await connectDB();
+    // 1. Connect Database
+    await connectDatabase();
 
-    const server = app.listen(PORT, () => {
+    // 2. Initialize Redis (if enabled)
+    initRedis();
 
-      console.log(" ShopSphere API Started Successfully");
+    // 3. Sync Database Indexes
+    await createDatabaseIndexes();
 
-      console.log(` Server  : http://localhost:${PORT}`);
-
-      console.log(` Mode    : ${process.env.NODE_ENV || "development"}`);
-
-      console.log(` Started : ${new Date().toLocaleString()}`);
-
+    // 4. Start HTTP Server
+    server.listen(env.PORT, () => {
+      logger.info(`===================================================`);
+      logger.info(`🚀 ShopSphere Server running in [${env.NODE_ENV}] mode`);
+      logger.info(`📡 Port: ${env.PORT} | Base URL: http://localhost:${env.PORT}${env.API_PREFIX}`);
+      logger.info(`⚡ Socket.IO initialized`);
+      logger.info(`===================================================`);
     });
-
-    /*                        Graceful Shutdown                               */
-
-    const shutdown = async (signal) => {
-      try {
-        console.log(`\n ${signal} received. Shutting down...`);
-
-        server.close(async () => {
-          console.log(" HTTP server closed");
-
-          await mongoose.connection.close();
-
-          console.log(" MongoDB connection closed");
-
-          process.exit(0);
-        });
-
-        setTimeout(() => {
-          console.error(" Forced shutdown due to timeout");
-
-          process.exit(1);
-        }, 10000);
-      } catch (error) {
-        console.error(" Shutdown error:", error);
-
-        process.exit(1);
-      }
-    };
-
-    process.on("SIGINT", () => shutdown("SIGINT"));
-
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
   } catch (error) {
-
-    console.error(" Failed to start ShopSphere API");
-
-    console.error(error);
-
-
+    logger.error('CRITICAL: Server startup failed:', error);
     process.exit(1);
   }
 };
 
-/*                         Global Process Errors                             */
+// Graceful shutdown
+const shutdown = async (signal) => {
+  logger.info(`Received ${signal}. Gracefully shutting down...`);
 
-process.on("uncaughtException", (error) => {
-  console.error(" Uncaught Exception:", error);
+  server.close(async () => {
+    logger.info('HTTP server closed.');
+    try {
+      await disconnectDatabase();
+      logger.info('Database disconnected.');
+      process.exit(0);
+    } catch (err) {
+      logger.error('Error during shutdown:', err);
+      process.exit(1);
+    }
+  });
 
+  // Force shutdown after 10 seconds timeout
+  setTimeout(() => {
+    logger.error('Forcefully terminating process due to shutdown timeout.');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
   process.exit(1);
 });
 
-process.on("unhandledRejection", (error) => {
-  console.error(" Unhandled Promise Rejection:", error);
+// Start if executed directly
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
-  process.exit(1);
-});
-
-/*                               Bootstrap                                    */
-
-startServer();
+export { server, app };
+export default server;

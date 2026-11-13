@@ -1,74 +1,14 @@
-import mongoose from "mongoose";
-
-
-/*                               Image Schema                                 */
-
-
-const imageSchema = new mongoose.Schema(
-  {
-    url: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    publicId: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    alt: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 200,
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
-
-/*                          Specification Schema                              */
-
-
-const specificationSchema = new mongoose.Schema(
-  {
-    key: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    value: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 300,
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
-
-/*                              Product Schema                                */
-
+import mongoose from 'mongoose';
+import { PRODUCT_STATUS, PRODUCT_STATUS_LIST } from '../constants/productStatus.constant.js';
 
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, 'Product name is required'],
       trim: true,
-      minlength: 3,
-      maxlength: 200,
+      index: true,
     },
-
     slug: {
       type: String,
       required: true,
@@ -76,317 +16,136 @@ const productSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-
-    shortDescription: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 250,
-    },
-
     description: {
       type: String,
-      required: true,
-      trim: true,
+      required: [true, 'Product description is required'],
     },
-
+    shortDescription: {
+      type: String,
+      default: '',
+    },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+      index: true,
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+      ref: 'Category',
       required: true,
+      index: true,
     },
-
     brand: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Brand",
-      default: null,
+      ref: 'Brand',
+      index: true,
     },
-
-    vendor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    thumbnail: {
-      url: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-    },
-
-    images: {
-      type: [imageSchema],
-      default: [],
-    },
-
     price: {
       type: Number,
-      required: true,
-      min: 0,
+      required: [true, 'Price is required'],
+      min: [0, 'Price cannot be negative'],
     },
-
-    stock: {
+    compareAtPrice: {
       type: Number,
-      required: true,
+      min: [0, 'Compare at price cannot be negative'],
+      default: 0,
+    },
+    discountPercentage: {
+      type: Number,
       default: 0,
       min: 0,
+      max: 100,
     },
-
+    stock: {
+      type: Number,
+      required: [true, 'Stock count is required'],
+      min: [0, 'Stock cannot be negative'],
+      default: 0,
+    },
     sku: {
       type: String,
-      unique: true,
       trim: true,
       uppercase: true,
     },
-
-    sold: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    tags: [
+    images: [
       {
-        type: String,
-        trim: true,
-        lowercase: true,
+        url: { type: String, required: true },
+        publicId: { type: String, default: '' },
+        isDefault: { type: Boolean, default: false },
       },
     ],
-
-    specifications: {
-      type: [specificationSchema],
-      default: [],
+    status: {
+      type: String,
+      enum: PRODUCT_STATUS_LIST,
+      default: PRODUCT_STATUS.PENDING_APPROVAL,
+      index: true,
     },
-
-    averageRating: {
+    rejectionReason: {
+      type: String,
+      default: '',
+    },
+    rating: {
       type: Number,
       default: 0,
       min: 0,
       max: 5,
     },
-
-    totalReviews: {
+    numReviews: {
       type: Number,
       default: 0,
-      min: 0,
     },
-
-    featured: {
-      type: Boolean,
-      default: false,
-    },
-
-    flashSale: {
-      type: Boolean,
-      default: false,
-    },
-
-    bestSeller: {
-      type: Boolean,
-      default: false,
-    },
-
-    trending: {
-      type: Boolean,
-      default: false,
-    },
-
-    newArrival: {
-      type: Boolean,
-      default: true,
-    },
-
     isActive: {
       type: Boolean,
       default: true,
     },
-
-    status: {
-      type: String,
-      enum: ["draft", "pending_approval", "published", "rejected", "archived"],
-      default: "draft",
+    isFeatured: {
+      type: Boolean,
+      default: false,
     },
-
-    seoTitle: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 200,
+    isTrending: {
+      type: Boolean,
+      default: false,
     },
-
-    seoDescription: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
+    isFlashSale: {
+      type: Boolean,
+      default: false,
     },
-
-    deletedAt: {
-      type: Date,
-      default: null,
+    isBestSeller: {
+      type: Boolean,
+      default: false,
+    },
+    isNewArrival: {
+      type: Boolean,
+      default: false,
+    },
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    attributes: [
+      {
+        name: String,
+        value: String,
+      },
+    ],
+    hasVariants: {
+      type: Boolean,
+      default: false,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-/*                             Generate SKU                                   */
+productSchema.index({ name: 'text', description: 'text', tags: 'text' });
+productSchema.index({ status: 1, isActive: 1 });
+productSchema.index({ category: 1, status: 1 });
+productSchema.index({ brand: 1, status: 1 });
+productSchema.index({ price: 1 });
 
-
-productSchema.pre("save", function (next) {
-  if (!this.sku) {
-    this.sku =
-      "SKU-" +
-      Date.now() +
-      "-" +
-      Math.floor(1000 + Math.random() * 9000);
-  }
-
-  next();
-});
-
-
-/*                                 Virtuals                                   */
-
-
-// Discount Percentage
-productSchema.virtual("discountPercentage").get(function () {
-  if (
-    this.discountPrice <= 0 ||
-    this.discountPrice >= this.price
-  ) {
-    return 0;
-  }
-
-  return Math.round(
-    ((this.price - this.discountPrice) / this.price) * 100,
-  );
-});
-
-// Final Selling Price
-productSchema.virtual("finalPrice").get(function () {
-  return this.discountPrice > 0
-    ? this.discountPrice
-    : this.price;
-});
-
-// Stock Status
-productSchema.virtual("stockStatus").get(function () {
-  if (this.stock <= 0) {
-    return "OUT_OF_STOCK";
-  }
-
-  if (this.stock <= 5) {
-    return "LOW_STOCK";
-  }
-
-  return "IN_STOCK";
-});
-
-
-/*                                  Indexes                                   */
-
-
-// Text Search
-productSchema.index({
-  name: "text",
-  shortDescription: "text",
-  description: "text",
-});
-
-// Category + Brand
-productSchema.index({
-  category: 1,
-  brand: 1,
-});
-
-// Vendor
-productSchema.index({
-  vendor: 1,
-});
-
-// Price Filter
-productSchema.index({
-  price: 1,
-});
-
-// Rating Sort
-productSchema.index({
-  averageRating: -1,
-});
-
-// Latest Products
-productSchema.index({
-  createdAt: -1,
-});
-
-// Product Status
-productSchema.index({
-  status: 1,
-});
-
-// Active Products
-productSchema.index({
-  isActive: 1,
-});
-
-// Featured
-productSchema.index({
-  featured: 1,
-});
-
-// Flash Sale
-productSchema.index({
-  flashSale: 1,
-});
-
-// Best Seller
-productSchema.index({
-  bestSeller: 1,
-});
-
-// Trending
-productSchema.index({
-  trending: 1,
-});
-
-// New Arrival
-productSchema.index({
-  newArrival: 1,
-});
-
-// Stock
-productSchema.index({
-  stock: 1,
-});
-
-
-/*                           Include Virtuals                                 */
-
-
-productSchema.set("toJSON", {
-  virtuals: true,
-});
-
-productSchema.set("toObject", {
-  virtuals: true,
-});
-
-
-/*                                   Model                                    */
-
-
-const Product =
-  mongoose.models.Product ||
-  mongoose.model("Product", productSchema);
-
+export const Product = mongoose.model('Product', productSchema);
 export default Product;

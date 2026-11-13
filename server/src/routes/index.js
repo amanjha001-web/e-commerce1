@@ -1,101 +1,132 @@
+import { Router } from 'express';
 
-/*                              Authentication                                */
+// Role-wise modular route routers
+import commonRoutes from './common/index.js';
+import customerRoutes from './customer/index.js';
+import vendorRoutes from './vendor/index.js';
+import adminRoutes from './admin/index.js';
+import superAdminRoutes from './superAdmin/index.js';
 
+// Direct domain routers for frontend compatibility
+import authRoutes from './common/auth.routes.js';
+import productRoutes from './common/products.routes.js';
+import categoryRoutes from './common/categories.routes.js';
+import brandRoutes from './common/brands.routes.js';
+import bannerRoutes from './common/banners.routes.js';
+import couponRoutes from './common/coupons.routes.js';
+import reviewRoutes from './common/reviews.routes.js';
+import chatRoutes from './common/chat.routes.js';
+import notificationRoutes from './common/notifications.routes.js';
+import webhookRoutes from './common/webhook.routes.js';
+import healthRoutes from './common/health.routes.js';
 
-export { default as authRoutes } from "./auth.routes.js";
+import profileRoutes from './customer/profile.routes.js';
+import addressRoutes from './customer/addresses.routes.js';
+import cartRoutes from './customer/cart.routes.js';
+import wishlistRoutes from './customer/wishlist.routes.js';
+import orderRoutes from './customer/orders.routes.js';
+import paymentRoutes from './customer/payments.routes.js';
+import supportRoutes from './customer/support.routes.js';
+import activityRoutes from './customer/activity.routes.js';
+import vendorRequestRoutes from './vendor/requests.routes.js';
 
-export { userRoutes } from "./user.routes.js";
+// Public vendor listing
+import { Vendor } from '../models/Vendor.model.js';
+import { Product } from '../models/Product.model.js';
+import { ApiResponse } from '../utils/apiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ApiError } from '../utils/apiError.js';
+import mongoose from 'mongoose';
 
-export { default as adminRoutes } from "./admin.routes.js";
+const router = Router();
 
+// =====================================
+// 1. ROLE-BASED ARCHITECTURAL ROUTERS
+// =====================================
+router.use('/common', commonRoutes);
+router.use('/customer', customerRoutes);
+router.use('/vendor', vendorRoutes);
+router.use('/admin', adminRoutes);
+router.use('/super-admin', superAdminRoutes);
+router.use('/superAdmin', superAdminRoutes);
 
-/*                              Vendor                                        */
+// =====================================
+// 2. ROOT ALIASES FOR FRONTEND COMPATIBILITY
+// =====================================
+router.use('/auth', authRoutes);
+router.use('/users', profileRoutes); // Customer profile & account management
+router.use('/products', productRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/brands', brandRoutes);
+router.use('/banners', bannerRoutes);
+router.use('/coupons', couponRoutes);
+router.use('/cart', cartRoutes);
+router.use('/wishlist', wishlistRoutes);
+router.use('/orders', orderRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/addresses', addressRoutes);
+router.use('/chat', chatRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/support', supportRoutes);
+router.use('/activity', activityRoutes);
+router.use('/webhooks', webhookRoutes);
+router.use('/health', healthRoutes);
+router.use('/vendor-requests', vendorRequestRoutes);
 
+// Public /vendors listing for frontend storefront
+const publicVendorsRouter = Router();
+publicVendorsRouter.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const vendors = await Vendor.find({ status: 'approved', isActive: true })
+      .select('storeName slug logo banner description rating numReviews address')
+      .sort({ rating: -1 });
+    return ApiResponse.success(res, vendors, 'Active vendors retrieved');
+  })
+);
 
-export { default as vendorRoutes } from "./vendor.routes.js";
+publicVendorsRouter.get(
+  '/:vendorId',
+  asyncHandler(async (req, res) => {
+    let vendor;
+    if (mongoose.Types.ObjectId.isValid(req.params.vendorId)) {
+      vendor = await Vendor.findById(req.params.vendorId);
+    }
+    if (!vendor) {
+      vendor = await Vendor.findOne({ slug: req.params.vendorId });
+    }
+    if (!vendor) throw ApiError.notFound('Vendor not found');
+    return ApiResponse.success(res, vendor, 'Vendor details');
+  })
+);
 
-export {
- vendorRequestRoutes,
-} from "./vendorRequest.routes.js";
+publicVendorsRouter.get(
+  '/slug/:slug',
+  asyncHandler(async (req, res) => {
+    const vendor = await Vendor.findOne({ slug: req.params.slug, isActive: true });
+    if (!vendor) throw ApiError.notFound('Vendor not found');
+    return ApiResponse.success(res, vendor, 'Vendor details');
+  })
+);
 
+publicVendorsRouter.get(
+  '/:vendorId/products',
+  asyncHandler(async (req, res) => {
+    let vendorId = req.params.vendorId;
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      const v = await Vendor.findOne({ slug: vendorId });
+      if (v) vendorId = v._id;
+    }
+    const products = await Product.find({
+      vendorId,
+      status: 'published',
+      isActive: true,
+    }).populate('category', 'name slug');
+    return ApiResponse.success(res, products, 'Vendor products');
+  })
+);
 
-/*                              Product Catalog                               */
+router.use('/vendors', publicVendorsRouter);
 
-
-export { default as productRoutes } from "./product.routes.js";
-
-export { default as productVariantRoutes } from "./productVariant.routes.js";
-
-export { default as categoryRoutes } from "./category.routes.js";
-
-export { default as brandRoutes } from "./brand.routes.js";
-
-
-/*                              Shopping                                      */
-
-
-export { default as cartRoutes } from "./cart.routes.js";
-
-export { default as wishlistRoutes } from "./wishlist.routes.js";
-
-export { default as orderRoutes } from "./order.routes.js";
-
-export { default as paymentRoutes } from "./payment.routes.js";
-
-
-/*                              Marketing                                     */
-
-
-export { default as couponRoutes } from "./coupon.routes.js";
-
-export { default as bannerRoutes } from "./banner.routes.js";
-
-export { default as taxRoutes } from "./tax.routes.js";
-
-
-/*                              Reviews                                       */
-
-
-export { default as reviewRoutes } from "./review.routes.js";
-
-
-/*                              Communication                                 */
-
-
-export { default as chatRoutes } from "./chat.routes.js";
-export { default as conversationRoutes } from "./conversation.routes.js";
-export { default as messageRoutes } from "./message.routes.js";
-export { default as notificationRoutes } from "./notification.routes.js";
-
-
-/*                              Support                                       */
-
-
-export { default as supportRoutes } from "./support.routes.js";
-
-export { default as reportRoutes } from "./report.routes.js";
-
-
-/*                              Files                                  */
-
-export { default as fileRoutes } from "./file.routes.js";
-
-
-/*                              Address                                       */
-
-
-export { default as addressRoutes } from "./address.routes.js";
-
-
-/*                              Search & Setting                              */
-
-
-export { default as searchRoutes } from "./search.routes.js";
-
-export { default as settingRoutes } from "./setting.routes.js";
-
-
-/*                              Shipment                                      */
-
-
-export { default as shipmentRoutes } from "./shipment.routes.js";
+export default router;

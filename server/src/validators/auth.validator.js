@@ -1,157 +1,61 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-import {
-  email,
-  password,
-  username,
-  fullName,
-  objectId,
-} from "./common.validator.js";
-
-/*                              Register                                      */
-
-export const registerSchema = z.object({
-  body: z
-    .object({
-      fullName,
-
-      username,
-
-      email,
-
-      password,
-
-      confirmPassword: z.string(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.password !== data.confirmPassword) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["confirmPassword"],
-          message: "Passwords do not match",
-        });
+export const registerSchema = z
+  .object({
+    fullName: z.string().min(2, 'Full name must be at least 2 characters').max(100).optional(),
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
+    username: z.string().min(3, 'Username must be at least 3 characters').max(50).optional(),
+    email: z.string().email('Please enter a valid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters long'),
+    confirmPassword: z.string().optional(),
+    conformPassword: z.string().optional(),
+    phone: z.string().optional(),
+    role: z.string().optional(),
+  })
+  .refine((data) => data.fullName || data.name, {
+    message: 'Full name is required',
+    path: ['fullName'],
+  })
+  .refine(
+    (data) => {
+      const confirm = data.confirmPassword ?? data.conformPassword;
+      if (confirm !== undefined && confirm !== null && confirm !== '') {
+        return data.password === confirm;
       }
-    }),
-});
-
-/*                                Login                                       */
-
+      return true;
+    },
+    {
+      message: 'Passwords do not match',
+      path: ['confirmPassword'],
+    }
+  );
 
 export const loginSchema = z.object({
-  body: z.object({
-    email,
-
-    password: z.string().min(1, "Password is required"),
-
-    role: z.enum(["admin", "vendor", "customer"], {
-      message: "Invalid login role",
-    }),
-  }),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+  role: z.string().optional(),
 });
-
-
-/*                           Refresh Token                                    */
-
-export const refreshTokenSchema = z.object({
-  body: z.object({
-    refreshToken: z.string().optional(),
-  }),
-});
-
-/*                           Forgot Password                                  */
 
 export const forgotPasswordSchema = z.object({
-  body: z.object({
-    email,
-  }),
+  email: z.string().email('Please enter a valid email address'),
 });
-
-/*                            Reset Password                                  */
 
 export const resetPasswordSchema = z.object({
-  params: z.object({
-    token: z.string().min(1, "Reset token is required"),
-  }),
-
-  body: z
-    .object({
-      password,
-
-      confirmPassword: z.string(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.password !== data.confirmPassword) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["confirmPassword"],
-          message: "Passwords do not match",
-        });
-      }
-    }),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
-
-/*                           Change Password                                  */
 
 export const changePasswordSchema = z.object({
-  body: z
-    .object({
-      oldPassword: z.string().min(1, "Old password is required"),
-
-      newPassword: password,
-
-      confirmPassword: z.string(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.newPassword !== data.confirmPassword) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["confirmPassword"],
-          message: "Passwords do not match",
-        });
-      }
-
-      if (data.oldPassword === data.newPassword) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["newPassword"],
-          message: "New password must be different from old password",
-        });
-      }
-    }),
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
 });
 
-/*                            Update Profile                                  */
-
-export const updateProfileSchema = z.object({
-  body: z.object({
-    fullName: fullName.optional(),
-
-    username: username.optional(),
-
-    email: email.optional(),
-  }),
+export const otpSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  otp: z.string().min(4, 'OTP must be at least 4 digits').max(8),
 });
 
-/*                           Verify Email                                     */
-
-export const verifyEmailSchema = z.object({
-  params: z.object({
-    token: z.string().min(1, "Verification token is required"),
-  }),
-});
-
-/*                           Resend Verification                              */
-
-export const resendVerificationSchema = z.object({
-  body: z.object({
-    email,
-  }),
-});
-
-/*                              User Params                                   */
-
-export const userIdSchema = z.object({
-  params: z.object({
-    id: objectId,
-  }),
+export const googleAuthSchema = z.object({
+  token: z.string().optional(),
+  idToken: z.string().optional(),
+  credential: z.string().optional(),
 });

@@ -1,44 +1,32 @@
-import { PERMISSIONS } from "../constants/permissions.js";
+import { ApiError } from '../utils/apiError.js';
+import { DEFAULT_ROLE_PERMISSIONS } from '../constants/permissions.constant.js';
+import { ROLES } from '../constants/roles.constant.js';
 
-const ROLE_PERMISSIONS = {
-  customer: [PERMISSIONS.PRODUCT_READ],
-
-  vendor: [
-    PERMISSIONS.PRODUCT_CREATE,
-    PERMISSIONS.PRODUCT_READ,
-    PERMISSIONS.PRODUCT_UPDATE,
-    PERMISSIONS.PRODUCT_DELETE,
-  ],
-
-  admin: Object.values(PERMISSIONS),
-
-  super_admin: Object.values(PERMISSIONS),
-};
-
-const permissionMiddleware = (...permissions) => {
+export const requirePermission = (...requiredPermissions) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized access",
-      });
+      return next(ApiError.unauthorized('Authentication required.'));
     }
 
-    const userPermissions = ROLE_PERMISSIONS[req.user.role] || [];
+    // Super Admin has all permissions automatically
+    if (req.user.role === ROLES.SUPER_ADMIN) {
+      return next();
+    }
 
-    const hasPermission = permissions.some((permission) =>
-      userPermissions.includes(permission),
-    );
+    const rolePermissions = DEFAULT_ROLE_PERMISSIONS[req.user.role] || [];
 
-    if (!hasPermission) {
-      return res.status(403).json({
-        success: false,
-        message: "Permission denied",
-      });
+    const hasAll = requiredPermissions.every((perm) => rolePermissions.includes(perm));
+
+    if (!hasAll) {
+      return next(
+        ApiError.forbidden(
+          `Access denied. Missing required permission(s): ${requiredPermissions.join(', ')}`
+        )
+      );
     }
 
     next();
   };
 };
 
-export default permissionMiddleware;
+export default requirePermission;

@@ -1,88 +1,22 @@
-import { upload } from "../config/index.js";
+import multer from 'multer';
+import { ApiError } from '../utils/apiError.js';
 
-/*                             Common Uploads                                 */
+const storage = multer.memoryStorage();
 
-export const uploadSingle = upload.single("thumbnail");
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(ApiError.badRequest('Invalid file format. Only images are permitted.'), false);
+  }
+};
 
-export const uploadMultiple = upload.array("images", 10);
-
-/*                             Product Upload                                 */
-
-export const uploadProductImages = upload.fields([
-  {
-    name: "thumbnail",
-    maxCount: 1,
+export const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
   },
-  {
-    name: "images",
-    maxCount: 10,
-  },
-]);
+});
 
-/*                             Category Upload                                */
-
-export const uploadCategoryImage = upload.fields([
-  {
-    name: "image",
-    maxCount: 1,
-  },
-]);
-
-/*                               Brand Upload                                 */
-
-export const uploadBrandImage = upload.fields([
-  {
-    name: "image",
-    maxCount: 1,
-  },
-]);
-
-/*                               Vendor Upload                                */
-
-export const uploadVendorFiles = upload.fields([
-  {
-    name: "logo",
-    maxCount: 1,
-  },
-  {
-    name: "banner",
-    maxCount: 1,
-  },
-]);
-
-export const uploadVendorLogo = upload.fields([
-  {
-    name: "logo",
-    maxCount: 1,
-  },
-]);
-
-export const uploadVendorBanner = upload.fields([
-  {
-    name: "banner",
-    maxCount: 1,
-  },
-]);
-
-export const uploadAvatar = upload.single("avatar");
-export const uploadCoverImage = upload.single("coverImage");
-export const uploadVendorDocuments = upload.array("documents", 5);
-
-/*                              Banner Upload                                  */
-
-export const uploadBannerImages = upload.fields([
-  {
-    name: "desktopImage",
-    maxCount: 1,
-  },
-  {
-    name: "mobileImage",
-    maxCount: 1,
-  },
-  {
-    name: "tabletImage",
-    maxCount: 1,
-  },
-]);
-
-export const uploadFile = upload.single("file");
+export default upload;

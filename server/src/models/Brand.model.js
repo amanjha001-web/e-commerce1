@@ -1,16 +1,13 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const brandSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
-      unique: true,
+      required: [true, 'Brand name is required'],
       trim: true,
-      minlength: 2,
-      maxlength: 100,
+      unique: true,
     },
-
     slug: {
       type: String,
       required: true,
@@ -18,88 +15,29 @@ const brandSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-
     description: {
       type: String,
-      default: "",
-      trim: true,
-      maxlength: 1000,
+      default: '',
     },
-
     logo: {
-      url: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-        trim: true,
-      },
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
-
     website: {
       type: String,
-      default: "",
-      trim: true,
-      lowercase: true,
+      default: '',
     },
-
-    isFeatured: {
-      type: Boolean,
-      default: false,
-    },
-
-    sortOrder: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
     isActive: {
       type: Boolean,
       default: true,
     },
-
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+brandSchema.index({ isActive: 1 });
 
-/*                                  Indexes                                   */
-
-
-
-
-brandSchema.index({
-  isActive: 1,
-});
-
-brandSchema.index({
-  isFeatured: 1,
-});
-
-brandSchema.index({
-  sortOrder: 1,
-});
-
-brandSchema.index({
-  name: "text",
-  description: "text",
-});
-
-
-/*                                   Model                                    */
-
-
-const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
-
+export const Brand = mongoose.model('Brand', brandSchema);
 export default Brand;

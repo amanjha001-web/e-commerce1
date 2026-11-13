@@ -1,273 +1,51 @@
-import mongoose from "mongoose";
-import Review from "../models/Review.model.js";
+import { BaseRepository } from './base.repository.js';
+import { ProductReview } from '../models/ProductReview.model.js';
 
-/*                              Create Review                                 */
+export class ReviewRepository extends BaseRepository {
+  constructor() {
+    super(ProductReview);
+  }
 
-const createReview = async (reviewData, session = null) => {
-  const review = await Review.create([reviewData], {
-    session,
-  });
+  async findByProduct(productId, pagination = {}) {
+    return this.paginate(
+      { productId, status: 'approved' },
+      {
+        ...pagination,
+        populate: { path: 'userId', select: 'name avatar' },
+      }
+    );
+  }
 
-  return review[0];
-};
-
-/*                           Get Review By Id                                 */
-
-const getReviewById = async (reviewId) => {
-  return await Review.findById(reviewId)
-    .populate("user", "fullName avatar")
-    .populate("product", "name slug thumbnail")
-    .lean();
-};
-
-/*                    Get Review By User & Product                            */
-
-const getReviewByUserAndProduct = async (userId, productId) => {
-  return await Review.findOne({
-    user: userId,
-    product: productId,
-  }).lean();
-};
-
-/*                        Get Product Reviews                                 */
-
-const getReviewsByProduct = async (productId, options = {}) => {
-  const { page = 1, limit = 10 } = options;
-
-  const skip = (page - 1) * limit;
-
-  const query = {
-    product: productId,
-    isApproved: true,
-  };
-
-  const [reviews, totalReviews] = await Promise.all([
-    Review.find(query)
-      .populate("user", "fullName avatar")
-      .sort({
-        createdAt: -1,
-      })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-
-    Review.countDocuments(query),
-  ]);
-
-  return {
-    reviews,
-
-    pagination: {
-      totalReviews,
-      totalPages: Math.ceil(totalReviews / limit),
-      currentPage: page,
-      limit,
-      hasNextPage: page < Math.ceil(totalReviews / limit),
-      hasPrevPage: page > 1,
-    },
-  };
-};
-
-/*                           Get User Reviews                                 */
-
-const getReviewsByUser = async (userId) => {
-  return await Review.find({
-    user: userId,
-  })
-    .populate("product", "name slug thumbnail")
-    .sort({
-      createdAt: -1,
-    })
-    .lean();
-};
-
-/*                           Get All Reviews                                  */
-
-const getAllReviews = async (filter = {}, options = {}) => {
-  const {
-    page = 1,
-    limit = 10,
-    sort = {
-      createdAt: -1,
-    },
-  } = options;
-
-  const skip = (page - 1) * limit;
-
-  const [reviews, totalReviews] = await Promise.all([
-    Review.find(filter)
-      .populate("user", "fullName email")
-      .populate("product", "name slug")
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-
-    Review.countDocuments(filter),
-  ]);
-
-  return {
-    reviews,
-
-    pagination: {
-      totalReviews,
-      totalPages: Math.ceil(totalReviews / limit),
-      currentPage: page,
-      limit,
-      hasNextPage: page < Math.ceil(totalReviews / limit),
-      hasPrevPage: page > 1,
-    },
-  };
-};
-
-/*                           Update Review                                    */
-
-const updateReview = async (reviewId, updateData, session = null) => {
-  return await Review.findByIdAndUpdate(reviewId, updateData, {
-    new: true,
-    runValidators: true,
-    session,
-  })
-    .populate("user", "fullName avatar")
-    .populate("product", "name slug thumbnail");
-};
-
-/*                          Approve Review                                    */
-
-const approveReview = async (reviewId, session = null) => {
-  return await Review.findByIdAndUpdate(
-    reviewId,
-    {
-      isApproved: true,
-    },
-    {
-      new: true,
-      session,
-    },
-  );
-};
-
-/*                          Delete Review                                     */
-
-const deleteReview = async (reviewId, session = null) => {
-  return await Review.findByIdAndDelete(reviewId, {
-    session,
-  });
-};
-
-/*                   Product Rating Statistics                                */
-
-const getProductReviewStats = async (productId) => {
-  const stats = await Review.aggregate([
-    {
-      $match: {
-        product: new mongoose.Types.ObjectId(productId),
-        isApproved: true,
-      },
-    },
-    {
-      $group: {
-        _id: "$product",
-
-        averageRating: {
-          $avg: "$rating",
-        },
-
-        totalReviews: {
-          $sum: 1,
-        },
-
-        fiveStar: {
-          $sum: {
-            $cond: [
-              {
-                $eq: ["$rating", 5],
-              },
-              1,
-              0,
-            ],
-          },
-        },
-
-        fourStar: {
-          $sum: {
-            $cond: [
-              {
-                $eq: ["$rating", 4],
-              },
-              1,
-              0,
-            ],
-          },
-        },
-
-        threeStar: {
-          $sum: {
-            $cond: [
-              {
-                $eq: ["$rating", 3],
-              },
-              1,
-              0,
-            ],
-          },
-        },
-
-        twoStar: {
-          $sum: {
-            $cond: [
-              {
-                $eq: ["$rating", 2],
-              },
-              1,
-              0,
-            ],
-          },
-        },
-
-        oneStar: {
-          $sum: {
-            $cond: [
-              {
-                $eq: ["$rating", 1],
-              },
-              1,
-              0,
-            ],
-          },
+  async getRatingSummary(productId) {
+    const stats = await this.model.aggregate([
+      { $match: { productId: new (ProductReview.base.Types.ObjectId)(productId), status: 'approved' } },
+      {
+        $group: {
+          _id: '$rating',
+          count: { $sum: 1 },
         },
       },
-    },
-  ]);
+    ]);
 
-  return (
-    stats[0] || {
-      averageRating: 0,
-      totalReviews: 0,
-      fiveStar: 0,
-      fourStar: 0,
-      threeStar: 0,
-      twoStar: 0,
-      oneStar: 0,
-    }
-  );
-};
+    const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let totalReviews = 0;
+    let sumRating = 0;
 
-/*                                Export                                      */
+    stats.forEach((s) => {
+      breakdown[s._id] = s.count;
+      totalReviews += s.count;
+      sumRating += s._id * s.count;
+    });
 
-export default {
-  createReview,
+    const averageRating = totalReviews > 0 ? (sumRating / totalReviews).toFixed(1) : 0;
 
-  getReviewById,
-  getReviewByUserAndProduct,
+    return {
+      averageRating: Number(averageRating),
+      totalReviews,
+      breakdown,
+    };
+  }
+}
 
-  getReviewsByProduct,
-  getReviewsByUser,
-  getAllReviews,
-
-  updateReview,
-  approveReview,
-  deleteReview,
-
-  getProductReviewStats,
-};
+export const reviewRepository = new ReviewRepository();
+export default reviewRepository;

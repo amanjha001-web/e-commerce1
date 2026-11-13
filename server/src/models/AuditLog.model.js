@@ -1,38 +1,54 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
+      index: true,
     },
-
     action: {
       type: String,
       required: true,
+      index: true,
     },
-
-    module: {
+    resource: {
       type: String,
       required: true,
+      index: true,
     },
-
-    oldData: Object,
-
-    newData: Object,
-
-    ipAddress: String,
-
-    userAgent: String,
+    resourceId: {
+      type: String,
+      index: true,
+    },
+    ipAddress: {
+      type: String,
+      default: '',
+    },
+    userAgent: {
+      type: String,
+      default: '',
+    },
+    changes: {
+      before: mongoose.Schema.Types.Mixed,
+      after: mongoose.Schema.Types.Mixed,
+    },
+    status: {
+      type: String,
+      enum: ['SUCCESS', 'FAILURE', 'WARNING'],
+      default: 'SUCCESS',
+    },
+    details: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-auditLogSchema.index({
-  user: 1,
-  createdAt: -1,
-});
+auditLogSchema.index({ createdAt: -1 });
 
-export default mongoose.model("AuditLog", auditLogSchema);
+export const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+export default AuditLog;

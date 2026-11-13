@@ -1,52 +1,49 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema(
   {
-    conversation: {
+    conversationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Conversation",
+      ref: 'Conversation',
       required: true,
+      index: true,
     },
-
     sender: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
+      index: true,
     },
-
-    message: {
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    content: {
       type: String,
-      trim: true,
+      default: '',
     },
-
     attachments: [
       {
         url: String,
-        type: String,
+        publicId: String,
+        fileType: String,
       },
     ],
-
-    messageType: {
-      type: String,
-      enum: ["TEXT", "IMAGE", "FILE"],
-      default: "TEXT",
-    },
-
     isRead: {
       type: Boolean,
       default: false,
     },
-
-    readAt: Date,
+    readAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
-messageSchema.index({
-  conversation: 1,
-  createdAt: 1,
-});
+messageSchema.index({ conversationId: 1, createdAt: 1 });
 
-export default mongoose.model("Message", messageSchema);
+export const Message = mongoose.model('Message', messageSchema);
+export default Message;

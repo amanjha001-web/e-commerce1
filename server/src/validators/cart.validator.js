@@ -1,69 +1,16 @@
-import { z } from "zod";
-
-import { objectId, positiveInteger } from "./common.validator.js";
-
-/*                               Base Schema                                  */
-
-const quantity = positiveInteger.max(999, "Quantity cannot exceed 999");
-
-/*                              Add To Cart                                   */
+import { z } from 'zod';
 
 export const addToCartSchema = z.object({
-  body: z.object({
-    productId: objectId,
-
-    quantity,
-  }),
+  productId: z.string().min(1, 'Product ID is required'),
+  quantity: z.coerce.number().int().positive('Quantity must be at least 1').default(1),
+  variant: z.string().optional().nullable(),
 });
-
-/*                           Update Cart Item                                 */
 
 export const updateCartItemSchema = z.object({
-  params: z.object({
-    productId: objectId,
-  }),
-
-  body: z.object({
-    quantity,
-  }),
+  quantity: z.coerce.number().int().positive('Quantity must be at least 1'),
+  variant: z.string().optional().nullable(),
 });
 
-/*                          Remove Cart Item                                  */
-
-export const removeCartItemSchema = z.object({
-  params: z.object({
-    productId: objectId,
-  }),
-});
-
-/*                            Clear Cart                                      */
-
-export const clearCartSchema = z.object({
-  body: z.object({}),
-});
-
-/*                         Move To Wishlist                                   */
-
-export const moveToWishlistSchema = z.object({
-  params: z.object({
-    productId: objectId,
-  }),
-});
-
-/*                          Buy Now                                           */
-
-export const buyNowSchema = z.object({
-  body: z.object({
-    productId: objectId,
-
-    quantity,
-  }),
-});
-
-/*                           Cart Item Params                                 */
-
-export const cartItemIdSchema = z.object({
-  params: z.object({
-    productId: objectId,
-  }),
+export const applyCouponSchema = z.object({
+  couponCode: z.string().min(1, 'Coupon code is required'),
 });

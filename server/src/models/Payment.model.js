@@ -1,162 +1,75 @@
-import mongoose from "mongoose";
-
-
-/*                              Payment Schema                                */
-
+import mongoose from 'mongoose';
+import { PAYMENT_STATUS, PAYMENT_STATUS_LIST, PAYMENT_METHODS } from '../constants/paymentStatus.constant.js';
 
 const paymentSchema = new mongoose.Schema(
   {
-    order: {
+    orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Order",
+      ref: 'Order',
       required: true,
       index: true,
     },
-
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
       index: true,
     },
-
     amount: {
       type: Number,
       required: true,
       min: 0,
     },
-
     currency: {
       type: String,
-      default: "INR",
+      default: 'INR',
       uppercase: true,
-      trim: true,
     },
-
-    paymentGateway: {
-      type: String,
-      enum: ["RAZORPAY"],
-      default: "RAZORPAY",
-    },
-
     paymentMethod: {
       type: String,
-      enum: ["COD", "UPI", "CARD", "NETBANKING", "WALLET", "EMI"],
-      default: "UPI",
+      enum: Object.values(PAYMENT_METHODS),
+      default: PAYMENT_METHODS.RAZORPAY,
     },
-
-    razorpayOrderId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    razorpayPaymentId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    razorpaySignature: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    transactionId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
     status: {
       type: String,
-      enum: [
-        "CREATED",
-        "PENDING",
-        "SUCCESS",
-        "FAILED",
-        "CANCELLED",
-        "REFUNDED",
-      ],
-      default: "CREATED",
+      enum: PAYMENT_STATUS_LIST,
+      default: PAYMENT_STATUS.PENDING,
+      index: true,
     },
-
+    razorpayOrderId: {
+      type: String,
+      sparse: true,
+      index: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+      sparse: true,
+      index: true,
+    },
+    razorpaySignature: {
+      type: String,
+      default: '',
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     failureReason: {
       type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
+      default: '',
     },
-
-    refundId: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    refundAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    refundReason: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 500,
-    },
-
-    gatewayResponse: {
-      type: mongoose.Schema.Types.Mixed,
+    metadata: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
       default: {},
-    },
-
-    paidAt: {
-      type: Date,
-      default: null,
-    },
-
-    refundedAt: {
-      type: Date,
-      default: null,
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+paymentSchema.index({ orderId: 1, status: 1 });
 
-/*                                  Indexes                                   */
-
-
-paymentSchema.index({
-  status: 1,
-});
-
-paymentSchema.index({
-  razorpayOrderId: 1,
-});
-
-paymentSchema.index({
-  razorpayPaymentId: 1,
-});
-
-paymentSchema.index({
-  transactionId: 1,
-});
-
-paymentSchema.index({
-  createdAt: -1,
-});
-
-
-/*                                   Model                                    */
-
-
-const Payment =
-  mongoose.models.Payment || mongoose.model("Payment", paymentSchema);
-
+export const Payment = mongoose.model('Payment', paymentSchema);
 export default Payment;

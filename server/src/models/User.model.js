@@ -1,230 +1,111 @@
-import mongoose from "mongoose";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-
-
-/*                               User Schema                                  */
-
+import mongoose from 'mongoose';
+import { ROLES, ROLE_LIST } from '../constants/roles.constant.js';
 
 const userSchema = new mongoose.Schema(
   {
-    fullName: {
+    name: {
       type: String,
-      required: true,
+      required: [true, 'Name is required'],
       trim: true,
-      minlength: 3,
-      maxlength: 100,
+      maxlength: [100, 'Name cannot exceed 100 characters'],
     },
-
     username: {
       type: String,
-      required: true,
       unique: true,
-      lowercase: true,
+      sparse: true,
       trim: true,
-      minlength: 3,
-      maxlength: 30,
+      lowercase: true,
     },
-
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
       trim: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
-
     password: {
       type: String,
-      required: true,
-      minlength: 6,
-      select: false,
-    },
-
-    phone: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    avatar: {
-      url: {
-        type: String,
-        default: "",
-        trim: true,
+      required: function () {
+        return !this.googleId;
       },
-
-      publicId: {
-        type: String,
-        default: "",
-        trim: true,
-      },
+      minlength: [6, 'Password must be at least 6 characters long'],
+      select: false, // Don't return password by default
     },
-    coverImage: {
-      url: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-
-      publicId: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-    },
-
     role: {
       type: String,
-      enum: ["customer", "vendor", "admin", "super_admin"],
-      default: "customer",
+      enum: ROLE_LIST,
+      default: ROLES.USER,
     },
-
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-    
-
-    emailVerificationToken: {
-      type: String,
-      default: "",
-      select: false,
-    },
-
-    emailVerificationExpires: {
-      type: Date,
-      default: null,
-    },
-
-    passwordResetToken: {
-      type: String,
-      default: "",
-      select: false,
-    },
-
-    passwordResetExpires: {
-      type: Date,
-      default: null,
-    },
-
-    isBlocked: {
-      type: Boolean,
-      default: false,
-    },
-
-    refreshToken: {
-      type: String,
-      default: "",
-      select: false,
-    },
-
-    lastLogin: {
-      type: Date,
-      default: null,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
-
-    recentlyViewed: [
+    roles: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
+        ref: 'Role',
       },
     ],
+    avatar: {
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+    },
+    refreshToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    otp: {
+      type: String,
+      select: false,
+    },
+    otpExpires: {
+      type: Date,
+      select: false,
+    },
+    lastLogin: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
+userSchema.index({ role: 1 });
 
-/*                                  Indexes                                   */
-
-
-userSchema.index({
-  role: 1,
-});
-
-userSchema.index({
-  isVerified: 1,
-});
-
-userSchema.index({
-  isBlocked: 1,
-});
-
-userSchema.index({
-  createdAt: -1,
-});
-
-
-/*                             Password Hash                                  */
-
-
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
-
-  this.password = await bcrypt.hash(this.password, 10);
-
-  next();
-});
-
-
-/*                           Compare Password                                 */
-
-
-userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
-};
-
-
-/*                         Generate Access Token                              */
-
-
-userSchema.methods.generateAccessToken = function () {
-  return jwt.sign(
-    {
-      _id: this._id,
-      email: this.email,
-      role: this.role,
-    },
-
-    process.env.JWT_SECRET,
-
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    },
-  );
-};
-
-
-/*                        Generate Refresh Token                              */
-
-
-userSchema.methods.generateRefreshToken = function () {
-  return jwt.sign(
-    {
-      _id: this._id,
-    },
-
-    process.env.JWT_SECRET,
-
-    {
-      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
-    },
-  );
-};
-
-
-/*                                   Model                                    */
-
-
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-
+export const User = mongoose.model('User', userSchema);
 export default User;
