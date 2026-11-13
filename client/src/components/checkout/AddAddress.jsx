@@ -24,8 +24,8 @@ const AddAddress = ({
           fullName: initialAddress.fullName || "",
           phone: initialAddress.phone || "",
           addressLine1:
-            initialAddress.addressLine1 || initialAddress.address || "",
-          addressLine2: initialAddress.addressLine2 || "",
+            initialAddress.addressLine1 || initialAddress.street || initialAddress.address || "",
+          addressLine2: initialAddress.addressLine2 || initialAddress.apartment || "",
           city: initialAddress.city || "",
           state: initialAddress.state || "",
           pincode: initialAddress.pincode || initialAddress.postalCode || "",
@@ -93,7 +93,24 @@ const AddAddress = ({
       return;
     }
 
-    onSubmit?.(form);
+    const payload = {
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      street: (form.addressLine1 || form.street || "").trim(),
+      addressLine1: (form.addressLine1 || form.street || "").trim(),
+      apartment: (form.addressLine2 || form.apartment || form.landmark || "").trim(),
+      addressLine2: (form.addressLine2 || "").trim(),
+      landmark: (form.landmark || "").trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      postalCode: (form.pincode || form.postalCode || "").trim(),
+      pincode: (form.pincode || form.postalCode || "").trim(),
+      country: form.country || "India",
+      addressType: form.addressType || "home",
+      isDefault: form.isDefault || false,
+    };
+
+    onSubmit?.(payload);
   };
 
   const inputClass = (field) =>

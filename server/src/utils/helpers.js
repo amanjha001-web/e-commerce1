@@ -21,6 +21,8 @@ export const sanitizeUser = (user) => {
   delete obj.emailVerificationExpires;
   delete obj.otp;
   delete obj.otpExpires;
+  obj.fullName = obj.fullName || obj.name || '';
+  obj.name = obj.name || obj.fullName || '';
   return obj;
 };
 

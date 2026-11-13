@@ -16,8 +16,27 @@ export class VendorRequestService {
       throw ApiError.conflict('You already have a pending or active vendor application');
     }
 
+    const storeName = (
+      requestData.storeName ||
+      requestData.shopName ||
+      requestData.businessName ||
+      'My Store'
+    ).trim();
+
+    const businessAddress = requestData.businessAddress || {
+      street: requestData.address?.addressLine1 || requestData.address?.street || '',
+      city: requestData.address?.city || '',
+      state: requestData.address?.state || '',
+      postalCode: requestData.address?.postalCode || requestData.address?.pincode || '',
+      country: requestData.address?.country || 'India',
+    };
+
     return VendorRequest.create({
       ...requestData,
+      storeName,
+      shopName: storeName,
+      businessName: requestData.businessName || storeName,
+      businessAddress,
       userId,
       status: VENDOR_STATUS.PENDING,
     });

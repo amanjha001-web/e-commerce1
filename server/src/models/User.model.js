@@ -5,9 +5,13 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Name is required'],
       trim: true,
       maxlength: [100, 'Name cannot exceed 100 characters'],
+    },
+    fullName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Full name cannot exceed 100 characters'],
     },
     username: {
       type: String,
@@ -44,8 +48,8 @@ const userSchema = new mongoose.Schema(
       },
     ],
     avatar: {
-      url: { type: String, default: '' },
-      publicId: { type: String, default: '' },
+      type: mongoose.Schema.Types.Mixed,
+      default: { url: '', publicId: '' },
     },
     phone: {
       type: String,
@@ -104,6 +108,20 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+userSchema.pre('validate', function (next) {
+  if (!this.name && this.fullName) {
+    this.name = this.fullName;
+  }
+  if (!this.fullName && this.name) {
+    this.fullName = this.name;
+  }
+  if (!this.name && !this.fullName) {
+    this.name = this.username || (this.email ? this.email.split('@')[0] : 'User');
+    this.fullName = this.name;
+  }
+  next();
+});
 
 userSchema.index({ role: 1 });
 

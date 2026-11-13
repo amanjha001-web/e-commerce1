@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import ProductFilters from "../../components/product/ProductFilters";
@@ -9,6 +9,7 @@ import ProductGrid from "../../components/product/ProductGrid";
 import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import Pagination from "../../components/common/Pagination";
+import useAuth from "../../hooks/useAuth";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
@@ -44,11 +45,25 @@ const Products = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const isDealsView = searchParams.get("deals") === "true";
 
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+
+  const rawRole =
+    user?.role?.name ||
+    user?.role?.roleName ||
+    user?.role ||
+    user?.userRole ||
+    "";
+  const role = String(rawRole).trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const isAdmin = ["admin", "superadmin", "super_admin"].includes(role);
+  const isVendor = ["vendor", "seller"].includes(role);
+  const isCustomer = ["customer", "user"].includes(role) || (!isAdmin && !isVendor);
+
   const handleAddToCart = async (product) => {
     const productId = product?._id || product?.id;
 
     if (!productId) {
-      console.error("Product ID is missing");
+      toast.error("Product information is missing");
       return;
     }
 
@@ -57,10 +72,21 @@ const Products = ({
       return;
     }
 
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to add items to cart");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Shopping cart is only available for customer accounts");
+      return;
+    }
+
     const result = await dispatch(addCartProduct(productId, 1));
 
     if (!result?.success) {
-      console.error(result?.message || "Failed to add product");
+      toast.error(result?.message || "Failed to add product to cart");
       return;
     }
 
@@ -229,6 +255,17 @@ const Products = ({
     const productId = product?._id || product?.id || product?.slug;
 
     if (!productId) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to manage your wishlist");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Wishlist is only available for customer accounts");
       return;
     }
 

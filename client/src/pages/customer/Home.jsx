@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -6,9 +6,15 @@ import { toast } from "sonner";
 import ProductGrid from "../../components/product/ProductGrid";
 import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
+import useAuth from "../../hooks/useAuth";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
+import {
+  fetchWishlist,
+  addWishlistProduct,
+  removeWishlistProduct,
+} from "../../store/slices/wishlistThunk.js";
 
 import productService from "../../services/product.service";
 
@@ -31,6 +37,39 @@ const Home = ({
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user: authUser, isAuthenticated } = useAuth();
+  const currentUser = user || authUser;
+
+  const rawRole =
+    currentUser?.role?.name ||
+    currentUser?.role?.roleName ||
+    currentUser?.role ||
+    currentUser?.userRole ||
+    "";
+  const role = String(rawRole).trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const isAdmin = ["admin", "superadmin", "super_admin"].includes(role);
+  const isVendor = ["vendor", "seller"].includes(role);
+  const isCustomer = ["customer", "user"].includes(role) || (!isAdmin && !isVendor);
+
+  // =========================
+  // Redux Wishlist State
+  // =========================
+
+  const wishlistItems = useSelector((state) => state.wishlist?.items || []);
+  const wishlistIds = useMemo(() => {
+    return wishlistItems
+      .map((item) => {
+        const prod = item?.product || item;
+        return prod?._id || prod?.id || item?.productId || null;
+      })
+      .filter(Boolean);
+  }, [wishlistItems]);
+
+  useEffect(() => {
+    if (isAuthenticated && isCustomer) {
+      dispatch(fetchWishlist());
+    }
+  }, [dispatch, isAuthenticated, isCustomer]);
 
   // =========================
   // Redux Product State
@@ -64,7 +103,18 @@ const Home = ({
     const productId = product?._id || product?.id;
 
     if (!productId) {
-      console.error("Add to Cart failed: Product ID is missing");
+      toast.error("Product information is missing");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to add items to cart");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Shopping cart is only available for customer accounts");
       return;
     }
 
@@ -72,16 +122,51 @@ const Home = ({
       const result = await dispatch(addCartProduct(productId, 1));
 
       if (!result?.success) {
-        console.error(
-          "Add to Cart failed:",
-          result?.message || "Unable to add product to cart",
-        );
+        toast.error(result?.message || "Unable to add product to cart");
         return;
       }
 
       toast.success("Added to cart");
     } catch (error) {
       console.error("Add to Cart failed:", error);
+      toast.error("Unable to add product to cart");
+    }
+  };
+
+  // =========================
+  // Wishlist Toggle
+  // =========================
+
+  const handleWishlist = (product) => {
+    if (onToggleWishlist) {
+      onToggleWishlist(product);
+      return;
+    }
+
+    const productId = product?._id || product?.id || product?.slug;
+    if (!productId) return;
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to manage your wishlist");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Wishlist is only available for customer accounts");
+      return;
+    }
+
+    const isWishlisted = wishlistIds.some(
+      (id) => String(id) === String(productId),
+    );
+
+    if (isWishlisted) {
+      dispatch(removeWishlistProduct(productId));
+      toast.success("Removed from wishlist");
+    } else {
+      dispatch(addWishlistProduct(productId));
+      toast.success("Added to wishlist");
     }
   };
 
@@ -302,11 +387,11 @@ const Home = ({
               "Discover thoughtful essentials, elevated everyday style and pieces made to make life feel a little more special."}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
               type="button"
               onClick={handleShopNow}
-              className="primarybtn goldbtn"
+              className="primarybtn goldbtn text-xs sm:text-sm !py-2 !px-3.5 sm:!py-2.5 sm:!px-4"
             >
               {activeBanner?.buttonText || "Explore collection →"}
             </button>
@@ -314,7 +399,7 @@ const Home = ({
             <button
               type="button"
               onClick={() => navigate("/products?deals=true")}
-              className="outlinebtn"
+              className="outlinebtn text-xs sm:text-sm !py-2 !px-3.5 sm:!py-2.5 sm:!px-4"
               style={{
                 background: "#ffffff16",
                 color: "#ffffff",
@@ -436,7 +521,8 @@ const Home = ({
               <ProductGrid
                 products={sec.products.slice(0, 4)}
                 onAddToCart={handleAddToCart}
-                onWishlist={onToggleWishlist}
+                onWishlist={handleWishlist}
+                wishlistIds={wishlistIds}
               />
             )}
           </section>

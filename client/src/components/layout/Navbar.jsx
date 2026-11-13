@@ -94,23 +94,23 @@ const Navbar = ({
     <header
       className={`sticky top-0 z-40 w-full border-b border-[var(--line)] bg-white/95 backdrop-blur-md dark:border-line dark:bg-card/95 ${className}`}
     >
-      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-6 px-4 sm:px-7">
+      <div className="mx-auto flex h-14 sm:h-16 max-w-[1440px] items-center gap-2 sm:gap-4 md:gap-6 px-2.5 sm:px-7">
         {/* Mobile Menu Button */}
         {showMenuButton && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-white text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] md:hidden"
+            className="flex h-9 w-9 min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-white text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] md:hidden"
             aria-label="Open menu"
           >
-            ☰
+            <span className="text-base leading-none">☰</span>
           </button>
         )}
 
         {/* Brand Logo */}
         <Link
           to="/"
-          className="shrink-0 text-2xl font-black tracking-tight text-[var(--primary)] transition hover:opacity-90"
+          className="shrink-0 text-lg sm:text-xl md:text-2xl font-black tracking-tight text-[var(--primary)] transition hover:opacity-90"
         >
           {logo || (
             <>
@@ -141,7 +141,7 @@ const Navbar = ({
         </nav>
 
         {/* Right Tools */}
-        <div className="ml-auto flex items-center gap-2.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           {rightContent || (
             <>
               {/* Wishlist Button */}
@@ -165,11 +165,11 @@ const Navbar = ({
               {(!isAuthenticated || isCustomer) && (
                 <Link
                   to="/cart"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
+                  className="inline-flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-xl border border-[var(--line)] bg-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
                   aria-label={`Cart, ${cartCount} items`}
                 >
                   <span>🛍</span>
-                  <span>Cart</span>
+                  <span className="hidden sm:inline">Cart</span>
                   <span className="rounded-full bg-[var(--soft)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--primary)]">
                     {cartCount}
                   </span>
@@ -182,8 +182,9 @@ const Navbar = ({
                   <button
                     type="button"
                     onClick={() => setAccountOpen((prev) => !prev)}
-                    className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] dark:bg-card"
+                    className="flex shrink-0 items-center gap-1.5 sm:gap-2 rounded-xl border border-[var(--line)] bg-white px-2.5 py-1.5 sm:px-3 sm:py-1.5 text-xs font-bold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] dark:bg-card"
                     aria-expanded={accountOpen}
+                    aria-haspopup="true"
                   >
                     {user?.avatar?.url ? (
                       <img
@@ -300,7 +301,7 @@ const Navbar = ({
               ) : (
                 <Link
                   to="/login"
-                  className="primarybtn !py-2 !px-4 !text-xs !rounded-xl"
+                  className="primarybtn shrink-0 whitespace-nowrap !py-1.5 !px-3 sm:!py-2 sm:!px-4 !text-xs !rounded-xl"
                 >
                   Sign in
                 </Link>

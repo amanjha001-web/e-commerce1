@@ -289,6 +289,7 @@ export default function BecomeSeller() {
     }
 
     const payload = {
+      storeName: form.shopName.trim(),
       shopName: form.shopName.trim(),
       businessName: form.businessName.trim(),
       description: form.description.trim(),
@@ -302,6 +303,13 @@ export default function BecomeSeller() {
         postalCode: form.address.postalCode.trim(),
         addressLine1: form.address.addressLine1.trim(),
         addressLine2: form.address.addressLine2.trim(),
+      },
+      businessAddress: {
+        country: form.address.country.trim(),
+        state: form.address.state.trim(),
+        city: form.address.city.trim(),
+        postalCode: form.address.postalCode.trim(),
+        street: form.address.addressLine1.trim(),
       },
       bankDetails: {
         accountHolderName: form.bankDetails.accountHolderName.trim(),

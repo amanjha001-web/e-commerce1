@@ -5,11 +5,15 @@ import LoginForm from "../../components/auth/LoginForm";
 import SocialLogin from "../../components/auth/SocialLogin";
 import useAuth from "../../hooks/useAuth";
 
-const normalizeRole = (role) =>
-  String(role || "")
+const normalizeRole = (role) => {
+  const r = String(role || "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+  if (r === "user") return "customer";
+  if (r === "seller") return "vendor";
+  return r;
+};
 
 const getDashboardPath = (role) => {
   const normalizedRole = normalizeRole(role);
@@ -22,11 +26,11 @@ const getDashboardPath = (role) => {
     return "/vendor";
   }
 
-  if (normalizedRole === "customer") {
+  if (["customer", "user"].includes(normalizedRole)) {
     return "/";
   }
 
-  return null;
+  return "/";
 };
 
 const Login = () => {
@@ -70,13 +74,15 @@ const Login = () => {
         return false;
       }
 
-      const responseUser = result.payload?.data?.user;
+      const responseUser = result.payload?.data?.user || result.payload?.user;
       const actualRole = normalizeRole(responseUser?.role);
+      const reqRole = normalizeRole(requestedRole);
 
       const roleMatches =
-        requestedRole === actualRole ||
-        (requestedRole === "admin" && actualRole === "super_admin") ||
-        (requestedRole === "vendor" && actualRole === "seller");
+        reqRole === actualRole ||
+        (reqRole === "customer" && (actualRole === "customer" || actualRole === "user")) ||
+        (reqRole === "admin" && (actualRole === "admin" || actualRole === "super_admin")) ||
+        (reqRole === "vendor" && (actualRole === "vendor" || actualRole === "seller"));
 
       if (!roleMatches) {
         setRoleError(

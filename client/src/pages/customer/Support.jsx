@@ -1,24 +1,54 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import supportService from "../../services/support.service";
 
 import TicketTable from "../../components/admin/support/TicketTable";
-import TicketDetails from "../../components/admin/support/TicketDetails";
 import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Support = ({
-  tickets = [],
-  loading = false,
-  submitting = false,
+  tickets: propTickets = null,
+  loading: propLoading = false,
+  submitting: propSubmitting = false,
   onCreateTicket,
   onViewTicket,
   onCloseTicket,
   onNavigate,
 }) => {
+  const [internalTickets, setInternalTickets] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propTickets?.length);
+  const [submitting, setSubmitting] = useState(propSubmitting);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  const loadTickets = async () => {
+    try {
+      setInternalLoading(true);
+      const res = await supportService.getMyTickets();
+      const list = res?.data?.tickets || res?.data || res?.tickets || [];
+      setInternalTickets(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to fetch customer tickets:", err);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (propTickets && propTickets.length > 0) {
+      setInternalTickets(propTickets);
+    } else {
+      loadTickets();
+    }
+  }, [propTickets]);
+
+  const tickets = propTickets && propTickets.length > 0 ? propTickets : internalTickets;
+  const loading = propLoading || internalLoading;
 
   const filteredTickets = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -70,32 +100,191 @@ const Support = ({
     ).length,
   };
 
-  const handleViewTicket = (ticket) => {
-    setSelectedTicket(ticket);
-    onViewTicket?.(ticket);
+  const handleViewTicket = async (ticket) => {
+    if (onViewTicket) {
+      onViewTicket(ticket);
+    }
+    const id = ticket?._id || ticket?.ticketId || ticket?.id;
+    try {
+      const res = await supportService.getTicketById(id);
+      setSelectedTicket(res?.data?.ticket || res?.data || res || ticket);
+    } catch {
+      setSelectedTicket(ticket);
+    }
   };
 
-  const handleCreateTicket = (data) => {
-    onCreateTicket?.(data);
-    setShowForm(false);
+  const handleCreateTicket = async (data) => {
+    if (onCreateTicket) {
+      onCreateTicket(data);
+      setShowForm(false);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await supportService.createTicket(data);
+      toast.success("Support ticket created successfully!");
+      setShowForm(false);
+      await loadTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to create support ticket");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSendReply = async (e) => {
+    e.preventDefault();
+    if (!replyMessage.trim() || !selectedTicket) return;
+
+    const id = selectedTicket._id || selectedTicket.ticketId;
+    try {
+      setReplyLoading(true);
+      const res = await supportService.addMessage(id, { message: replyMessage.trim() });
+      toast.success("Message sent");
+      setReplyMessage("");
+      const updated = res?.data?.ticket || res?.data || res;
+      setSelectedTicket(updated);
+      await loadTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to send message");
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+    const id = selectedTicket._id || selectedTicket.ticketId;
+
+    if (onCloseTicket) {
+      onCloseTicket(selectedTicket);
+      return;
+    }
+
+    try {
+      await supportService.closeTicket(id);
+      toast.success("Ticket closed");
+      setSelectedTicket((prev) => (prev ? { ...prev, status: "closed" } : prev));
+      await loadTickets();
+    } catch (err) {
+      toast.error("Failed to close ticket");
+    }
   };
 
   if (selectedTicket) {
+    const isClosed = selectedTicket.status === "closed" || selectedTicket.status === "resolved";
+    const messages = selectedTicket.messages || [];
+
     return (
       <CustomerWorkspace title="Ticket Details" eyebrow="Customer workspace">
-        <button
-          type="button"
-          onClick={() => setSelectedTicket(null)}
-          className="mb-4 text-xs font-bold text-[var(--primary)] hover:underline"
-        >
-          ← Back to all tickets
-        </button>
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setSelectedTicket(null)}
+            className="text-xs font-bold text-[var(--primary)] hover:underline"
+          >
+            ← Back to all tickets
+          </button>
+
+          {!isClosed && (
+            <button
+              type="button"
+              onClick={handleCloseTicket}
+              className="rounded-xl border border-[var(--line)] px-3 py-1.5 text-xs font-bold text-[var(--red)] hover:bg-[#fff0f1]"
+            >
+              Close Ticket
+            </button>
+          )}
+        </div>
 
         <section className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card dark:border-line">
-          <TicketDetails
-            ticket={selectedTicket}
-            onCloseTicket={onCloseTicket}
-          />
+          <div className="border-b border-[var(--line)] pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-mono font-bold text-[var(--gold)]">
+                  #{selectedTicket.ticketId || String(selectedTicket._id).slice(-6)}
+                </span>
+                <h1 className="mt-1 text-lg font-black text-[var(--text)] dark:text-foreground">
+                  {selectedTicket.subject}
+                </h1>
+              </div>
+
+              <div className="flex gap-2">
+                <span className="pill text-xs capitalize">
+                  {selectedTicket.category || "General"}
+                </span>
+                <span
+                  className={`status-badge text-xs font-bold capitalize ${
+                    isClosed ? "green" : "amber"
+                  }`}
+                >
+                  {selectedTicket.status || "Open"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Conversation history */}
+          <div className="my-6 space-y-4">
+            {messages.length === 0 ? (
+              <p className="text-xs text-[var(--muted)]">No messages in this ticket yet.</p>
+            ) : (
+              messages.map((m, idx) => {
+                const isCustomer = !m.sender?.role || m.sender?.role === "user" || m.sender?.role === "customer";
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl p-4 text-xs ${
+                      isCustomer
+                        ? "ml-6 bg-[var(--soft)]/50 border border-[var(--line)]"
+                        : "mr-6 bg-[#fcf9fa] border border-[#f3cbd0]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between font-bold text-[var(--text)] dark:text-foreground">
+                      <span>{isCustomer ? "You" : m.sender?.name || "Support Representative"}</span>
+                      <span className="text-[10px] text-[var(--muted)]">
+                        {m.createdAt ? new Date(m.createdAt).toLocaleString("en-IN") : ""}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-[var(--text)] dark:text-foreground whitespace-pre-wrap">
+                      {m.message}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Reply Form */}
+          {!isClosed ? (
+            <form onSubmit={handleSendReply} className="mt-6 border-t border-[var(--line)] pt-4">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                Add a reply
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={replyMessage}
+                onChange={(e) => setReplyMessage(e.target.value)}
+                placeholder="Type your message to support..."
+                className="mt-2 w-full resize-none rounded-xl border border-[var(--line)] bg-white p-3 text-xs text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={replyLoading || !replyMessage.trim()}
+                  className="primarybtn !py-2 !px-4 !text-xs !rounded-xl"
+                >
+                  {replyLoading ? "Sending..." : "Send Message"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="rounded-xl border border-[var(--line)] bg-[#fcf9fa] p-4 text-center text-xs text-[var(--muted)]">
+              This ticket is closed. If you need further assistance, please open a new ticket.
+            </div>
+          )}
         </section>
       </CustomerWorkspace>
     );
@@ -161,7 +350,7 @@ const Support = ({
                 <option value="general">General Inquiry</option>
                 <option value="order">Order & Tracking</option>
                 <option value="payment">Payment & Refunds</option>
-                <option value="delivery">Delivery Delay</option>
+                <option value="product">Product Details</option>
                 <option value="account">Account & Profile</option>
               </select>
             </div>

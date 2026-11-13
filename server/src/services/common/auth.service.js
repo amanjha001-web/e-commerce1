@@ -131,7 +131,9 @@ export class AuthService {
 
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();
-    await user.save();
+    user.name = user.name || user.fullName || user.username || 'User';
+    user.fullName = user.fullName || user.name;
+    await user.save({ validateModifiedOnly: true });
 
     return {
       user: sanitizeUser(user),
@@ -313,7 +315,9 @@ export class AuthService {
 
     user.refreshToken = refreshToken;
     user.lastLogin = new Date();
-    await user.save();
+    user.name = user.name || user.fullName || user.username || 'User';
+    user.fullName = user.fullName || user.name;
+    await user.save({ validateModifiedOnly: true });
 
     return {
       user: sanitizeUser(user),

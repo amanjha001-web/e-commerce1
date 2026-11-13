@@ -8,6 +8,7 @@ import corsOptions from './config/cors.js';
 import { helmetConfig, apiRateLimiter } from './config/security.js';
 import { notFoundHandler } from './middlewares/notFound.middleware.js';
 import { errorHandler } from './middlewares/error.middleware.js';
+import './models/index.js';
 import routes from './routes/index.js';
 
 const app = express();

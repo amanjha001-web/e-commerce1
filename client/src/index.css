@@ -287,14 +287,35 @@
 
   .productactions {
     display: flex;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 10px;
+    align-items: center;
   }
 
-  .productactions button {
-    flex: 1 1 0%;
+  .productactions button.primarybtn {
+    flex: 1 1 auto;
     min-width: 0;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 700;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    border-radius: 9px;
+  }
+
+  .productactions button.outlinebtn {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    border-radius: 9px;
   }
 
   .categorygrid {
@@ -624,6 +645,137 @@
     .pagehead {
       align-items: flex-start;
       flex-direction: column;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page {
+      padding: 12px 10px;
+    }
+    .wrap {
+      padding: 0 10px;
+    }
+    .hero {
+      padding: 22px 14px;
+      border-radius: 18px;
+      gap: 16px;
+      min-height: auto;
+    }
+    .hero h1 {
+      font-size: 26px;
+      line-height: 1.15;
+      margin: 8px 0;
+    }
+    .hero p {
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 8px 0;
+    }
+    .heroart {
+      height: 125px;
+      font-size: 54px;
+      border-radius: 14px;
+    }
+    .categorygrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .category {
+      padding: 12px 6px;
+      border-radius: 12px;
+    }
+    .category b {
+      font-size: 11px;
+      margin-top: 4px;
+      word-break: break-word;
+    }
+    .sectionhead {
+      margin: 20px 0 12px;
+    }
+    .sectionhead h2 {
+      font-size: 20px;
+    }
+    .product-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .product {
+      border-radius: 12px;
+    }
+    .productvisual {
+      height: 115px;
+      font-size: 45px;
+    }
+    .productbody {
+      padding: 10px;
+    }
+    .productbody h3 {
+      font-size: 13px;
+    }
+    .price {
+      font-size: 14px;
+    }
+    .productactions {
+      gap: 5px;
+      padding-top: 8px;
+    }
+    .productactions button.primarybtn {
+      padding: 6px 4px;
+      font-size: 11px;
+      border-radius: 8px;
+    }
+    .productactions button.outlinebtn {
+      flex: 0 0 30px;
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+    .stats {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .page {
+      padding: 10px 8px;
+    }
+    .wrap {
+      padding: 0 8px;
+    }
+    .hero {
+      padding: 18px 10px;
+      border-radius: 14px;
+    }
+    .hero h1 {
+      font-size: 22px;
+    }
+    .hero p {
+      font-size: 12px;
+    }
+    .heroart {
+      height: 100px;
+      font-size: 44px;
+    }
+    .categorygrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .product-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .productactions button.primarybtn {
+      padding: 6px 6px;
+      font-size: 11px;
+    }
+    .productactions button.outlinebtn {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      font-size: 12px;
     }
   }
 

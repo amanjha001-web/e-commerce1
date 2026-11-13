@@ -13,6 +13,14 @@ const vendorRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    shopName: {
+      type: String,
+      trim: true,
+    },
+    businessName: {
+      type: String,
+      trim: true,
+    },
     email: {
       type: String,
       required: true,
@@ -72,6 +80,13 @@ const vendorRequestSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+vendorRequestSchema.pre('validate', function (next) {
+  if (!this.storeName && (this.shopName || this.businessName)) {
+    this.storeName = this.shopName || this.businessName;
+  }
+  next();
+});
 
 vendorRequestSchema.index({ userId: 1, status: 1 });
 vendorRequestSchema.index({ status: 1 });

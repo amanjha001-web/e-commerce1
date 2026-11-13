@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 
+import useAuth from "../../hooks/useAuth";
 import { addCartProduct } from "../../store/slices/cartThunk";
+import {
+  addWishlistProduct,
+  removeWishlistProduct,
+} from "../../store/slices/wishlistThunk";
 
 const getCategoryIcon = (categoryName = "") => {
   const lower = String(categoryName).toLowerCase();
@@ -24,8 +29,22 @@ const ProductCard = ({
   loading = false,
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+
   const [addingToCart, setAddingToCart] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  const rawRole =
+    user?.role?.name ||
+    user?.role?.roleName ||
+    user?.role ||
+    user?.userRole ||
+    "";
+  const role = String(rawRole).trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const isAdmin = ["admin", "superadmin", "super_admin"].includes(role);
+  const isVendor = ["vendor", "seller"].includes(role);
+  const isCustomer = ["customer", "user"].includes(role) || (!isAdmin && !isVendor);
 
   if (!product) {
     return null;
@@ -105,7 +124,10 @@ const ProductCard = ({
     badges.push({ type: "discount", text: `${discountPercentage}% OFF` });
   }
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
     if (!productId || addingToCart || isOutOfStock) {
       return;
     }
@@ -120,6 +142,17 @@ const ProductCard = ({
       return;
     }
 
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to add items to cart");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Shopping cart is only available for customer accounts");
+      return;
+    }
+
     setAddingToCart(true);
 
     try {
@@ -128,15 +161,42 @@ const ProductCard = ({
       if (result?.success) {
         toast.success("Added to cart");
       } else {
-        console.error(
-          "Add to cart failed:",
-          result?.message || "Please try again.",
-        );
+        toast.error(result?.message || "Unable to add product to cart");
       }
     } catch (error) {
       console.error("Add to cart failed:", error);
+      toast.error("Unable to add product to cart");
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleWishlistClick = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
+    if (onWishlist) {
+      onWishlist(product);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast.error("Please sign in as a customer to manage your wishlist");
+      navigate("/login");
+      return;
+    }
+
+    if (!isCustomer || isAdmin || isVendor) {
+      toast.error("Wishlist is only available for customer accounts");
+      return;
+    }
+
+    if (isWishlisted) {
+      dispatch(removeWishlistProduct(productId));
+      toast.success("Removed from wishlist");
+    } else {
+      dispatch(addWishlistProduct(productId));
+      toast.success("Added to wishlist");
     }
   };
 
@@ -222,16 +282,17 @@ const ProductCard = ({
 
           <button
             type="button"
-            onClick={() => onWishlist?.(product)}
+            onClick={handleWishlistClick}
             disabled={loading}
             aria-label={
               isWishlisted
                 ? `Remove ${productName} from wishlist`
                 : `Add ${productName} to wishlist`
             }
+            title={isWishlisted ? "In wishlist" : "Add to wishlist"}
             className={`outlinebtn ${
               isWishlisted
-                ? "border-[var(--primary)] bg-[var(--soft)] text-[var(--primary)]"
+                ? "!border-[var(--primary)] !bg-[var(--soft)] !text-[var(--primary)]"
                 : ""
             }`}
           >
