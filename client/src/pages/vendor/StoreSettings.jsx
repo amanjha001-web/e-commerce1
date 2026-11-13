@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import vendorService from "../../services/vendor.service";
 
 import Button from "../../components/common/Button";
 import Input from "../../components/common/Input";
@@ -7,21 +9,69 @@ import Loader from "../../components/common/Loader";
 
 const StoreSettings = ({
   user = null,
-  store = null,
-  loading = false,
-  saving = false,
+  store: propStore = null,
+  loading: propLoading = false,
+  saving: propSaving = false,
   onUpdateStore,
 }) => {
+  const [loading, setLoading] = useState(propLoading || !propStore);
+  const [saving, setSaving] = useState(propSaving);
   const [form, setForm] = useState(() => ({
-    storeName: store?.storeName || store?.name || "",
-    description: store?.description || "",
-    email: store?.email || user?.email || "",
-    phone: store?.phone || user?.phone || "",
-    address: store?.address || "",
-    city: store?.city || "",
-    state: store?.state || "",
-    pincode: store?.pincode || store?.postalCode || "",
+    storeName: propStore?.storeName || propStore?.name || "",
+    description: propStore?.description || "",
+    email: propStore?.email || user?.email || "",
+    phone: propStore?.phone || user?.phone || "",
+    address: propStore?.address || "",
+    city: propStore?.city || "",
+    state: propStore?.state || "",
+    pincode: propStore?.pincode || propStore?.postalCode || "",
   }));
+
+  useEffect(() => {
+    if (propStore) {
+      setForm({
+        storeName: propStore?.storeName || propStore?.name || "",
+        description: propStore?.description || "",
+        email: propStore?.email || user?.email || "",
+        phone: propStore?.phone || user?.phone || "",
+        address: typeof propStore?.address === "string" ? propStore.address : propStore?.address?.street || "",
+        city: propStore?.city || propStore?.address?.city || "",
+        state: propStore?.state || propStore?.address?.state || "",
+        pincode: propStore?.pincode || propStore?.address?.pinCode || "",
+      });
+      return;
+    }
+
+    let isMounted = true;
+    const fetchStore = async () => {
+      try {
+        setLoading(true);
+        const res = await vendorService.getMyStore();
+        const s = res?.data?.store || res?.data || res;
+        if (isMounted && s && typeof s === "object") {
+          setForm({
+            storeName: s.name || s.storeName || "",
+            description: s.description || "",
+            email: s.email || user?.email || "",
+            phone: s.phone || user?.phone || "",
+            address: typeof s.address === "string" ? s.address : s.address?.street || "",
+            city: s.city || s.address?.city || "",
+            state: s.state || s.address?.state || "",
+            pincode: s.pincode || s.postalCode || s.address?.pinCode || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load store settings:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchStore();
+    return () => {
+      isMounted = false;
+    };
+  }, [propStore, user]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -35,9 +85,30 @@ const StoreSettings = ({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!onUpdateStore || saving) return;
+    if (onUpdateStore) {
+      await onUpdateStore(form);
+      return;
+    }
 
-    await onUpdateStore(form);
+    try {
+      setSaving(true);
+      await vendorService.updateStore({
+        name: form.storeName,
+        storeName: form.storeName,
+        description: form.description,
+        email: form.email,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+      });
+      toast.success("Store settings updated successfully");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update store settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import addressService from "../../services/address.service";
+import { toast } from "sonner";
 
 import AddressCard from "../../components/checkout/AddressCard";
 import AddAddress from "../../components/checkout/AddAddress";
@@ -7,9 +9,9 @@ import Loader from "../../components/common/Loader";
 import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Addresses = ({
-  addresses = [],
-  loading = false,
-  saving = false,
+  addresses: propAddresses = [],
+  loading: propLoading = false,
+  saving: propSaving = false,
   defaultAddressId = null,
   onAddAddress,
   onEditAddress,
@@ -17,8 +19,34 @@ const Addresses = ({
   onSetDefaultAddress,
   onNavigate,
 }) => {
+  const [internalAddresses, setInternalAddresses] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propAddresses?.length);
+  const [internalSaving, setInternalSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
+
+  const addresses = propAddresses?.length > 0 ? propAddresses : internalAddresses;
+  const loading = propAddresses?.length > 0 ? propLoading : internalLoading;
+  const saving = propSaving || internalSaving;
+
+  const loadAddresses = async () => {
+    try {
+      setInternalLoading(true);
+      const res = await addressService.getAddresses();
+      const list = res?.data?.addresses || res?.data || res?.addresses || [];
+      setInternalAddresses(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to fetch addresses:", err);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propAddresses || propAddresses.length === 0) {
+      loadAddresses();
+    }
+  }, [propAddresses]);
 
   const getAddressId = (address) => address?._id || address?.id;
 
@@ -50,14 +78,62 @@ const Addresses = ({
   };
 
   const handleSubmit = async (data) => {
-    if (editingAddress) {
-      await onEditAddress?.(getAddressId(editingAddress), data);
-    } else {
-      await onAddAddress?.(data);
+    setInternalSaving(true);
+    try {
+      if (editingAddress) {
+        if (onEditAddress) {
+          await onEditAddress(getAddressId(editingAddress), data);
+        } else {
+          await addressService.updateAddress(getAddressId(editingAddress), data);
+          toast.success("Address updated successfully");
+          await loadAddresses();
+        }
+      } else {
+        if (onAddAddress) {
+          await onAddAddress(data);
+        } else {
+          await addressService.addAddress(data);
+          toast.success("Address added successfully");
+          await loadAddresses();
+        }
+      }
+      setShowForm(false);
+      setEditingAddress(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save address");
+    } finally {
+      setInternalSaving(false);
     }
+  };
 
-    setShowForm(false);
-    setEditingAddress(null);
+  const handleDelete = async (address) => {
+    const id = getAddressId(address);
+    if (onDeleteAddress) return onDeleteAddress(id);
+    try {
+      setInternalSaving(true);
+      await addressService.deleteAddress(id);
+      toast.success("Address deleted");
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete address");
+    } finally {
+      setInternalSaving(false);
+    }
+  };
+
+  const handleSetDefault = async (address) => {
+    const id = getAddressId(address);
+    if (onSetDefaultAddress) return onSetDefaultAddress(id);
+    try {
+      setInternalSaving(true);
+      await addressService.setDefaultAddress(id);
+      toast.success("Default address updated");
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to set default");
+    } finally {
+      setInternalSaving(false);
+    }
   };
 
   return (
@@ -139,11 +215,11 @@ const Addresses = ({
                       {isDefault ? "DEFAULT · " : ""}
                       {address?.type?.toUpperCase() || "HOME"}
                     </span>
-                    {!isDefault && onSetDefaultAddress && (
+                    {!isDefault && (
                       <button
                         type="button"
-                        onClick={() => onSetDefaultAddress(id)}
-                        className="text-xs font-semibold text-[var(--primary)] hover:underline"
+                        onClick={() => handleSetDefault(address)}
+                        className="text-xs font-semibold text-[var(--primary)] hover:underline cursor-pointer"
                       >
                         Set as default
                       </button>
@@ -174,8 +250,8 @@ const Addresses = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onDeleteAddress?.(id)}
-                    className="btnsm text-[var(--red)] hover:bg-[#fff0f1]"
+                    onClick={() => handleDelete(address)}
+                    className="btnsm text-[var(--red)] hover:bg-[#fff0f1] cursor-pointer"
                   >
                     Delete
                   </button>

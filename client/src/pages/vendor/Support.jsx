@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import supportService from "../../services/support.service";
 
 const INITIAL_TICKETS = [
   { id: "VT-81", subject: "Payout clarification", status: "Open", statusClass: "amber" },
@@ -8,25 +9,57 @@ const INITIAL_TICKETS = [
 
 const VendorSupport = () => {
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
+  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [subject, setSubject] = useState("");
   const [category, setCategory] = useState("General");
   const [message, setMessage] = useState("");
 
-  const handleSubmitTicket = () => {
-    setTickets((prev) => [
-      {
-        id: `#TK-${204 + prev.length}`,
-        subject: subject.trim() || "New support request",
-        status: "Open",
-        statusClass: "amber",
-      },
-      ...prev,
-    ]);
-    setModalOpen(false);
-    setSubject("");
-    setMessage("");
-    toast.success("Ticket created");
+  const fetchTickets = async () => {
+    try {
+      setLoading(true);
+      const res = await supportService.getMyTickets();
+      const list = res?.data?.tickets || res?.data || res?.tickets || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setTickets(
+          list.map((t) => ({
+            id: t.ticketNumber || t._id || "VT-01",
+            subject: t.subject || "Support Request",
+            status: t.status ? String(t.status).charAt(0).toUpperCase() + String(t.status).slice(1) : "Open",
+            statusClass: t.status === "closed" || t.status === "resolved" ? "green" : "amber",
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch support tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const handleSubmitTicket = async () => {
+    if (!subject.trim() || !message.trim()) {
+      toast.error("Please provide both subject and message");
+      return;
+    }
+    try {
+      await supportService.createTicket({
+        subject: subject.trim(),
+        category,
+        message: message.trim(),
+      });
+      toast.success("Support ticket created successfully");
+      setModalOpen(false);
+      setSubject("");
+      setMessage("");
+      fetchTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to create support ticket");
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 
-import { useMemo, useState } from "react";
-
-
+import { useEffect, useMemo, useState } from "react";
+import couponService from "../../services/coupon.service";
+import { toast } from "sonner";
 
 import DataTable from "../../components/vendor/DataTable";
 import DashboardCard from "../../components/vendor/DashboardCard";
@@ -15,18 +15,18 @@ import Loader from "../../components/common/Loader";
 import Textarea from "../../components/common/Textarea";
 
 const Coupons = ({
-  coupons = [],
-  loading = false,
-  saving = false,
-
-
+  coupons: propCoupons = [],
+  loading: propLoading = false,
+  saving: propSaving = false,
   onCreateCoupon,
   onUpdateCoupon,
   onDeleteCoupon,
   onToggleCoupon,
- 
 }) => {
-  
+  const [internalCoupons, setInternalCoupons] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propCoupons?.length);
+  const [internalSaving, setInternalSaving] = useState(false);
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
 
@@ -43,6 +43,29 @@ const Coupons = ({
     expiresAt: "",
     status: "active",
   });
+
+  const coupons = propCoupons?.length > 0 ? propCoupons : internalCoupons;
+  const loading = propCoupons?.length > 0 ? propLoading : internalLoading;
+  const saving = propSaving || internalSaving;
+
+  const loadCoupons = async () => {
+    try {
+      setInternalLoading(true);
+      const res = await couponService.getVendorCoupons();
+      const list = res?.data?.coupons || res?.data || res?.coupons || [];
+      setInternalCoupons(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to load vendor coupons:", err);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propCoupons || propCoupons.length === 0) {
+      loadCoupons();
+    }
+  }, [propCoupons]);
 
  
 
@@ -146,40 +169,75 @@ const Coupons = ({
     event.preventDefault();
 
     const payload = {
-      ...form,
       code: form.code.trim().toUpperCase(),
-      discountValue: Number(form.discountValue),
-      minimumOrderAmount: form.minimumOrderAmount
-        ? Number(form.minimumOrderAmount)
-        : 0,
-      usageLimit: form.usageLimit
-        ? Number(form.usageLimit)
-        : undefined,
+      description: form.description,
+      discountType: form.discountType,
+      discountAmount: Number(form.discountValue || 0),
+      discountValue: Number(form.discountValue || 0),
+      minPurchaseAmount: form.minimumOrderAmount ? Number(form.minimumOrderAmount) : 0,
+      usageLimit: form.usageLimit ? Number(form.usageLimit) : undefined,
+      expiryDate: form.expiresAt ? new Date(form.expiresAt) : new Date(Date.now() + 30 * 86400000),
+      isActive: form.status === "active",
     };
 
-    if (editingCoupon) {
-      await onUpdateCoupon?.(
-        editingCoupon,
-        payload
-      );
-    } else {
-      await onCreateCoupon?.(payload);
+    setInternalSaving(true);
+    try {
+      if (editingCoupon) {
+        if (onUpdateCoupon) {
+          await onUpdateCoupon(editingCoupon, payload);
+        } else {
+          await couponService.updateVendorCoupon(editingCoupon._id || editingCoupon.id, payload);
+          toast.success("Coupon updated successfully");
+          await loadCoupons();
+        }
+      } else {
+        if (onCreateCoupon) {
+          await onCreateCoupon(payload);
+        } else {
+          await couponService.createVendorCoupon(payload);
+          toast.success("Store coupon created successfully");
+          await loadCoupons();
+        }
+      }
+      setModalOpen(false);
+      resetForm();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to save coupon");
+    } finally {
+      setInternalSaving(false);
     }
-
-    setModalOpen(false);
-    resetForm();
   };
 
-  const handleDelete = (coupon) => {
-    onDeleteCoupon?.(coupon);
+  const handleDelete = async (coupon) => {
+    if (onDeleteCoupon) return onDeleteCoupon(coupon);
+    const id = coupon?._id || coupon?.id;
+    if (!window.confirm("Are you sure you want to delete this coupon?")) return;
+    try {
+      setInternalSaving(true);
+      await couponService.deleteVendorCoupon(id);
+      toast.success("Coupon deleted");
+      await loadCoupons();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete coupon");
+    } finally {
+      setInternalSaving(false);
+    }
   };
 
-  const handleToggle = (coupon) => {
-    onToggleCoupon?.(
-      coupon,
-      String(coupon?.status || "active").toLowerCase() !==
-        "active"
-    );
+  const handleToggle = async (coupon) => {
+    const nextActive = String(coupon?.status || "active").toLowerCase() !== "active";
+    if (onToggleCoupon) return onToggleCoupon(coupon, nextActive);
+    const id = coupon?._id || coupon?.id;
+    try {
+      setInternalSaving(true);
+      await couponService.updateVendorCoupon(id, { isActive: nextActive });
+      toast.success(`Coupon marked ${nextActive ? "Active" : "Inactive"}`);
+      await loadCoupons();
+    } catch (err) {
+      toast.error("Failed to update status");
+    } finally {
+      setInternalSaving(false);
+    }
   };
 
   const columns = [

@@ -41,6 +41,15 @@ export class NotificationService {
     return { message: 'All notifications marked as read' };
   }
 
+  async deleteNotification(notificationId, userId) {
+    return Notification.findOneAndDelete({ _id: notificationId, userId });
+  }
+
+  async clearNotifications(userId) {
+    await Notification.deleteMany({ userId });
+    return { message: 'All notifications cleared' };
+  }
+
   async createNotification({ userId, title, message, type = 'system', data = {} }) {
     const notif = await Notification.create({
       userId,

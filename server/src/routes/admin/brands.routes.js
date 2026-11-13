@@ -58,6 +58,14 @@ router.patch('/:brandId/logo', upload.single('logo'), asyncHandler(async (req, r
   return ApiResponse.success(res, brand, 'Brand logo updated');
 }));
 
+router.delete('/:brandId/logo', asyncHandler(async (req, res) => {
+  const brand = await Brand.findById(req.params.brandId);
+  if (!brand) throw ApiError.notFound('Brand not found');
+  brand.logo = undefined;
+  await brand.save();
+  return ApiResponse.success(res, brand, 'Brand logo removed');
+}));
+
 router.delete('/:brandId', asyncHandler(async (req, res) => {
   const brand = await Brand.findByIdAndDelete(req.params.brandId);
   if (!brand) throw ApiError.notFound('Brand not found');

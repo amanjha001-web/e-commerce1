@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import notificationService from "../../services/notification.service";
+import { toast } from "sonner";
 
 import NotificationList from "../../components/notification/NotificationList";
 import Button from "../../components/common/Button";
@@ -7,16 +9,85 @@ import Loader from "../../components/common/Loader";
 import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Notifications = ({
-  notifications = [],
-  loading = false,
+  notifications: propNotifications = [],
+  loading: propLoading = false,
   onMarkAsRead,
   onMarkAllAsRead,
   onDeleteNotification,
   onClearAll,
   onNavigate,
 }) => {
+  const [internalNotifications, setInternalNotifications] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propNotifications?.length);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+
+  const notifications = propNotifications?.length > 0 ? propNotifications : internalNotifications;
+  const loading = propNotifications?.length > 0 ? propLoading : internalLoading;
+
+  const loadNotifications = async () => {
+    try {
+      setInternalLoading(true);
+      const res = await notificationService.getNotifications();
+      const list = res?.data?.notifications || res?.data || res?.notifications || [];
+      setInternalNotifications(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to load customer notifications:", err);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propNotifications || propNotifications.length === 0) {
+      loadNotifications();
+    }
+  }, [propNotifications]);
+
+  const handleMarkAsRead = async (id) => {
+    if (onMarkAsRead) return onMarkAsRead(id);
+    try {
+      await notificationService.markAsRead(id);
+      setInternalNotifications((prev) =>
+        prev.map((n) => (n._id === id || n.id === id ? { ...n, isRead: true, read: true } : n))
+      );
+    } catch (err) {
+      toast.error("Failed to mark as read");
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (onMarkAllAsRead) return onMarkAllAsRead();
+    try {
+      await notificationService.markAllAsRead();
+      toast.success("All notifications marked as read");
+      await loadNotifications();
+    } catch (err) {
+      toast.error("Failed to mark all as read");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (onDeleteNotification) return onDeleteNotification(id);
+    try {
+      await notificationService.deleteNotification(id);
+      toast.success("Notification removed");
+      await loadNotifications();
+    } catch (err) {
+      toast.error("Failed to remove notification");
+    }
+  };
+
+  const handleClear = async () => {
+    if (onClearAll) return onClearAll();
+    try {
+      await notificationService.clearNotifications();
+      toast.success("All notifications cleared");
+      setInternalNotifications([]);
+    } catch (err) {
+      toast.error("Failed to clear notifications");
+    }
+  };
 
   const getIsRead = (notification) =>
     notification?.read ?? notification?.isRead ?? false;
@@ -56,8 +127,8 @@ const Notifications = ({
         unreadCount > 0 ? (
           <button
             type="button"
-            onClick={onMarkAllAsRead}
-            className="btnsm"
+            onClick={handleMarkAllAsRead}
+            className="btnsm cursor-pointer"
           >
             Mark all read
           </button>
@@ -131,8 +202,8 @@ const Notifications = ({
         ) : (
           <NotificationList
             notifications={filteredNotifications}
-            onMarkAsRead={onMarkAsRead}
-            onDelete={onDeleteNotification}
+            onMarkAsRead={handleMarkAsRead}
+            onDelete={handleDelete}
           />
         )}
       </div>

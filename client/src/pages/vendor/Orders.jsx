@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import orderService from "../../services/order.service";
 
 const INITIAL_DEMO_ORDERS = [
   { id: "#SS-10482", customer: "Riya Sharma", date: "11 Nov 2026", amount: 4298, status: "Processing" },
@@ -20,18 +21,43 @@ const statusClass = (s) =>
         : "";
 
 const Orders = ({ orders: propOrders = [] }) => {
+  const [apiOrders, setApiOrders] = useState([]);
+  const [loading, setLoading] = useState(!propOrders?.length);
   const [demoOrders, setDemoOrders] = useState(INITIAL_DEMO_ORDERS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [updatingOrder, setUpdatingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState("Processing");
 
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await orderService.getVendorOrders({ limit: 50 });
+      const list = res?.data?.orders || res?.data || res?.orders || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setApiOrders(list);
+      }
+    } catch (err) {
+      console.error("Vendor orders fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propOrders || propOrders.length === 0) {
+      fetchOrders();
+    }
+  }, [propOrders]);
+
   const rows = useMemo(() => {
-    const source = propOrders.length > 0 ? propOrders : demoOrders;
+    const source = propOrders.length > 0 ? propOrders : (apiOrders.length > 0 ? apiOrders : demoOrders);
     return source.map((o, i) => ({
+      _raw: o,
+      orderId: o._id || o.id,
       id:
-        o.id ||
         o.orderNumber ||
+        o.id ||
         (o._id ? `#SS-${String(o._id).slice(-5).toUpperCase()}` : `#SS-${10482 - i}`),
       customer:
         o.customer?.fullName ||

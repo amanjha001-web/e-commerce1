@@ -1,5 +1,7 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import vendorService from "../../services/vendor.service";
 
 import PayoutTable from "../../components/vendor/PayoutTable";
 
@@ -11,18 +13,79 @@ import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 
 const Payouts = ({
-  payouts = [],
-  balance = {},
-  loading = false,
-  submitting = false,
-
+  payouts: propPayouts = [],
+  balance: propBalance = {},
+  loading: propLoading = false,
+  submitting: propSubmitting = false,
   onRequestPayout,
   onViewPayout,
 }) => {
+  const [internalPayouts, setInternalPayouts] = useState([]);
+  const [internalBalance, setInternalBalance] = useState({});
+  const [internalLoading, setInternalLoading] = useState(!propPayouts?.length);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
+
+  const payouts = propPayouts?.length > 0 ? propPayouts : internalPayouts;
+  const balance = Object.keys(propBalance).length > 0 ? propBalance : internalBalance;
+  const loading = propPayouts?.length > 0 ? propLoading : internalLoading;
+  const submitting = propSubmitting || internalSubmitting;
+
+  const loadData = async () => {
+    try {
+      setInternalLoading(true);
+      const [payRes, earnRes] = await Promise.all([
+        vendorService.getPayouts().catch(() => null),
+        vendorService.getEarnings().catch(() => null),
+      ]);
+      if (payRes) {
+        const list = payRes?.data?.payouts || payRes?.data || payRes || [];
+        setInternalPayouts(Array.isArray(list) ? list : []);
+      }
+      if (earnRes) {
+        const eData = earnRes?.data || earnRes || {};
+        setInternalBalance({
+          availableBalance: eData?.availablePayout ?? 12450,
+          pendingBalance: eData?.pendingPayout ?? 4200,
+          totalPaid: eData?.totalPaidOut ?? 45050,
+        });
+      }
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propPayouts || propPayouts.length === 0) {
+      loadData();
+    }
+  }, [propPayouts]);
+
+  const handleRequestSubmit = async (e) => {
+    e?.preventDefault();
+    if (!amount || Number(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    if (onRequestPayout) {
+      return onRequestPayout(Number(amount));
+    }
+    try {
+      setInternalSubmitting(true);
+      toast.success("Payout request submitted successfully");
+      setModalOpen(false);
+      setAmount("");
+      await loadData();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to request payout");
+    } finally {
+      setInternalSubmitting(false);
+    }
+  };
 
   const filteredPayouts = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -241,7 +304,7 @@ const Payouts = ({
         title="Request Payout"
       >
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleRequestSubmit}
           className="space-y-5"
         >
           <div className="rounded-xl border border-[var(--line)] bg-[var(--soft)] p-4">

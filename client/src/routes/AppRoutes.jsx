@@ -9,8 +9,16 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Direct shortcuts to Auth */}
+        <Route path="/register" element={<Navigate to="/login/register" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/login/forgot-password" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/login/reset-password" replace />} />
+        <Route path="/verify-email" element={<Navigate to="/login/verify-email" replace />} />
+        <Route path="/verify-otp" element={<Navigate to="/login/verify-otp" replace />} />
+
         {/* Auth */}
         <Route path="/login/*" element={<AuthRoutes />} />
+        <Route path="/auth/*" element={<AuthRoutes />} />
 
         {/* Vendor */}
         <Route path="/vendor/*" element={<VendorRoutes />} />

@@ -1,5 +1,7 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import reviewService from "../../services/review.service";
 
 import RatingStars from "../../components/review/RatingStars";
 import RatingSummary from "../../components/review/RatingSummary";
@@ -12,18 +14,54 @@ import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 
 const Reviews = ({
- 
-  reviews = [],
-  loading = false,
- 
-
+  reviews: propReviews = [],
+  loading: propLoading = false,
   onViewReview,
-  onReplyReview,
-  
+  onReplyReview: propOnReplyReview,
 }) => {
- 
+  const [internalReviews, setInternalReviews] = useState(propReviews);
+  const [loading, setLoading] = useState(propLoading || !propReviews?.length);
   const [search, setSearch] = useState("");
   const [rating, setRating] = useState("all");
+
+  const fetchVendorReviews = async () => {
+    try {
+      setLoading(true);
+      const res = await reviewService.getVendorReviews();
+      const list = res?.data?.reviews || res?.data || res?.reviews || [];
+      if (Array.isArray(list)) {
+        setInternalReviews(list);
+      }
+    } catch (err) {
+      console.error("Failed to load vendor reviews:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (propReviews && propReviews.length > 0) {
+      setInternalReviews(propReviews);
+    } else {
+      fetchVendorReviews();
+    }
+  }, [propReviews]);
+
+  const handleReply = async (reviewId, replyText) => {
+    if (propOnReplyReview) {
+      propOnReplyReview(reviewId, replyText);
+      return;
+    }
+    try {
+      await reviewService.replyToReview(reviewId, replyText);
+      toast.success("Reply submitted successfully");
+      fetchVendorReviews();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to submit reply");
+    }
+  };
+
+  const reviews = internalReviews;
 
 
 
@@ -280,7 +318,7 @@ const Reviews = ({
                       filteredReviews
                     }
                     onReplyReview={
-                      onReplyReview
+                      handleReply
                     }
                     onViewReview={
                       onViewReview

@@ -62,9 +62,10 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        const storedRefreshToken = localStorage.getItem("refreshToken");
         const refreshResponse = await axios.post(
           `${API_BASE_URL}/auth/refresh-token`,
-          {},
+          { refreshToken: storedRefreshToken },
           {
             withCredentials: true,
           },
@@ -73,6 +74,9 @@ api.interceptors.response.use(
         const newAccessToken =
           refreshResponse.data?.data?.accessToken ||
           refreshResponse.data?.accessToken;
+        const newRefreshToken =
+          refreshResponse.data?.data?.refreshToken ||
+          refreshResponse.data?.refreshToken;
 
         if (!newAccessToken) {
           throw new Error("New access token not received.");
@@ -80,6 +84,9 @@ api.interceptors.response.use(
 
         // Save new token
         localStorage.setItem("accessToken", newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem("refreshToken", newRefreshToken);
+        }
 
         // Attach new token to failed request
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

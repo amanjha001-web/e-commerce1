@@ -16,6 +16,7 @@ import bannerRoutes from './banners.routes.js';
 import supportRoutes from './support.routes.js';
 import reportRoutes from './reports.routes.js';
 import auditLogRoutes from './auditLogs.routes.js';
+import notificationRoutes from '../common/notifications.routes.js';
 
 // Also import payout routes from payment controller for `/admin/vendor-payouts`
 import * as paymentController from '../../controllers/admin/payment.controller.js';
@@ -44,6 +45,7 @@ router.use('/banners', bannerRoutes);
 router.use('/support', supportRoutes);
 router.use('/support-tickets', supportRoutes);
 router.use('/reports', reportRoutes);
+router.use('/notifications', notificationRoutes);
 router.use('/audit-logs', auditLogRoutes);
 router.use('/activity-logs', auditLogRoutes);
 

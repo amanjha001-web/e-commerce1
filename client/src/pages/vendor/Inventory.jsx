@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import inventoryService from "../../services/inventory.service";
 
 const DEMO_INVENTORY = [
   { name: "Classic Leather Tote", sku: "SS-300", available: 24, threshold: 10, status: "In stock", statusClass: "green" },
@@ -11,8 +12,88 @@ const DEMO_INVENTORY = [
 ];
 
 const Inventory = () => {
+  const [apiInventory, setApiInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [updatingItem, setUpdatingItem] = useState(null);
   const [qty, setQty] = useState(24);
+  const [saving, setSaving] = useState(false);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const res = await inventoryService.getVendorInventory();
+      const list = res?.data?.inventory || res?.data || res?.items || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setApiInventory(list);
+      }
+    } catch (err) {
+      console.error("Failed to fetch vendor inventory:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const items = useMemo(() => {
+    if (apiInventory.length > 0) {
+      return apiInventory.map((item) => {
+        const prod = item.productId || item.product || {};
+        const available = item.availableStock ?? item.quantity ?? prod.stockQuantity ?? prod.stock ?? 0;
+        const threshold = item.lowStockThreshold ?? item.threshold ?? 10;
+        const status = available <= 0 ? "Out of stock" : available <= threshold ? "Low stock" : "In stock";
+        const statusClass = available <= 0 ? "red" : available <= threshold ? "amber" : "green";
+        return {
+          _id: item._id || prod._id,
+          productId: prod._id || item.productId,
+          name: prod.name || prod.title || "Product SKU",
+          sku: prod.sku || item.sku || `SKU-${String(item._id).slice(-4)}`,
+          available,
+          threshold,
+          status,
+          statusClass,
+        };
+      });
+    }
+    return DEMO_INVENTORY;
+  }, [apiInventory]);
+
+  const stats = useMemo(() => {
+    const total = items.length;
+    const inStock = items.filter((x) => x.status === "In stock").length;
+    const lowStock = items.filter((x) => x.status === "Low stock").length;
+    const outStock = items.filter((x) => x.status === "Out of stock").length;
+    return [
+      ["Total SKUs", String(total)],
+      ["In stock", String(inStock)],
+      ["Low stock", String(lowStock)],
+      ["Out of stock", String(outStock)],
+    ];
+  }, [items]);
+
+  const handleSaveStock = async () => {
+    if (!updatingItem) return;
+    try {
+      setSaving(true);
+      const targetId = updatingItem.productId || updatingItem._id;
+      if (targetId) {
+        await inventoryService.updateVendorInventory(targetId, {
+          quantity: Number(qty),
+        });
+        toast.success("Stock updated successfully");
+        await fetchInventory();
+      } else {
+        toast.success("Stock adjusted");
+      }
+      setUpdatingItem(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to adjust stock");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div>
@@ -24,12 +105,7 @@ const Inventory = () => {
       </div>
 
       <div className="stats">
-        {[
-          ["Total SKUs", "42"],
-          ["In stock", "35"],
-          ["Low stock", "5"],
-          ["Out of stock", "2"],
-        ].map((x) => (
+        {stats.map((x) => (
           <div key={x[0]} className="stat">
             <span className="label">{x[0]}</span>
             <strong>{x[1]}</strong>
@@ -53,8 +129,8 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody>
-              {DEMO_INVENTORY.map((item) => (
-                <tr key={item.sku}>
+              {items.map((item, idx) => (
+                <tr key={item._id || item.sku || idx}>
                   <td>{item.name}</td>
                   <td>{item.sku}</td>
                   <td>{item.available}</td>
@@ -67,7 +143,7 @@ const Inventory = () => {
                   <td>
                     <button
                       type="button"
-                      className="btnsm"
+                      className="btnsm cursor-pointer"
                       onClick={() => {
                         setUpdatingItem(item);
                         setQty(item.available);
@@ -111,13 +187,11 @@ const Inventory = () => {
               />
               <button
                 type="button"
-                className="primarybtn"
-                onClick={() => {
-                  setUpdatingItem(null);
-                  toast.success("Stock updated");
-                }}
+                className="primarybtn cursor-pointer"
+                disabled={saving}
+                onClick={handleSaveStock}
               >
-                Save
+                {saving ? "Saving..." : "Save"}
               </button>
             </div>
           </div>

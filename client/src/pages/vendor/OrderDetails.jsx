@@ -1,5 +1,8 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import orderService from "../../services/order.service";
 
 import VendorHeader from "../../components/vendor/VendorHeader";
 import VendorSidebar from "../../components/vendor/VendorSidebar";
@@ -15,10 +18,10 @@ import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 
 const OrderDetails = ({
-  user = null,
-  order = null,
-  loading = false,
-  actionLoading = false,
+  user: propUser = null,
+  order: propOrder = null,
+  loading: propLoading = false,
+  actionLoading: propActionLoading = false,
   notificationCount = 0,
 
   onUpdateStatus,
@@ -27,17 +30,71 @@ const OrderDetails = ({
   onNavigate,
   onLogout,
 }) => {
+  const { orderId: paramOrderId } = useParams();
+  const navigate = useNavigate();
+
+  const [order, setOrder] = useState(propOrder);
+  const [loading, setLoading] = useState(propLoading || (!propOrder && Boolean(paramOrderId)));
+  const [actionLoading, setActionLoading] = useState(propActionLoading);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (propOrder) {
+      setOrder(propOrder);
+      return;
+    }
+
+    if (!paramOrderId) return;
+
+    let isMounted = true;
+    const fetchOrder = async () => {
+      try {
+        setLoading(true);
+        const res = await orderService.getVendorOrderById(paramOrderId);
+        if (isMounted) {
+          setOrder(res?.data?.order || res?.data || res);
+        }
+      } catch (err) {
+        console.error("Failed to load vendor order details:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchOrder();
+    return () => {
+      isMounted = false;
+    };
+  }, [paramOrderId, propOrder]);
 
   const handleNavigate = (item) => {
     setSidebarOpen(false);
-    onNavigate?.(item);
+    if (onNavigate) {
+      onNavigate(item);
+    } else {
+      navigate(`/vendor/${item}`);
+    }
   };
 
-  const handleStatusChange = (status) => {
+  const handleStatusChange = async (status) => {
     if (!order || actionLoading) return;
 
-    onUpdateStatus?.(order, status);
+    if (onUpdateStatus) {
+      onUpdateStatus(order, status);
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const targetId = order._id || paramOrderId;
+      await orderService.updateOrderStatus(targetId, status);
+      toast.success(`Order status updated to ${status}`);
+      setOrder((prev) => (prev ? { ...prev, status } : prev));
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update order status");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading) {

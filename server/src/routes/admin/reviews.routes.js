@@ -12,6 +12,13 @@ router.get('/reported', reviewController.getReportedReviews);
 router.get('/:reviewId', reviewController.getReviewById);
 router.patch('/:reviewId/approve', reviewController.approveReview);
 router.patch('/:reviewId/reject', reviewController.rejectReview);
+router.patch('/:reviewId/status', (req, res, next) => {
+  const status = req.body?.status;
+  if (status === 'approved' || status === 'active' || status === 'APPROVED') {
+    return reviewController.approveReview(req, res, next);
+  }
+  return reviewController.rejectReview(req, res, next);
+});
 router.delete('/:reviewId', reviewController.deleteReview);
 
 export default router;

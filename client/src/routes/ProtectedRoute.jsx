@@ -3,11 +3,15 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import Loader from "../components/common/Loader";
 import useAuth from "../hooks/useAuth";
 
-const normalizeRole = (role) =>
-  String(role || "")
+const normalizeRole = (role) => {
+  const r = String(role || "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+  if (r === "user") return "customer";
+  if (r === "seller") return "vendor";
+  return r;
+};
 
 const ProtectedRoute = ({ allowedRoles = [], children }) => {
   const location = useLocation();

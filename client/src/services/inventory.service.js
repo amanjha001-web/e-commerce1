@@ -40,6 +40,17 @@ const inventoryService = {
     const response = await api.get(`/admin/inventory/${productId}/movements`, { params });
     return response.data;
   },
+
+  // Vendor inventory
+  getVendorInventory: async (params = {}) => {
+    const response = await api.get('/vendor/inventory', { params });
+    return response.data;
+  },
+
+  updateVendorInventory: async (productId, data) => {
+    const response = await api.patch(`/vendor/inventory/${productId}`, data);
+    return response.data;
+  },
 };
 
 export default inventoryService;

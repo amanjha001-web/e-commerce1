@@ -12,6 +12,12 @@ const ProductDetails = lazy(
   () => import("../pages/customer/ProductDetails")
 );
 const Categories = lazy(() => import("../pages/customer/Categories"));
+const About = lazy(() => import("../pages/customer/About"));
+const Contact = lazy(() => import("../pages/customer/Contact"));
+const FAQ = lazy(() => import("../pages/customer/FAQ"));
+const PrivacyPolicy = lazy(() => import("../pages/customer/PrivacyPolicy"));
+const Terms = lazy(() => import("../pages/customer/Terms"));
+const ShippingPolicy = lazy(() => import("../pages/customer/ShippingPolicy"));
 
 // Protected Customer Pages
 const Cart = lazy(() => import("../pages/customer/Cart"));
@@ -43,7 +49,7 @@ const PageLoader = () => {
     <div className="flex min-h-[50vh] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div
-          className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"
+          className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[var(--primary)]"
           role="status"
           aria-label="Loading"
         />
@@ -70,6 +76,14 @@ const CustomerRoutes = () => {
           <Route path="/products/:productId" element={<ProductDetails />} />
 
           <Route path="/categories" element={<Categories />} />
+
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/terms-and-conditions" element={<Terms />} />
+          <Route path="/shipping-policy" element={<ShippingPolicy />} />
 
           {/* Protected Customer Pages */}
 

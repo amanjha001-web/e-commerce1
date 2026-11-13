@@ -8,7 +8,10 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', profileController.getProfile);
+router.get('/profile', profileController.getProfile);
 router.patch('/', profileController.updateProfile);
+router.patch('/me', profileController.updateProfile);
+router.get('/:userId', profileController.getProfile);
 router.patch('/avatar', upload.single('avatar'), profileController.updateAvatar);
 router.delete('/avatar', profileController.deleteAvatar);
 router.patch('/username', profileController.updateUsername);

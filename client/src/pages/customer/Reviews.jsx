@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import reviewService from "../../services/review.service";
+import { toast } from "sonner";
 
 import RatingSummary from "../../components/review/RatingSummary";
 import RatingStars from "../../components/review/RatingStars";
@@ -11,16 +13,56 @@ import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 
 const Reviews = ({
-  reviews = [],
+  reviews: propReviews = [],
   products = [],
-  loading = false,
-  submitting = false,
+  loading: propLoading = false,
+  submitting: propSubmitting = false,
   onSubmitReview,
   onDeleteReview,
   onEditReview,
   onProductSelect,
   onNavigate,
 }) => {
+  const [internalReviews, setInternalReviews] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propReviews?.length);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
+
+  const reviews = propReviews?.length > 0 ? propReviews : internalReviews;
+  const loading = propReviews?.length > 0 ? propLoading : internalLoading;
+  const submitting = propSubmitting || internalSubmitting;
+
+  const loadReviews = async () => {
+    try {
+      setInternalLoading(true);
+      const res = await reviewService.getMyReviews();
+      const list = res?.data?.reviews || res?.data || res?.reviews || [];
+      setInternalReviews(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to load customer reviews:", err);
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propReviews || propReviews.length === 0) {
+      loadReviews();
+    }
+  }, [propReviews]);
+
+  const handleDelete = async (reviewId) => {
+    if (onDeleteReview) return onDeleteReview(reviewId);
+    try {
+      setInternalSubmitting(true);
+      await reviewService.deleteReview(reviewId);
+      toast.success("Review deleted successfully");
+      await loadReviews();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete review");
+    } finally {
+      setInternalSubmitting(false);
+    }
+  };
   const [search, setSearch] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
@@ -212,7 +254,7 @@ const Reviews = ({
           <div className="p-5 sm:p-6">
             <ReviewList
               reviews={filteredReviews}
-              onDelete={onDeleteReview}
+              onDelete={handleDelete}
               onEdit={onEditReview}
               onProductSelect={onProductSelect}
             />

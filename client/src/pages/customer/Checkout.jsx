@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import cartService from "../../services/cart.service";
+import addressService from "../../services/address.service";
+import orderService from "../../services/order.service";
+import paymentService from "../../services/payment.service";
 
 import CheckoutSteps from "../../components/checkout/CheckoutSteps";
 import AddressSelector from "../../components/checkout/AddressSelector";
@@ -11,23 +17,72 @@ import Button from "../../components/common/Button";
 import Loader from "../../components/common/Loader";
 
 const Checkout = ({
-  cart = null,
-  addresses = [],
-  selectedAddress = null,
-  selectedPaymentMethod = null,
-  loading = false,
-  placingOrder = false,
-  paymentLoading = false,
-  paymentStatus = null,
-  error = null,
+  cart: propCart = null,
+  addresses: propAddresses = [],
+  selectedAddress: propSelectedAddress = null,
+  selectedPaymentMethod: propSelectedPaymentMethod = null,
+  loading: propLoading = false,
+  placingOrder: propPlacingOrder = false,
+  paymentLoading: propPaymentLoading = false,
+  paymentStatus: propPaymentStatus = null,
+  error: propError = null,
   onSelectAddress,
   onAddAddress,
   onSelectPaymentMethod,
   onPlaceOrder,
   onNavigate,
 }) => {
+  const navigate = useNavigate();
+
+  const [internalCart, setInternalCart] = useState(null);
+  const [internalAddresses, setInternalAddresses] = useState([]);
+  const [internalSelectedAddress, setInternalSelectedAddress] = useState(null);
+  const [internalPaymentMethod, setInternalPaymentMethod] = useState("cod");
+  const [internalLoading, setInternalLoading] = useState(!propCart);
+  const [internalPlacingOrder, setInternalPlacingOrder] = useState(false);
+  const [internalPaymentStatus, setInternalPaymentStatus] = useState(null);
+  const [internalError, setInternalError] = useState("");
+
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [step, setStep] = useState(1);
+
+  const cart = propCart || internalCart;
+  const addresses = propAddresses?.length > 0 ? propAddresses : internalAddresses;
+  const selectedAddress = propSelectedAddress || internalSelectedAddress;
+  const selectedPaymentMethod = propSelectedPaymentMethod || internalPaymentMethod;
+  const loading = propCart ? propLoading : internalLoading;
+  const placingOrder = propPlacingOrder || internalPlacingOrder;
+  const paymentLoading = propPaymentLoading || false;
+  const paymentStatus = propPaymentStatus || internalPaymentStatus;
+  const error = propError || internalError;
+
+  // Fetch Cart and Addresses if not passed via props
+  useEffect(() => {
+    if (!propCart) {
+      setInternalLoading(true);
+      Promise.all([cartService.getCart(), addressService.getAddresses()])
+        .then(([cartRes, addrRes]) => {
+          const cData = cartRes?.data?.cart || cartRes?.data || cartRes;
+          setInternalCart(cData);
+
+          const aData = addrRes?.data?.addresses || addrRes?.data || addrRes || [];
+          const addrList = Array.isArray(aData) ? aData : [];
+          setInternalAddresses(addrList);
+
+          if (addrList.length > 0) {
+            const def = addrList.find((a) => a.isDefault || a.default) || addrList[0];
+            setInternalSelectedAddress(def);
+          }
+        })
+        .catch((err) => {
+          console.error("Checkout data fetch error:", err);
+          setInternalError("Failed to load checkout details. Please refresh.");
+        })
+        .finally(() => {
+          setInternalLoading(false);
+        });
+    }
+  }, [propCart]);
 
   const items = cart?.items || [];
 
@@ -62,27 +117,129 @@ const Checkout = ({
   );
 
   const handleAddressSelect = (address) => {
-    onSelectAddress?.(address);
+    if (onSelectAddress) {
+      onSelectAddress(address);
+    } else {
+      setInternalSelectedAddress(address);
+    }
     setStep(2);
   };
 
   const handleAddAddress = async (data) => {
-    await onAddAddress?.(data);
+    if (onAddAddress) {
+      await onAddAddress(data);
+    } else {
+      try {
+        const res = await addressService.addAddress(data);
+        const newAddr = res?.data?.address || res?.data || data;
+        const addrRes = await addressService.getAddresses();
+        const aData = addrRes?.data?.addresses || addrRes?.data || [];
+        setInternalAddresses(Array.isArray(aData) ? aData : [newAddr]);
+        setInternalSelectedAddress(newAddr);
+        toast.success("Delivery address added");
+      } catch (err) {
+        toast.error("Failed to add address");
+      }
+    }
     setShowAddressForm(false);
   };
 
   const handlePaymentSelect = (method) => {
-    onSelectPaymentMethod?.(method);
+    if (onSelectPaymentMethod) {
+      onSelectPaymentMethod(method);
+    } else {
+      setInternalPaymentMethod(method);
+    }
     setStep(3);
   };
 
-  const handlePlaceOrder = () => {
-    if (!selectedAddress || !selectedPaymentMethod) return;
+  const handlePlaceOrder = async () => {
+    if (!selectedAddress || !selectedPaymentMethod) {
+      toast.error("Please select a delivery address and payment method");
+      return;
+    }
 
-    onPlaceOrder?.({
-      address: selectedAddress,
-      paymentMethod: selectedPaymentMethod,
-    });
+    if (onPlaceOrder) {
+      return onPlaceOrder({
+        address: selectedAddress,
+        paymentMethod: selectedPaymentMethod,
+      });
+    }
+
+    try {
+      setInternalPlacingOrder(true);
+      setInternalError("");
+
+      const addressId = selectedAddress._id || selectedAddress.id;
+      const orderPayload = {
+        shippingAddressId: addressId,
+        paymentMethod: selectedPaymentMethod.toLowerCase(),
+        customerNote: "Placed via ShopSphere Checkout",
+      };
+
+      const res = await orderService.createOrder(orderPayload);
+      const createdOrder = res?.data?.order || res?.data || res;
+      const orderId = createdOrder?._id || createdOrder?.id;
+
+      if (!orderId) {
+        throw new Error("Order creation failed - no order ID returned");
+      }
+
+      toast.success("Order placed successfully!");
+
+      if (selectedPaymentMethod.toLowerCase() === "cod") {
+        navigate(`/orders/${orderId}`);
+      } else {
+        // Online Payment Flow (Razorpay)
+        try {
+          const payRes = await paymentService.createPaymentOrder(orderId);
+          const payData = payRes?.data || payRes;
+
+          if (window.Razorpay && payData?.keyId && payData?.orderId) {
+            const options = {
+              key: payData.keyId,
+              amount: payData.amount,
+              currency: payData.currency || "INR",
+              name: "ShopSphere",
+              description: `Order #${orderId}`,
+              order_id: payData.orderId,
+              handler: async (response) => {
+                try {
+                  await paymentService.verifyPayment({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                  });
+                  toast.success("Payment verified successfully!");
+                  navigate(`/orders/${orderId}`);
+                } catch {
+                  toast.error("Payment verification failed");
+                  navigate(`/orders/${orderId}`);
+                }
+              },
+              prefill: {
+                name: selectedAddress.fullName || selectedAddress.name || "",
+                contact: selectedAddress.phone || "",
+              },
+              theme: { color: "#881337" },
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+          } else {
+            // Test or fallback
+            navigate(`/orders/${orderId}`);
+          }
+        } catch {
+          navigate(`/orders/${orderId}`);
+        }
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || "Failed to place order";
+      setInternalError(msg);
+      toast.error(msg);
+    } finally {
+      setInternalPlacingOrder(false);
+    }
   };
 
   if (loading) {

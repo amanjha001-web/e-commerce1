@@ -21,3 +21,13 @@ export const markAllAsRead = asyncHandler(async (req, res) => {
   const result = await notificationService.markAllAsRead(req.user._id);
   return ApiResponse.success(res, result, 'All notifications marked as read');
 });
+
+export const deleteNotification = asyncHandler(async (req, res) => {
+  await notificationService.deleteNotification(req.params.notificationId, req.user._id);
+  return ApiResponse.success(res, null, 'Notification deleted');
+});
+
+export const clearNotifications = asyncHandler(async (req, res) => {
+  const result = await notificationService.clearNotifications(req.user._id);
+  return ApiResponse.success(res, result, 'Notifications cleared');
+});

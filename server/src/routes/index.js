@@ -37,6 +37,9 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/apiError.js';
 import mongoose from 'mongoose';
+import { authenticate } from '../middlewares/auth.middleware.js';
+import { requireVendor } from '../middlewares/role.middleware.js';
+import * as vendorStoreController from '../controllers/vendor/store.controller.js';
 
 const router = Router();
 
@@ -76,6 +79,11 @@ router.use('/vendor-requests', vendorRequestRoutes);
 
 // Public /vendors listing for frontend storefront
 const publicVendorsRouter = Router();
+
+publicVendorsRouter.get('/dashboard', authenticate, requireVendor, vendorStoreController.getDashboard);
+publicVendorsRouter.get('/dashboard/stats', authenticate, requireVendor, vendorStoreController.getStats);
+publicVendorsRouter.get('/dashboard/sales', authenticate, requireVendor, vendorStoreController.getSalesReport);
+
 publicVendorsRouter.get(
   '/',
   asyncHandler(async (req, res) => {

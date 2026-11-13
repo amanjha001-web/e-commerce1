@@ -37,7 +37,7 @@ getAdminRequests: async (params = {}) => {
     )
   );
 
-  const response = await api.get("/vendor-requests", {
+  const response = await api.get("/admin/vendor-requests", {
     params: cleanedParams,
   });
 
@@ -47,19 +47,19 @@ getAdminRequests: async (params = {}) => {
 
   // Admin: request details
   getRequestById: async (requestId) => {
-    const response = await api.get(`/vendor-requests/${requestId}`);
+    const response = await api.get(`/admin/vendor-requests/${requestId}`);
     return response.data;
   },
 
   // Admin: approve
   approveRequest: async (requestId) => {
-    const response = await api.patch(`/vendor-requests/${requestId}/approve`);
+    const response = await api.patch(`/admin/vendor-requests/${requestId}/approve`);
     return response.data;
   },
 
   // Admin: reject
   rejectRequest: async (requestId, reason = "") => {
-    const response = await api.patch(`/vendor-requests/${requestId}/reject`, {
+    const response = await api.patch(`/admin/vendor-requests/${requestId}/reject`, {
       reason,
     });
     return response.data;
@@ -68,7 +68,7 @@ getAdminRequests: async (params = {}) => {
   // Admin: review
   reviewRequest: async (requestId, reviewData = {}) => {
     const response = await api.patch(
-      `/vendor-requests/${requestId}/review`,
+      `/admin/vendor-requests/${requestId}/review`,
       reviewData,
     );
     return response.data;
@@ -76,13 +76,13 @@ getAdminRequests: async (params = {}) => {
 
   // Admin: restore soft-deleted request
   restoreRequest: async (requestId) => {
-    const response = await api.patch(`/vendor-requests/${requestId}/restore`);
+    const response = await api.patch(`/admin/vendor-requests/${requestId}/restore`);
     return response.data;
   },
 
   // Admin: delete request
   deleteRequest: async (requestId) => {
-    const response = await api.delete(`/vendor-requests/${requestId}`);
+    const response = await api.delete(`/admin/vendor-requests/${requestId}`);
     return response.data;
   },
 };

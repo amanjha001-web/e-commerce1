@@ -203,7 +203,7 @@ const authSlice = createSlice({
     },
 
     setCredentials: (state, action) => {
-      const { user, accessToken } = action.payload;
+      const { user, accessToken, refreshToken } = action.payload;
 
       state.user = user;
       state.accessToken = accessToken;
@@ -215,6 +215,10 @@ const authSlice = createSlice({
 
       if (accessToken) {
         localStorage.setItem("accessToken", accessToken);
+      }
+
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
       }
     },
 
@@ -248,6 +252,7 @@ const authSlice = createSlice({
 
         const user = responseData?.user;
         const accessToken = responseData?.accessToken;
+        const refreshToken = responseData?.refreshToken;
 
         if (user) {
           state.user = user;
@@ -260,6 +265,10 @@ const authSlice = createSlice({
           state.isAuthenticated = true;
 
           localStorage.setItem("accessToken", accessToken);
+        }
+
+        if (refreshToken) {
+          localStorage.setItem("refreshToken", refreshToken);
         }
       })
 
@@ -286,6 +295,7 @@ const authSlice = createSlice({
 
         const user = responseData?.user;
         const accessToken = responseData?.accessToken;
+        const refreshToken = responseData?.refreshToken;
 
         if (user) {
           state.user = user;
@@ -298,6 +308,10 @@ const authSlice = createSlice({
           state.isAuthenticated = true;
 
           localStorage.setItem("accessToken", accessToken);
+        }
+
+        if (refreshToken) {
+          localStorage.setItem("refreshToken", refreshToken);
         }
       })
 

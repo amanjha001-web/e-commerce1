@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import orderService from "../../services/order.service";
+import { toast } from "sonner";
 
 import OrderList from "../../components/order/OrderList";
 import Button from "../../components/common/Button";
@@ -30,16 +33,67 @@ const getStatus = (order) =>
 const getOrderId = (order) => order?._id || order?.id || order?.orderId || "";
 
 const Orders = ({
-  orders = [],
-  loading = false,
+  orders: propOrders = [],
+  loading: propLoading = false,
   onViewOrder,
   onTrackOrder,
   onCancelOrder,
   onReturnOrder,
   onNavigate,
 }) => {
+  const navigate = useNavigate();
+  const [internalOrders, setInternalOrders] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(!propOrders?.length);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+
+  const orders = propOrders?.length > 0 ? propOrders : internalOrders;
+  const loading = propOrders?.length > 0 ? propLoading : internalLoading;
+
+  useEffect(() => {
+    if (!propOrders || propOrders.length === 0) {
+      setInternalLoading(true);
+      orderService
+        .getMyOrders()
+        .then((res) => {
+          const list = res?.data?.orders || res?.data || res?.orders || [];
+          setInternalOrders(Array.isArray(list) ? list : []);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch customer orders:", err);
+        })
+        .finally(() => {
+          setInternalLoading(false);
+        });
+    }
+  }, [propOrders]);
+
+  const handleViewOrder = (order) => {
+    if (onViewOrder) return onViewOrder(order);
+    const id = getOrderId(order);
+    navigate(`/orders/${id}`);
+  };
+
+  const handleCancelOrder = async (order) => {
+    if (onCancelOrder) return onCancelOrder(order);
+    const id = getOrderId(order);
+    try {
+      await orderService.cancelOrder(id, "Cancelled by customer");
+      toast.success("Order cancelled successfully");
+      const res = await orderService.getMyOrders();
+      const list = res?.data?.orders || res?.data || res?.orders || [];
+      setInternalOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message || err?.message || "Failed to cancel order"
+      );
+    }
+  };
+
+  const handleNavigate = (path) => {
+    if (onNavigate) return onNavigate(path);
+    navigate(path);
+  };
 
   const filteredOrders = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -81,15 +135,15 @@ const Orders = ({
     <CustomerWorkspace
       title="My Orders"
       eyebrow="Customer workspace"
-      action={
-        <button
-          type="button"
-          onClick={() => onNavigate?.("/products")}
-          className="outlinebtn !py-2 !px-3 !text-xs"
-        >
-          Continue Shopping
-        </button>
-      }
+        action={
+          <button
+            type="button"
+            onClick={() => handleNavigate("/products")}
+            className="outlinebtn !py-2 !px-3 !text-xs cursor-pointer"
+          >
+            Continue Shopping
+          </button>
+        }
     >
       {/* Stats Cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -188,16 +242,16 @@ const Orders = ({
                   ? "Try changing your search term or status filter."
                   : "Your orders will appear here once you make your first purchase."
               }
-              action={!hasFilters ? () => onNavigate?.("/products") : undefined}
+              action={!hasFilters ? () => handleNavigate("/products") : undefined}
               actionText="Start Shopping"
             />
           </div>
         ) : (
           <OrderList
             orders={filteredOrders}
-            onView={onViewOrder}
-            onTrack={onTrackOrder}
-            onCancel={onCancelOrder}
+            onView={handleViewOrder}
+            onTrack={onTrackOrder || handleViewOrder}
+            onCancel={handleCancelOrder}
             onReturn={onReturnOrder}
           />
         )}

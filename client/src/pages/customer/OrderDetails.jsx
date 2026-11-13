@@ -1,3 +1,8 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import orderService from "../../services/order.service";
+import { toast } from "sonner";
+
 import OrderItem from "../../components/order/OrderItem";
 import OrderStatus from "../../components/order/OrderStatus";
 import OrderSummary from "../../components/order/OrderSummary";
@@ -12,14 +17,79 @@ import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 
 const OrderDetails = ({
-  order = null,
-  loading = false,
+  order: propOrder = null,
+  loading: propLoading = false,
   actionLoading = false,
   onCancelOrder,
   onReturnOrder,
   onTrackOrder,
   onNavigate,
 }) => {
+  const { orderId: paramOrderId } = useParams();
+  const navigate = useNavigate();
+  const [internalOrder, setInternalOrder] = useState(null);
+  const [internalLoading, setInternalLoading] = useState(!propOrder && Boolean(paramOrderId));
+  const [internalActionLoading, setInternalActionLoading] = useState(false);
+
+  const order = propOrder || internalOrder;
+  const loading = propOrder ? propLoading : internalLoading;
+  const isBusy = actionLoading || internalActionLoading;
+
+  useEffect(() => {
+    if (!propOrder && paramOrderId) {
+      setInternalLoading(true);
+      orderService
+        .getOrderById(paramOrderId)
+        .then((res) => {
+          const data = res?.data?.order || res?.data || res;
+          setInternalOrder(data);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch order details:", err);
+          toast.error("Unable to load order details");
+        })
+        .finally(() => {
+          setInternalLoading(false);
+        });
+    }
+  }, [propOrder, paramOrderId]);
+
+  const handleCancel = async (reason) => {
+    if (onCancelOrder) return onCancelOrder(reason);
+    const targetId = order?._id || paramOrderId;
+    try {
+      setInternalActionLoading(true);
+      await orderService.cancelOrder(targetId, reason || "Cancelled by customer");
+      toast.success("Order cancelled successfully");
+      const res = await orderService.getOrderById(targetId);
+      setInternalOrder(res?.data?.order || res?.data || res);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to cancel order");
+    } finally {
+      setInternalActionLoading(false);
+    }
+  };
+
+  const handleReturn = async (data) => {
+    if (onReturnOrder) return onReturnOrder(data);
+    const targetId = order?._id || paramOrderId;
+    try {
+      setInternalActionLoading(true);
+      await orderService.returnOrder(targetId, data);
+      toast.success("Return request submitted");
+      const res = await orderService.getOrderById(targetId);
+      setInternalOrder(res?.data?.order || res?.data || res);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to submit return request");
+    } finally {
+      setInternalActionLoading(false);
+    }
+  };
+
+  const handleNavigate = (path) => {
+    if (onNavigate) return onNavigate(path);
+    navigate(path);
+  };
   if (loading) {
     return (
       <main className="mx-auto flex min-h-[60vh] max-w-6xl items-center justify-center bg-background px-4 py-10 text-foreground transition-colors duration-300 sm:px-6 lg:px-8">
@@ -37,7 +107,7 @@ const OrderDetails = ({
         />
 
         <div className="mt-6 flex justify-center">
-          <Button onClick={() => onNavigate?.("/orders")}>
+          <Button onClick={() => handleNavigate("/orders")}>
             Back to Orders
           </Button>
         </div>
@@ -298,19 +368,19 @@ const OrderDetails = ({
               <h2 className="font-semibold text-foreground">Order Actions</h2>
 
               <div className="mt-4 space-y-3">
-                {canCancel && onCancelOrder && (
+                {canCancel && (
                   <CancelOrder
                     order={order}
-                    loading={actionLoading}
-                    onCancel={onCancelOrder}
+                    loading={isBusy}
+                    onCancel={handleCancel}
                   />
                 )}
 
-                {canReturn && onReturnOrder && (
+                {canReturn && (
                   <ReturnOrder
                     order={order}
-                    loading={actionLoading}
-                    onReturn={onReturnOrder}
+                    loading={isBusy}
+                    onReturn={handleReturn}
                   />
                 )}
               </div>

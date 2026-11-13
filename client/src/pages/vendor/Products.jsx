@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import productService from "../../services/product.service";
 
 const DEMO_VENDOR_PRODUCTS = [
   { name: "Classic Leather Tote", cat: "Fashion", price: 2499, stock: 24, status: "Published", statusClass: "green" },
@@ -12,18 +14,53 @@ const DEMO_VENDOR_PRODUCTS = [
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-const Products = ({ products = [] }) => {
+const Products = ({ products: propProducts = [] }) => {
+  const navigate = useNavigate();
+  const [apiProducts, setApiProducts] = useState([]);
+  const [loading, setLoading] = useState(!propProducts?.length);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [modalTitle, setModalTitle] = useState("");
 
+  const fetchVendorProducts = async () => {
+    try {
+      setLoading(true);
+      const res = await productService.getVendorProducts({ limit: 50 });
+      const list = res?.data?.products || res?.data || res?.products || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setApiProducts(list);
+      }
+    } catch (err) {
+      console.error("Failed to fetch vendor products:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!propProducts || propProducts.length === 0) {
+      fetchVendorProducts();
+    }
+  }, [propProducts]);
+
+  const handleDelete = async (productId) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    try {
+      await productService.deleteProduct(productId);
+      toast.success("Product deleted successfully");
+      await fetchVendorProducts();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || "Failed to delete product");
+    }
+  };
+
   const rows = useMemo(() => {
-    const source = products.length > 0 ? products : DEMO_VENDOR_PRODUCTS;
+    const source = propProducts.length > 0 ? propProducts : (apiProducts.length > 0 ? apiProducts : DEMO_VENDOR_PRODUCTS);
     return source.map((p, i) => {
-      const name = p.name || "Product";
+      const name = p.name || p.title || "Product";
       const cat = p.cat || p.category?.name || p.category || "General";
       const price = p.price ?? 0;
-      const stock = p.stock ?? [24, 8, 36, 12, 4, 19][i % 6];
+      const stock = p.stockQuantity ?? p.stock ?? [24, 8, 36, 12, 4, 19][i % 6];
       const status =
         p.status || (stock <= 5 ? "Low stock" : "Published");
       const statusClass =
@@ -31,6 +68,7 @@ const Products = ({ products = [] }) => {
 
       return {
         ...p,
+        _id: p._id || p.id,
         _name: name,
         _cat: cat,
         _price: price,
@@ -39,7 +77,7 @@ const Products = ({ products = [] }) => {
         _statusClass: statusClass,
       };
     });
-  }, [products]);
+  }, [propProducts, apiProducts]);
 
   const filtered = useMemo(() => {
     return rows.filter((p) => {
@@ -84,13 +122,12 @@ const Products = ({ products = [] }) => {
             <option>Draft</option>
             <option>Pending approval</option>
           </select>
-          <button
-            type="button"
-            className="primarybtn"
-            onClick={() => setModalTitle("Add product")}
+          <Link
+            to="/vendor/products/add"
+            className="primarybtn inline-block text-center cursor-pointer"
           >
             + Add product
-          </button>
+          </Link>
         </div>
 
         <div id="vendorProductTable" className="tablewrap">
@@ -118,19 +155,28 @@ const Products = ({ products = [] }) => {
                     </span>
                   </td>
                   <td>
+                    {p._id ? (
+                      <Link
+                        to={`/vendor/products/edit/${p._id}`}
+                        className="btnsm inline-block"
+                      >
+                        Edit
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btnsm"
+                        onClick={() => setModalTitle("Edit product")}
+                      >
+                        Edit
+                      </button>
+                    )}{" "}
                     <button
                       type="button"
-                      className="btnsm"
-                      onClick={() => setModalTitle("Edit product")}
+                      className="btnsm text-[var(--red)] hover:bg-[#fff0f1]"
+                      onClick={() => p._id ? handleDelete(p._id) : toast.success("Product archived")}
                     >
-                      Edit
-                    </button>{" "}
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => toast.success("Product archived")}
-                    >
-                      Archive
+                      Delete
                     </button>
                   </td>
                 </tr>
