@@ -22,7 +22,7 @@ const orderItemSchema = new mongoose.Schema(
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
-      required: true,
+      required: false,
       index: true,
     },
     name: {

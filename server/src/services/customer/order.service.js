@@ -7,6 +7,7 @@ import { Coupon } from '../../models/Coupon.model.js';
 import { Inventory } from '../../models/Inventory.model.js';
 import { StockMovement } from '../../models/StockMovement.model.js';
 import { ReturnRequest } from '../../models/ReturnRequest.model.js';
+import { Vendor } from '../../models/Vendor.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS, PAYMENT_METHODS } from '../../constants/paymentStatus.constant.js';
@@ -60,13 +61,22 @@ export class CustomerOrderService {
         );
       }
 
+      let vendorId = product.vendorId || item.product?.vendorId || null;
+      if (!vendorId) {
+        const anyVendor = await Vendor.findOne();
+        if (anyVendor) {
+          vendorId = anyVendor._id;
+          await Product.findByIdAndUpdate(product._id, { vendorId: anyVendor._id }).catch(() => {});
+        }
+      }
+
       const itemTotal = roundToTwoDecimals(product.price * item.quantity);
       subtotal += itemTotal;
 
       orderItems.push({
         product: product._id,
         variant: item.variant || null,
-        vendorId: product.vendorId,
+        vendorId: vendorId || undefined,
         name: product.name,
         image: product.images?.[0]?.url || '',
         price: product.price,

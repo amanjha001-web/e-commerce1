@@ -15,7 +15,7 @@ const orderItemSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor',
-    required: true,
+    required: false,
   },
   name: { type: String, required: true },
   image: { type: String, default: '' },
