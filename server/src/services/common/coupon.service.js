@@ -2,15 +2,40 @@ import { Coupon } from '../../models/Coupon.model.js';
 import { CouponUsage } from '../../models/CouponUsage.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
+const extractNumericDiscount = (raw) => {
+  if (raw === undefined || raw === null) return 0;
+  if (typeof raw === 'number') return Number.isNaN(raw) ? 0 : raw;
+  const cleaned = String(raw).replace(/[^\d.]/g, '');
+  const parsed = parseFloat(cleaned);
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 export class CouponCommonService {
   async validateCoupon(code, cartTotal = 0, userId = null) {
     if (!code) throw ApiError.badRequest('Coupon code is required');
 
+    const cleanCode = String(code).toUpperCase().trim();
+    const now = new Date();
+
     const coupon = await Coupon.findOne({
-      code: code.toUpperCase(),
+      code: cleanCode,
       isActive: true,
-      startDate: { $lte: new Date() },
-      expiryDate: { $gte: new Date() },
+      $and: [
+        {
+          $or: [
+            { startDate: { $exists: false } },
+            { startDate: null },
+            { startDate: { $lte: now } },
+          ],
+        },
+        {
+          $or: [
+            { expiryDate: { $exists: false } },
+            { expiryDate: null },
+            { expiryDate: { $gte: now } },
+          ],
+        },
+      ],
     });
 
     if (!coupon) {
@@ -40,12 +65,15 @@ export class CouponCommonService {
       );
     }
 
-    const discountAmountValue = Math.max(
-      0,
-      Number(coupon.discountAmount ?? coupon.discountValue ?? coupon.discount ?? 0)
-    );
-    const discountType = (coupon.discountType || 'percentage').toLowerCase();
-    const maxDiscount = Number(coupon.maxDiscountAmount) || 0;
+    // Extract numeric discount value even if stored as "10%", "20", 20, etc.
+    let rawDiscount = coupon.discountAmount;
+    if (rawDiscount === undefined || rawDiscount === null || Number.isNaN(Number(rawDiscount)) || Number(rawDiscount) === 0) {
+      rawDiscount = coupon.discountValue ?? coupon.discount ?? 0;
+    }
+    const discountAmountValue = Math.max(0, extractNumericDiscount(rawDiscount));
+
+    const discountType = String(coupon.discountType || 'percentage').toLowerCase();
+    const maxDiscount = Math.max(0, extractNumericDiscount(coupon.maxDiscountAmount));
 
     let discount = 0;
     if (discountType === 'percentage') {
@@ -54,6 +82,7 @@ export class CouponCommonService {
         discount = Math.min(discount, maxDiscount);
       }
     } else {
+      // Fixed discount
       discount = discountAmountValue;
     }
 

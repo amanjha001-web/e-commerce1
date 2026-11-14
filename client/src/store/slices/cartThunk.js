@@ -206,11 +206,15 @@ export const applyCartCoupon = (couponCode) => async (dispatch) => {
   try {
     dispatch(setCartLoading(true));
 
-    await cartService.applyCoupon(couponCode.trim());
+    const applyRes = await cartService.applyCoupon(couponCode.trim());
+    const cartData = applyRes?.data ?? applyRes;
 
-    const latestCart = await cartService.getCart();
-
-    dispatch(fetchCartSuccess(latestCart));
+    if (cartData && Array.isArray(cartData.items)) {
+      dispatch(fetchCartSuccess(cartData));
+    } else {
+      const latestCart = await cartService.getCart();
+      dispatch(fetchCartSuccess(latestCart));
+    }
 
     return {
       success: true,

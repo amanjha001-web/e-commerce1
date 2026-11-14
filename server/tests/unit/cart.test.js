@@ -51,4 +51,23 @@ describe('Cart Business Logic Unit Tests', () => {
       expect(safeDiscount).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it('should extract numeric discount from percentage strings and calculate actual discount', () => {
+    const extractNumericDiscount = (raw) => {
+      if (raw === undefined || raw === null) return 0;
+      if (typeof raw === 'number') return Number.isNaN(raw) ? 0 : raw;
+      const cleaned = String(raw).replace(/[^\d.]/g, '');
+      const parsed = parseFloat(cleaned);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    expect(extractNumericDiscount('10%')).toBe(10);
+    expect(extractNumericDiscount('₹50')).toBe(50);
+    expect(extractNumericDiscount(20)).toBe(20);
+
+    const subtotal = 499;
+    const discountRate = extractNumericDiscount('10%');
+    const discount = (subtotal * discountRate) / 100;
+    expect(roundToTwoDecimals(discount)).toBe(49.9);
+  });
 });

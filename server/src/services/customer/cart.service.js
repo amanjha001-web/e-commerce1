@@ -81,7 +81,9 @@ export class CartService {
         subtotal += authoritativePrice * (Number(item.quantity) || 1);
       }
       cart.totalAmount = roundToTwoDecimals(subtotal);
-      cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - (cart.discountAmount || 0)));
+      const currentDiscount = Math.max(0, Number(cart.discountAmount) || Number(cart.coupon?.discount) || 0);
+      cart.discountAmount = currentDiscount;
+      cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - currentDiscount));
       await cart.save().catch(() => {});
     }
 
@@ -207,23 +209,23 @@ export class CartService {
       throw ApiError.badRequest('Cart is empty');
     }
 
-    // Ensure totalAmount is calculated from items if 0, undefined, or NaN
-    let subtotal = Number(cart.totalAmount) || 0;
-    if (subtotal <= 0 || Number.isNaN(subtotal)) {
-      subtotal = 0;
-      for (const item of cart.items) {
-        let itemPrice = Number(item.price) || 0;
-        if (itemPrice <= 0 && item.product) {
-          const product = await Product.findById(item.product);
-          if (product) {
-            itemPrice = Number(product.price) || 0;
-            item.price = itemPrice;
-          }
+    // Always calculate authoritative subtotal from product prices
+    let subtotal = 0;
+    for (const item of cart.items) {
+      let itemPrice = Number(item.price) || 0;
+      if (itemPrice <= 0 && item.product) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          itemPrice = Number(product.price) || 0;
+          item.price = itemPrice;
         }
-        subtotal += itemPrice * (Number(item.quantity) || 1);
       }
-      cart.totalAmount = roundToTwoDecimals(subtotal);
+      subtotal += itemPrice * (Number(item.quantity) || 1);
     }
+    if (subtotal <= 0) {
+      subtotal = Number(cart.totalAmount) || 0;
+    }
+    cart.totalAmount = roundToTwoDecimals(subtotal);
 
     const val = await couponCommonService.validateCoupon(
       couponCode,

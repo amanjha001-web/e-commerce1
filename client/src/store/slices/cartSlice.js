@@ -45,7 +45,13 @@ const normalizeCart = (payload) => {
     0,
   );
 
-  const discount = Number(data?.discountAmount ?? data?.discount ?? data?.coupon?.discount) || 0;
+  const discount = Math.max(
+    0,
+    Number(data?.discountAmount) ||
+      Number(data?.discount) ||
+      Number(data?.coupon?.discount) ||
+      0,
+  );
   const shipping = subtotal >= 999 || items.length === 0 ? 0 : (Number(data?.shipping) > 0 ? Number(data.shipping) : 50);
   const tax = Number(data?.tax) || 0;
 
@@ -68,11 +74,16 @@ const calculateTotals = (state) => {
     0,
   );
 
+  const currentDiscount = Math.max(
+    0,
+    Number(state.discount) || Number(state.coupon?.discount) || 0,
+  );
+  state.discount = currentDiscount;
   state.shipping = state.subtotal >= 999 || state.items.length === 0 ? 0 : (Number(state.shipping) > 0 ? Number(state.shipping) : 50);
 
   state.total = Math.max(
     0,
-    state.subtotal - (Number(state.discount) || 0) + state.shipping + (Number(state.tax) || 0),
+    state.subtotal - currentDiscount + state.shipping + (Number(state.tax) || 0),
   );
 };
 

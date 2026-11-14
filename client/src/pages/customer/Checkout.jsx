@@ -104,7 +104,7 @@ const Checkout = ({
     }, 0);
   }, [cart, items]);
 
-  const discount = Number(cart?.discount || 0);
+  const discount = Math.max(0, Number(cart?.discount || cart?.discountAmount || cart?.coupon?.discount || 0));
   const shipping = Number(
     cart?.shippingCharge ?? cart?.shipping ?? 0,
   );
