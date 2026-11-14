@@ -127,7 +127,7 @@ const Cart = () => {
   );
   const activeSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number(subtotal) || 0;
   const activeDiscount = Number(discount) || 0;
-  const activeShipping = activeSubtotal > 999 || cartItems.length === 0 ? 0 : Number(shipping) || 0;
+  const activeShipping = activeSubtotal >= 999 || cartItems.length === 0 ? 0 : (Number(shipping) > 0 ? Number(shipping) : 50);
   const activeTax = Number(tax) || 0;
   const activeTotal = Math.max(0, activeSubtotal - activeDiscount + activeShipping + activeTax);
 

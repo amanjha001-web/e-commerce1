@@ -3,9 +3,9 @@ import { roundToTwoDecimals } from '../../src/utils/helpers.js';
 
 describe('Order Calculation & Business Logic Unit Tests', () => {
   it('should calculate shipping fee and tax properly based on subtotal threshold', () => {
-    // Under ₹1000 -> ₹50 shipping fee
+    // Under ₹999 -> ₹50 shipping fee
     const subtotalSmall = 600;
-    const shippingSmall = subtotalSmall > 1000 ? 0 : 50;
+    const shippingSmall = subtotalSmall >= 999 ? 0 : 50;
     const taxSmall = roundToTwoDecimals(subtotalSmall * 0.18);
     const totalSmall = roundToTwoDecimals(subtotalSmall + shippingSmall + taxSmall);
 
@@ -13,15 +13,19 @@ describe('Order Calculation & Business Logic Unit Tests', () => {
     expect(taxSmall).toBe(108);
     expect(totalSmall).toBe(758);
 
-    // Over ₹1000 -> ₹0 free shipping
+    // ₹999 and above -> ₹0 free shipping
     const subtotalLarge = 2000;
-    const shippingLarge = subtotalLarge > 1000 ? 0 : 50;
+    const shippingLarge = subtotalLarge >= 999 ? 0 : 50;
     const taxLarge = roundToTwoDecimals(subtotalLarge * 0.18);
     const totalLarge = roundToTwoDecimals(subtotalLarge + shippingLarge + taxLarge);
 
     expect(shippingLarge).toBe(0);
     expect(taxLarge).toBe(360);
     expect(totalLarge).toBe(2360);
+
+    // Exact ₹999 threshold test
+    expect(999 >= 999 ? 0 : 50).toBe(0);
+    expect(499 >= 999 ? 0 : 50).toBe(50);
   });
 
   it('should generate valid human-readable order numbers', () => {

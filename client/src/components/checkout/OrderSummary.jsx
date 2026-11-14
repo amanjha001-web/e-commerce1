@@ -36,12 +36,17 @@ const OrderSummary = ({
 
   const finalDiscount = Number(discount) || 0;
 
-  const finalShipping = Number(shipping) || 0;
+  const finalShipping =
+    finalSubtotal >= 999 || items.length === 0
+      ? 0
+      : Number(shipping) > 0
+        ? Number(shipping)
+        : 50;
 
   const finalTax = Number(tax) || 0;
 
   const calculatedTotal =
-    finalSubtotal - finalDiscount + finalShipping + finalTax;
+    Math.max(0, finalSubtotal - finalDiscount + finalShipping + finalTax);
 
   const finalTotal = total !== undefined ? Number(total) : calculatedTotal;
 
@@ -182,7 +187,7 @@ const OrderSummary = ({
             <span>Shipping</span>
 
             <span>
-              {finalShipping === 0 ? "FREE" : formatPrice(finalShipping)}
+              {finalSubtotal >= 999 || finalShipping === 0 ? "FREE" : formatPrice(finalShipping)}
             </span>
           </div>
 

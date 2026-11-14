@@ -110,7 +110,7 @@ const Checkout = ({
   );
   const tax = Number(cart?.tax || 0);
 
-  const effectiveShipping = subtotal > 999 || items.length === 0 ? 0 : shipping;
+  const effectiveShipping = subtotal >= 999 || items.length === 0 ? 0 : (shipping > 0 ? shipping : 50);
   const total = Math.max(0, subtotal - discount + effectiveShipping + tax);
 
   const handleAddressSelect = (address) => {
@@ -368,7 +368,7 @@ const Checkout = ({
                 items={items}
                 subtotal={subtotal}
                 discount={discount}
-                shipping={shipping}
+                shipping={effectiveShipping}
                 tax={tax}
                 total={total}
               />

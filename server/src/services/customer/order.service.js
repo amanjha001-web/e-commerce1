@@ -74,7 +74,7 @@ export class CustomerOrderService {
     }
 
     const discountAmount = cart.discountAmount || 0;
-    const shippingPrice = subtotal > 1000 ? 0 : 50; // free shipping over ₹1000
+    const shippingPrice = subtotal >= 999 ? 0 : 50; // free shipping on orders ₹999 and above
     const taxPrice = roundToTwoDecimals((subtotal - discountAmount) * 0.18); // 18% standard GST
     const totalAmount = roundToTwoDecimals(subtotal - discountAmount + shippingPrice + taxPrice);
 

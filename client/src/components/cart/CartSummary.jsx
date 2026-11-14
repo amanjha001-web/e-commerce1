@@ -37,7 +37,7 @@ const CartSummary = ({
         <div className="flex items-center justify-between">
           <span>Shipping</span>
           <b className="text-[var(--text)] text-sm dark:text-foreground">
-            {subtotal > 999 || shipping === 0 ? "FREE" : formatPrice(shipping)}
+            {subtotal >= 999 ? "FREE" : subtotal <= 0 ? "₹0" : formatPrice(shipping > 0 ? shipping : 50)}
           </b>
         </div>
 
