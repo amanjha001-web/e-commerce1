@@ -254,6 +254,11 @@ export class CartService {
     cart.finalAmount = cart.totalAmount;
     await cart.save();
 
+    await Cart.updateOne(
+      { _id: cart._id },
+      { $unset: { coupon: 1 }, $set: { discountAmount: 0, finalAmount: cart.totalAmount } }
+    ).catch(() => {});
+
     return this.getCart(userId);
   }
 

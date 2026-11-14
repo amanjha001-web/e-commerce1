@@ -6,6 +6,7 @@ import {
   fetchCartSuccess,
   fetchCartFailure,
   setCartLoading,
+  removeCoupon,
 } from "./cartSlice";
 
 const getErrorMessage = (error, fallback) =>
@@ -232,6 +233,8 @@ export const removeCartCoupon = () => async (dispatch) => {
     dispatch(setCartLoading(true));
 
     await cartService.removeCoupon();
+
+    dispatch(removeCoupon());
 
     const latestCart = await cartService.getCart();
 

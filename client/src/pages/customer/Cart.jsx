@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import CartList from "../../components/cart/CartList";
 import CartSummary from "../../components/cart/CartSummary";
@@ -83,9 +84,13 @@ const Cart = () => {
 
         if (!result?.success) {
           setActionError(result?.message || "Unable to apply coupon.");
+          toast.error(result?.message || "Unable to apply coupon.");
+        } else {
+          toast.success("Coupon applied successfully!");
         }
       } catch {
         setActionError("Unable to apply coupon. Please try again.");
+        toast.error("Unable to apply coupon. Please try again.");
       } finally {
         setApplyingCoupon(false);
       }
@@ -103,9 +108,13 @@ const Cart = () => {
 
       if (!result?.success) {
         setActionError(result?.message || "Unable to remove coupon.");
+        toast.error(result?.message || "Unable to remove coupon.");
+      } else {
+        toast.success("Coupon removed successfully");
       }
     } catch {
       setActionError("Unable to remove coupon. Please try again.");
+      toast.error("Unable to remove coupon. Please try again.");
     } finally {
       setApplyingCoupon(false);
     }

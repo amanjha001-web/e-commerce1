@@ -14,12 +14,14 @@ router.use(authenticate);
 
 router.get('/', cartController.getCart);
 router.post('/', validate({ body: addToCartSchema }), cartController.addToCart);
+
+// Specific routes must come before parameterized /:productId
+router.get('/validate', cartController.validateCart);
+router.post('/coupon', validate({ body: applyCouponSchema }), cartController.applyCoupon);
+router.delete('/coupon', cartController.removeCoupon);
+
 router.patch('/:productId', validate({ body: updateCartItemSchema }), cartController.updateCartItem);
 router.delete('/:productId', cartController.removeCartItem);
 router.delete('/', cartController.clearCart);
-
-router.post('/coupon', validate({ body: applyCouponSchema }), cartController.applyCoupon);
-router.delete('/coupon', cartController.removeCoupon);
-router.get('/validate', cartController.validateCart);
 
 export default router;

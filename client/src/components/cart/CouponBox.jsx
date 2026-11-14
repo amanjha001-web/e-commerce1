@@ -11,15 +11,17 @@ const CouponBox = ({
   placeholder = "Coupon code (e.g. WELCOME10)",
 }) => {
   const currentCoupon = appliedCoupon || coupon;
-  const [couponCode, setCouponCode] = useState(currentCoupon?.code || "");
+  const couponCodeString = typeof currentCoupon === "string" ? currentCoupon : currentCoupon?.code || "";
+  const hasActiveCoupon = Boolean(couponCodeString && String(couponCodeString).trim().length > 0);
+  const [couponCode, setCouponCode] = useState(couponCodeString);
 
   useEffect(() => {
-    if (currentCoupon?.code) {
-      setCouponCode(currentCoupon.code);
+    if (hasActiveCoupon) {
+      setCouponCode(couponCodeString);
     } else {
       setCouponCode("");
     }
-  }, [currentCoupon?.code]);
+  }, [hasActiveCoupon, couponCodeString]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -48,14 +50,14 @@ const CouponBox = ({
         Have a coupon?
       </h3>
 
-      {currentCoupon ? (
+      {hasActiveCoupon ? (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#c3ebda] bg-[#e7f6ef] px-3.5 py-2.5">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#16845b]">
-              {currentCoupon.code}
+              {couponCodeString}
             </p>
 
-            {currentCoupon.discount !== undefined && (
+            {currentCoupon?.discount !== undefined && Number(currentCoupon.discount) > 0 && (
               <p className="mt-0.5 text-xs font-medium text-[#16845b]/80">
                 You saved ₹
                 {Number(currentCoupon.discount).toLocaleString("en-IN")}
@@ -69,7 +71,7 @@ const CouponBox = ({
             disabled={loading}
             className="text-xs font-bold text-[var(--red)] hover:underline disabled:opacity-50"
           >
-            Remove
+            {loading ? "Removing..." : "Remove"}
           </button>
         </div>
       ) : (
