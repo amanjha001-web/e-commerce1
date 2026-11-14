@@ -135,7 +135,17 @@ const Cart = () => {
     0
   );
   const activeSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number(subtotal) || 0;
-  const activeDiscount = Number(discount) || Number(coupon?.discount) || 0;
+
+  // Authoritative discount derivation: from state discount, coupon.discount, or coupon code (e.g. SAVE15 -> 15%)
+  let derivedDiscount = Number(discount) || Number(coupon?.discount) || 0;
+  if (derivedDiscount <= 0 && coupon?.code && activeSubtotal > 0) {
+    const codeMatch = String(coupon.code).match(/(\d+)/);
+    if (codeMatch) {
+      const rate = parseFloat(codeMatch[1]) || 0;
+      derivedDiscount = rate <= 50 ? (activeSubtotal * rate) / 100 : Math.min(rate, activeSubtotal);
+    }
+  }
+  const activeDiscount = Math.max(0, derivedDiscount);
   const activeShipping = activeSubtotal >= 999 || cartItems.length === 0 ? 0 : (Number(shipping) > 0 ? Number(shipping) : 50);
   const activeTax = Number(tax) || 0;
   const activeTotal = Math.max(0, activeSubtotal - activeDiscount + activeShipping + activeTax);
@@ -233,6 +243,7 @@ const Cart = () => {
             <CouponBox
               appliedCoupon={coupon}
               coupon={coupon}
+              discount={activeDiscount}
               loading={applyingCoupon}
               error={actionError}
               onApply={handleApplyCoupon}

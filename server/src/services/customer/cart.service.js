@@ -81,9 +81,31 @@ export class CartService {
         subtotal += authoritativePrice * (Number(item.quantity) || 1);
       }
       cart.totalAmount = roundToTwoDecimals(subtotal);
-      const currentDiscount = Math.max(0, Number(cart.discountAmount) || Number(cart.coupon?.discount) || 0);
-      cart.discountAmount = currentDiscount;
-      cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - currentDiscount));
+
+      // Re-calculate authoritative discount if a coupon is attached
+      if (cart.coupon && cart.coupon.code) {
+        try {
+          const val = await couponCommonService.validateCoupon(
+            cart.coupon.code,
+            cart.totalAmount,
+            cart.userId || cart.user || userId
+          );
+          const safeDiscount = Math.max(0, Number(val?.coupon?.discountCalculated) || 0);
+          cart.discountAmount = safeDiscount;
+          if (cart.coupon) {
+            cart.coupon.discount = safeDiscount;
+            cart.coupon.discountType = val?.coupon?.discountType || cart.coupon.discountType || 'percentage';
+          }
+        } catch {
+          // If coupon is no longer valid, clear it
+          cart.coupon = undefined;
+          cart.discountAmount = 0;
+        }
+      } else {
+        cart.discountAmount = 0;
+      }
+
+      cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - (cart.discountAmount || 0)));
       await cart.save().catch(() => {});
     }
 

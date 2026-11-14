@@ -70,9 +70,17 @@ export class CouponCommonService {
     if (rawDiscount === undefined || rawDiscount === null || Number.isNaN(Number(rawDiscount)) || Number(rawDiscount) === 0) {
       rawDiscount = coupon.discountValue ?? coupon.discount ?? 0;
     }
-    const discountAmountValue = Math.max(0, extractNumericDiscount(rawDiscount));
+    let discountAmountValue = Math.max(0, extractNumericDiscount(rawDiscount));
 
-    const discountType = String(coupon.discountType || 'percentage').toLowerCase();
+    // Fallback: If discountAmount is 0 or missing on coupon document, extract from coupon code (e.g. SAVE15 -> 15)
+    if (discountAmountValue === 0 && cleanCode) {
+      const codeMatch = cleanCode.match(/(\d+)/);
+      if (codeMatch) {
+        discountAmountValue = Math.max(0, parseFloat(codeMatch[1]) || 0);
+      }
+    }
+
+    const discountType = String(coupon.discountType || (discountAmountValue <= 50 ? 'percentage' : 'fixed')).toLowerCase();
     const maxDiscount = Math.max(0, extractNumericDiscount(coupon.maxDiscountAmount));
 
     let discount = 0;

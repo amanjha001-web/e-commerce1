@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 const CouponBox = ({
   appliedCoupon = null,
   coupon = null,
+  discount = 0,
   onApply,
   onRemove,
   loading = false,
@@ -13,6 +14,7 @@ const CouponBox = ({
   const currentCoupon = appliedCoupon || coupon;
   const couponCodeString = typeof currentCoupon === "string" ? currentCoupon : currentCoupon?.code || "";
   const hasActiveCoupon = Boolean(couponCodeString && String(couponCodeString).trim().length > 0);
+  const savedAmount = Math.max(0, Number(currentCoupon?.discount) || Number(discount) || 0);
   const [couponCode, setCouponCode] = useState(couponCodeString);
 
   useEffect(() => {
@@ -57,10 +59,12 @@ const CouponBox = ({
               {couponCodeString}
             </p>
 
-            {currentCoupon?.discount !== undefined && Number(currentCoupon.discount) > 0 && (
+            {savedAmount > 0 && (
               <p className="mt-0.5 text-xs font-medium text-[#16845b]/80">
                 You saved ₹
-                {Number(currentCoupon.discount).toLocaleString("en-IN")}
+                {Number(savedAmount).toLocaleString("en-IN", {
+                  maximumFractionDigits: 2,
+                })}
               </p>
             )}
           </div>

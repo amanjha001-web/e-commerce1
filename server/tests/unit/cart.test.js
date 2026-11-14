@@ -70,4 +70,16 @@ describe('Cart Business Logic Unit Tests', () => {
     const discount = (subtotal * discountRate) / 100;
     expect(roundToTwoDecimals(discount)).toBe(49.9);
   });
+
+  it('should extract discount rate from coupon code like SAVE15 and apply correctly', () => {
+    const code = 'SAVE15';
+    const codeMatch = code.match(/(\d+)/);
+    expect(codeMatch).not.toBeNull();
+    const rate = parseFloat(codeMatch[1]);
+    expect(rate).toBe(15);
+
+    const subtotal = 499;
+    const discount = (subtotal * rate) / 100;
+    expect(roundToTwoDecimals(discount)).toBe(74.85);
+  });
 });

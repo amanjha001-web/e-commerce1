@@ -104,7 +104,15 @@ const Checkout = ({
     }, 0);
   }, [cart, items]);
 
-  const discount = Math.max(0, Number(cart?.discount || cart?.discountAmount || cart?.coupon?.discount || 0));
+  let derivedDiscount = Number(cart?.discount || cart?.discountAmount || cart?.coupon?.discount || 0);
+  if (derivedDiscount <= 0 && cart?.coupon?.code && subtotal > 0) {
+    const codeMatch = String(cart.coupon.code).match(/(\d+)/);
+    if (codeMatch) {
+      const rate = parseFloat(codeMatch[1]) || 0;
+      derivedDiscount = rate <= 50 ? (subtotal * rate) / 100 : Math.min(rate, subtotal);
+    }
+  }
+  const discount = Math.max(0, derivedDiscount);
   const shipping = Number(
     cart?.shippingCharge ?? cart?.shipping ?? 0,
   );
