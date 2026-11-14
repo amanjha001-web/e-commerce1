@@ -113,12 +113,23 @@ const Cart = () => {
 
   const handleContinueShopping = () => navigate("/products");
 
-  const cartItems = items;
+  const cartItems = Array.isArray(items) ? items : [];
 
   const itemCount = cartItems.reduce(
     (count, item) => count + (Number(item?.quantity) || 0),
     0,
   );
+
+  // Authoritative consistent pricing mapping
+  const calculatedSubtotal = cartItems.reduce(
+    (sum, item) => sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
+    0
+  );
+  const activeSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number(subtotal) || 0;
+  const activeDiscount = Number(discount) || 0;
+  const activeShipping = activeSubtotal > 999 || cartItems.length === 0 ? 0 : Number(shipping) || 0;
+  const activeTax = Number(tax) || 0;
+  const activeTotal = Math.max(0, activeSubtotal - activeDiscount + activeShipping + activeTax);
 
   if (loading && cartItems.length === 0) {
     return (
@@ -236,11 +247,11 @@ const Cart = () => {
             </h2>
 
             <CartSummary
-              subtotal={Number(subtotal) || 0}
-              discount={Number(discount) || 0}
-              shipping={Number(shipping) || 0}
-              tax={Number(tax) || 0}
-              total={Number(total) || 0}
+              subtotal={activeSubtotal}
+              discount={activeDiscount}
+              shipping={activeShipping}
+              tax={activeTax}
+              total={activeTotal}
               coupon={coupon}
             />
 

@@ -110,11 +110,8 @@ const Checkout = ({
   );
   const tax = Number(cart?.tax || 0);
 
-  const total = Number(
-    cart?.totalAmount ??
-      cart?.total ??
-      subtotal - discount + shipping + tax,
-  );
+  const effectiveShipping = subtotal > 999 || items.length === 0 ? 0 : shipping;
+  const total = Math.max(0, subtotal - discount + effectiveShipping + tax);
 
   const handleAddressSelect = (address) => {
     if (onSelectAddress) {
@@ -122,7 +119,6 @@ const Checkout = ({
     } else {
       setInternalSelectedAddress(address);
     }
-    setStep(2);
   };
 
   const handleAddAddress = async (data) => {
@@ -334,7 +330,9 @@ const Checkout = ({
                 <AddressSelector
                   addresses={addresses}
                   selectedAddress={selectedAddress}
+                  selectedAddressId={selectedAddress?._id || selectedAddress?.id}
                   onSelect={handleAddressSelect}
+                  onAdd={() => setShowAddressForm(true)}
                 />
               )}
             </section>

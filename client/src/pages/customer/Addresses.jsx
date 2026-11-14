@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import addressService from "../../services/address.service";
 import { toast } from "sonner";
 
@@ -9,7 +9,7 @@ import Loader from "../../components/common/Loader";
 import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
 const Addresses = ({
-  addresses: propAddresses = [],
+  addresses: propAddresses,
   loading: propLoading = false,
   saving: propSaving = false,
   defaultAddressId = null,
@@ -20,16 +20,16 @@ const Addresses = ({
   onNavigate,
 }) => {
   const [internalAddresses, setInternalAddresses] = useState([]);
-  const [internalLoading, setInternalLoading] = useState(!propAddresses?.length);
+  const [internalLoading, setInternalLoading] = useState(true);
   const [internalSaving, setInternalSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
 
-  const addresses = propAddresses?.length > 0 ? propAddresses : internalAddresses;
-  const loading = propAddresses?.length > 0 ? propLoading : internalLoading;
+  const addresses = propAddresses && propAddresses.length > 0 ? propAddresses : internalAddresses;
+  const loading = propAddresses && propAddresses.length > 0 ? propLoading : internalLoading;
   const saving = propSaving || internalSaving;
 
-  const loadAddresses = async () => {
+  const loadAddresses = useCallback(async () => {
     try {
       setInternalLoading(true);
       const res = await addressService.getAddresses();
@@ -37,16 +37,19 @@ const Addresses = ({
       setInternalAddresses(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Failed to fetch addresses:", err);
+      setInternalAddresses([]);
     } finally {
       setInternalLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!propAddresses || propAddresses.length === 0) {
       loadAddresses();
+    } else {
+      setInternalLoading(false);
     }
-  }, [propAddresses]);
+  }, [propAddresses?.length, loadAddresses]);
 
   const getAddressId = (address) => address?._id || address?.id;
 

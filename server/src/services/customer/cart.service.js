@@ -70,6 +70,18 @@ export class CartService {
       await cart.save().catch(() => {});
     }
 
+    if (cart && Array.isArray(cart.items)) {
+      let subtotal = 0;
+      for (const item of cart.items) {
+        const authoritativePrice = Number(item.variant?.price ?? item.product?.price ?? item.price ?? 0);
+        item.price = authoritativePrice;
+        subtotal += authoritativePrice * (Number(item.quantity) || 1);
+      }
+      cart.totalAmount = roundToTwoDecimals(subtotal);
+      cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - (cart.discountAmount || 0)));
+      await cart.save().catch(() => {});
+    }
+
     return cart;
   }
 

@@ -4,6 +4,7 @@ import AddAddress from "./AddAddress";
 
 const AddressSelector = ({
   addresses = [],
+  selectedAddress,
   selectedAddressId,
   onSelect,
   onAdd,
@@ -13,22 +14,25 @@ const AddressSelector = ({
   saving = false,
 }) => {
   const selectedId =
-    selectedAddressId?._id || selectedAddressId?.id || selectedAddressId;
+    selectedAddress?._id ||
+    selectedAddress?.id ||
+    selectedAddressId?._id ||
+    selectedAddressId?.id ||
+    selectedAddressId;
 
   const sortedAddresses = useMemo(() => {
     return [...addresses].sort(
-      (a, b) => Number(b?.isDefault === true) - Number(a?.isDefault === true),
+      (a, b) => Number(b?.isDefault === true || b?.default === true) - Number(a?.isDefault === true || a?.default === true),
     );
   }, [addresses]);
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+      <div className="rounded-2xl border border-[var(--line)] bg-white p-6 dark:bg-card">
         <div className="animate-pulse space-y-4">
-          <div className="h-5 w-40 rounded bg-gray-200 dark:bg-gray-700" />
-
-          <div className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800" />
-          <div className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800" />
+          <div className="h-5 w-40 rounded bg-[var(--soft)]" />
+          <div className="h-24 rounded-xl bg-[var(--soft)]/50" />
+          <div className="h-24 rounded-xl bg-[var(--soft)]/50" />
         </div>
       </div>
     );
@@ -39,12 +43,11 @@ const AddressSelector = ({
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            Delivery Address
-          </h2>
-
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Choose where you want your order delivered.
+          <h3 className="text-sm font-black uppercase tracking-wider text-[var(--muted)]">
+            Choose Delivery Address ({sortedAddresses.length} saved)
+          </h3>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            Click on any address below to select it for this order.
           </p>
         </div>
 
@@ -52,14 +55,14 @@ const AddressSelector = ({
           <button
             type="button"
             onClick={onAdd}
-            className="shrink-0 rounded-lg border border-primary px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/5 dark:text-primary/80 dark:hover:bg-primary/20"
+            className="btnsm text-xs shrink-0"
           >
-            + Add Address
+            + Add new address
           </button>
         )}
       </div>
 
-      {/* Addresses */}
+      {/* Addresses list */}
       {sortedAddresses.length > 0 ? (
         <div className="space-y-3">
           {sortedAddresses.map((address, index) => {
@@ -78,22 +81,19 @@ const AddressSelector = ({
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
-          <div className="text-4xl">🏠</div>
-
-          <h3 className="mt-3 text-sm font-bold text-gray-900 dark:text-white">
+        <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--soft)] p-8 text-center">
+          <div className="text-3xl">🏠</div>
+          <h4 className="mt-2 text-sm font-black text-[var(--text)] dark:text-foreground">
             No saved addresses
-          </h3>
-
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Add a delivery address to continue.
+          </h4>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Add a delivery address to complete your checkout.
           </p>
-
           {onAdd && (
             <button
               type="button"
               onClick={onAdd}
-              className="mt-4 rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
+              className="primarybtn mt-4 !py-2 !px-4 !text-xs"
             >
               + Add Address
             </button>

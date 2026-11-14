@@ -41,13 +41,15 @@ const normalizeCart = (payload) => {
     : [];
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
     0,
   );
 
-  const discount = Number(data?.discount) || 0;
-  const shipping = Number(data?.shipping) || 0;
+  const discount = Number(data?.discountAmount ?? data?.discount) || 0;
+  const shipping = subtotal > 999 || items.length === 0 ? 0 : Number(data?.shipping || 0);
   const tax = Number(data?.tax) || 0;
+
+  const total = Math.max(0, subtotal - discount + shipping + tax);
 
   return {
     items,
@@ -55,25 +57,22 @@ const normalizeCart = (payload) => {
     discount,
     shipping,
     tax,
-    total:
-      data?.totalPrice != null
-        ? Number(data.totalPrice)
-        : data?.total != null
-          ? Number(data.total)
-          : Math.max(0, subtotal - discount + shipping + tax),
+    total,
     coupon: data?.coupon ?? data?.couponCode ?? null,
   };
 };
 
 const calculateTotals = (state) => {
   state.subtotal = state.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
     0,
   );
 
+  state.shipping = state.subtotal > 999 || state.items.length === 0 ? 0 : Number(state.shipping || 0);
+
   state.total = Math.max(
     0,
-    state.subtotal - state.discount + state.shipping + state.tax,
+    state.subtotal - (Number(state.discount) || 0) + state.shipping + (Number(state.tax) || 0),
   );
 };
 

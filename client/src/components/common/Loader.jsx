@@ -20,7 +20,7 @@ const Loader = ({
       aria-label={text}
     >
       <div
-        className={`animate-spin rounded-full border-gray-300 border-t-blue-600 dark:border-gray-700 dark:border-t-blue-500 ${
+        className={`animate-spin rounded-full border-gray-200 border-t-[var(--primary)] dark:border-gray-700 ${
           sizes[size] || sizes.md
         }`}
       />
