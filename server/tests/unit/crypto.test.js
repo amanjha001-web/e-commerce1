@@ -6,6 +6,7 @@ import {
   generateRandomToken,
   hashToken,
   verifyHmacSignature,
+  getGravatarUrl,
 } from '../../src/utils/crypto.utils.js';
 import {
   generateAccessToken,
@@ -60,5 +61,12 @@ describe('Crypto & Token Utilities Unit Tests', () => {
 
     const isInvalid = verifyWebhookSignature(payload, 'tampered_signature', secret);
     expect(isInvalid).toBe(false);
+  });
+
+  it('should generate valid Gravatar URL from email', () => {
+    const email = 'Customer@Example.Com';
+    const gravatarUrl = getGravatarUrl(email);
+    expect(gravatarUrl).toContain('https://www.gravatar.com/avatar/');
+    expect(gravatarUrl).toContain('d=mp');
   });
 });

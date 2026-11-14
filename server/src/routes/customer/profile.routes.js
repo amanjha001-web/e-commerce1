@@ -16,6 +16,10 @@ router.patch('/avatar', upload.single('avatar'), profileController.updateAvatar)
 router.delete('/avatar', profileController.deleteAvatar);
 router.patch('/username', profileController.updateUsername);
 router.patch('/email', profileController.updateEmail);
+router.post('/request-email-update', profileController.requestEmailUpdate);
+router.post('/verify-email-update', profileController.verifyEmailUpdate);
+router.post('/gravatar', profileController.fetchGravatar);
+router.get('/gravatar', profileController.fetchGravatar);
 router.patch('/deactivate', profileController.deactivateAccount);
 router.delete('/account', profileController.deleteAccount);
 

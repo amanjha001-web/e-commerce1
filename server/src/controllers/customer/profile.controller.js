@@ -32,6 +32,21 @@ export const updateEmail = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, updated, 'Email updated');
 });
 
+export const requestEmailUpdate = asyncHandler(async (req, res) => {
+  const result = await customerProfileService.requestEmailUpdate(req.user._id, req.body.email);
+  return ApiResponse.success(res, result, result.message);
+});
+
+export const verifyEmailUpdate = asyncHandler(async (req, res) => {
+  const updated = await customerProfileService.verifyEmailUpdate(req.user._id, req.body.otp, req.body);
+  return ApiResponse.success(res, updated, 'Email and profile updated successfully');
+});
+
+export const fetchGravatar = asyncHandler(async (req, res) => {
+  const updated = await customerProfileService.fetchGravatar(req.user._id);
+  return ApiResponse.success(res, updated, 'Profile photo updated from email successfully');
+});
+
 export const deactivateAccount = asyncHandler(async (req, res) => {
   const result = await customerProfileService.deactivateAccount(req.user._id);
   return ApiResponse.success(res, result, result.message);

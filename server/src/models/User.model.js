@@ -56,6 +56,23 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other', 'prefer_not_to_say', ''],
+      default: '',
+    },
+    dateOfBirth: {
+      type: Date,
+    },
+    bio: {
+      type: String,
+      maxlength: [500, 'Bio cannot exceed 500 characters'],
+      default: '',
+    },
+    pendingEmail: {
+      type: String,
+      select: false,
+    },
     googleId: {
       type: String,
       sparse: true,

@@ -54,6 +54,27 @@ const userService = {
     return response.data;
   },
 
+  // Request email update with verification OTP
+  requestEmailUpdate: async (email) => {
+    const response = await api.post("/users/request-email-update", { email });
+
+    return response.data;
+  },
+
+  // Verify email update with OTP & optional profile fields
+  verifyEmailUpdate: async (data) => {
+    const response = await api.post("/users/verify-email-update", data);
+
+    return response.data;
+  },
+
+  // Fetch Gravatar photo based on account email
+  fetchGravatar: async () => {
+    const response = await api.post("/users/gravatar");
+
+    return response.data;
+  },
+
   // Deactivate account
   deactivateAccount: async () => {
     const response = await api.patch("/users/deactivate");

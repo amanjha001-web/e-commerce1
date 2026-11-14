@@ -9,6 +9,7 @@ import {
   updateProfile,
   forgotPassword,
   resetPassword,
+  updateUser,
 } from "../store/slices/authSlice";
 
 const useAuth = () => {
@@ -57,6 +58,13 @@ const useAuth = () => {
     [dispatch],
   );
 
+  const handleUpdateUser = useCallback(
+    (userData) => {
+      return dispatch(updateUser(userData));
+    },
+    [dispatch],
+  );
+
   // Forgot Password
   const handleForgotPassword = useCallback(
     (email) => {
@@ -92,6 +100,7 @@ const useAuth = () => {
     logout: handleLogout,
     getCurrentUser: handleGetCurrentUser,
     updateProfile: handleUpdateProfile,
+    updateUser: handleUpdateUser,
 
     forgotPassword: handleForgotPassword,
     resetPassword: handleResetPassword,
