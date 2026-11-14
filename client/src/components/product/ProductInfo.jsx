@@ -20,7 +20,11 @@ const ProductInfo = ({ product, showDescription = true }) => {
   const rating = product.rating ?? product.averageRating ?? 0;
 
   const reviewCount =
-    product.reviewCount ?? product.reviewsCount ?? product.reviews?.length ?? 0;
+    product.numReviews ??
+    product.reviewCount ??
+    product.reviewsCount ??
+    product.reviews?.length ??
+    0;
 
   const discount = product.discountPercentage ?? product.discount ?? 0;
 

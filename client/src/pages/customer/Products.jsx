@@ -10,6 +10,8 @@ import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import Pagination from "../../components/common/Pagination";
 import useAuth from "../../hooks/useAuth";
+import categoryService from "../../services/category.service";
+import brandService from "../../services/brand.service";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
@@ -108,6 +110,55 @@ const Products = ({
   const [sort, setSort] = useState(filters.sort || "latest");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [brandsList, setBrandsList] = useState([]);
+
+  /*
+   * Fetch Live Filter Options (Categories & Brands)
+   */
+  useEffect(() => {
+    let isMounted = true;
+    const loadFiltersData = async () => {
+      try {
+        const [catRes, brandRes] = await Promise.allSettled([
+          categoryService.getCategories(),
+          brandService.getBrands(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (catRes.status === "fulfilled") {
+          const res = catRes.value;
+          const data =
+            res?.data?.categories ||
+            (Array.isArray(res?.data) ? res.data : []) ||
+            (Array.isArray(res) ? res : []);
+          setCategoriesList(data.filter((c) => c.isActive !== false));
+        }
+
+        if (brandRes.status === "fulfilled") {
+          const res = brandRes.value;
+          const data =
+            res?.data?.brands ||
+            (Array.isArray(res?.data) ? res.data : []) ||
+            (Array.isArray(res) ? res : []);
+          setBrandsList(data.filter((b) => b.isActive !== false));
+        }
+      } catch (err) {
+        console.warn("Could not load categories/brands for filters:", err);
+      }
+    };
+
+    loadFiltersData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const availableCategories =
+    categories.length > 0 ? categories : categoriesList;
+  const availableBrands = brands.length > 0 ? brands : brandsList;
+
   /*
    * Wishlist Product IDs
    */
@@ -135,17 +186,30 @@ const Products = ({
    * Fetch Products
    */
   useEffect(() => {
+    const activeCategory =
+      filters.category ||
+      (Array.isArray(filters.categories) && filters.categories.length > 0
+        ? filters.categories.join(",")
+        : "");
+
+    const activeBrand =
+      filters.brand ||
+      (Array.isArray(filters.brands) && filters.brands.length > 0
+        ? filters.brands.join(",")
+        : "");
+
     dispatch(
       fetchProducts({
         page: pagination.page || 1,
         limit: pagination.limit || 12,
 
         search: filters.search || "",
-        category: filters.category || "",
-        brand: filters.brand || "",
+        category: activeCategory,
+        brand: activeBrand,
 
         minPrice: filters.minPrice || "",
         maxPrice: filters.maxPrice || "",
+        inStock: filters.inStock ? "true" : "",
 
         rating: filters.rating || "",
 
@@ -158,9 +222,12 @@ const Products = ({
     pagination.limit,
     filters.search,
     filters.category,
+    filters.categories,
     filters.brand,
+    filters.brands,
     filters.minPrice,
     filters.maxPrice,
+    filters.inStock,
     filters.rating,
     filters.sort,
   ]);
@@ -287,14 +354,14 @@ const Products = ({
   const hasProductsError = error && !loading && products.length === 0;
 
   const categoryOptions = useMemo(() => {
-    if (categories && categories.length > 0) {
-      return categories.map((cat) => ({
+    if (availableCategories && availableCategories.length > 0) {
+      return availableCategories.map((cat) => ({
         label: cat.name || cat.label || cat,
-        value: cat._id || cat.slug || cat.name || cat,
+        value: cat.slug || cat._id || cat.name || cat,
       }));
     }
     return DEFAULT_CATEGORIES.map((name) => ({ label: name, value: name }));
-  }, [categories]);
+  }, [availableCategories]);
 
   /*
    * Error
@@ -447,9 +514,15 @@ const Products = ({
       {filtersOpen && (
         <div className="panel mb-5">
           <ProductFilters
-            categories={categories}
-            brands={brands}
-            onFilter={handleFilter}
+            filters={filters}
+            categories={availableCategories}
+            brands={availableBrands}
+            onChange={handleFilter}
+            onReset={() => {
+              dispatch(clearFilters());
+              setSearch("");
+              setSort("latest");
+            }}
           />
         </div>
       )}

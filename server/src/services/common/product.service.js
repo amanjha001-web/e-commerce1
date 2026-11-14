@@ -1,4 +1,6 @@
 import { Product } from '../../models/Product.model.js';
+import { Category } from '../../models/Category.model.js';
+import { Brand } from '../../models/Brand.model.js';
 import { RecentlyViewed } from '../../models/RecentlyViewed.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
@@ -18,22 +20,118 @@ export class ProductService {
       ];
     }
 
-    if (queryParams.category) {
-      filter.category = queryParams.category;
+    // Category Filter (support ObjectId, slug, name, or array)
+    const categoryParam = queryParams.category || queryParams.categories;
+    if (categoryParam) {
+      const rawCategories = Array.isArray(categoryParam)
+        ? categoryParam
+        : typeof categoryParam === 'string' && categoryParam.includes(',')
+        ? categoryParam.split(',')
+        : [categoryParam];
+
+      const objectIds = [];
+      let specifiedNonAll = false;
+
+      for (const cat of rawCategories) {
+        const trimmed = String(cat).trim();
+        if (!trimmed || trimmed === 'All' || trimmed === 'all') continue;
+        specifiedNonAll = true;
+
+        if (mongoose.Types.ObjectId.isValid(trimmed) && String(new mongoose.Types.ObjectId(trimmed)) === trimmed) {
+          objectIds.push(new mongoose.Types.ObjectId(trimmed));
+        } else {
+          const matched = await Category.findOne({
+            $or: [
+              { slug: trimmed.toLowerCase() },
+              { name: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+            ],
+          }).select('_id');
+          if (matched) {
+            objectIds.push(matched._id);
+          }
+        }
+      }
+
+      if (specifiedNonAll) {
+        if (objectIds.length > 0) {
+          filter.category = objectIds.length === 1 ? objectIds[0] : { $in: objectIds };
+        } else {
+          filter.category = new mongoose.Types.ObjectId();
+        }
+      }
     }
 
-    if (queryParams.brand) {
-      filter.brand = queryParams.brand;
+    // Brand Filter (support ObjectId, slug, name, or array)
+    const brandParam = queryParams.brand || queryParams.brands;
+    if (brandParam) {
+      const rawBrands = Array.isArray(brandParam)
+        ? brandParam
+        : typeof brandParam === 'string' && brandParam.includes(',')
+        ? brandParam.split(',')
+        : [brandParam];
+
+      const brandIds = [];
+      let specifiedBrand = false;
+
+      for (const b of rawBrands) {
+        const trimmed = String(b).trim();
+        if (!trimmed || trimmed === 'All' || trimmed === 'all') continue;
+        specifiedBrand = true;
+
+        if (mongoose.Types.ObjectId.isValid(trimmed) && String(new mongoose.Types.ObjectId(trimmed)) === trimmed) {
+          brandIds.push(new mongoose.Types.ObjectId(trimmed));
+        } else {
+          const matched = await Brand.findOne({
+            $or: [
+              { slug: trimmed.toLowerCase() },
+              { name: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+            ],
+          }).select('_id');
+          if (matched) {
+            brandIds.push(matched._id);
+          }
+        }
+      }
+
+      if (specifiedBrand) {
+        if (brandIds.length > 0) {
+          filter.brand = brandIds.length === 1 ? brandIds[0] : { $in: brandIds };
+        } else {
+          filter.brand = new mongoose.Types.ObjectId();
+        }
+      }
     }
 
-    if (queryParams.minPrice || queryParams.maxPrice) {
+    // Price Range Filter
+    if (
+      (queryParams.minPrice !== undefined && queryParams.minPrice !== '') ||
+      (queryParams.maxPrice !== undefined && queryParams.maxPrice !== '')
+    ) {
       filter.price = {};
-      if (queryParams.minPrice) filter.price.$gte = Number(queryParams.minPrice);
-      if (queryParams.maxPrice) filter.price.$lte = Number(queryParams.maxPrice);
+      if (queryParams.minPrice !== undefined && queryParams.minPrice !== '') {
+        const minP = Number(queryParams.minPrice);
+        if (!isNaN(minP)) filter.price.$gte = minP;
+      }
+      if (queryParams.maxPrice !== undefined && queryParams.maxPrice !== '') {
+        const maxP = Number(queryParams.maxPrice);
+        if (!isNaN(maxP)) filter.price.$lte = maxP;
+      }
+      if (Object.keys(filter.price).length === 0) {
+        delete filter.price;
+      }
     }
 
-    if (queryParams.rating) {
-      filter.rating = { $gte: Number(queryParams.rating) };
+    // Rating Filter
+    if (queryParams.rating !== undefined && queryParams.rating !== '') {
+      const r = Number(queryParams.rating);
+      if (!isNaN(r) && r > 0) {
+        filter.rating = { $gte: r };
+      }
+    }
+
+    // In Stock Filter
+    if (queryParams.inStock === 'true' || queryParams.inStock === true) {
+      filter.stock = { $gt: 0 };
     }
 
     const [products, total] = await Promise.all([

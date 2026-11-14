@@ -64,7 +64,10 @@ const Categories = () => {
     const loadCategories = async () => {
       try {
         const response = await categoryService.getCategories();
-        const categoryList = response?.data?.categories || [];
+        const categoryList =
+          response?.data?.categories ||
+          (Array.isArray(response?.data) ? response.data : []) ||
+          (Array.isArray(response) ? response : []);
 
         if (isMounted) {
           if (categoryList.length > 0) {

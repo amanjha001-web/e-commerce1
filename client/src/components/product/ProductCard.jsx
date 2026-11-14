@@ -59,9 +59,11 @@ const ProductCard = ({
       : product.thumbnail?.url) ||
     product.image?.url ||
     (typeof product.image === "string" ? product.image : "") ||
-    (typeof product.images?.[0] === "string"
-      ? product.images[0]
-      : product.images?.[0]?.url) ||
+    (Array.isArray(product.images) && product.images.length > 0
+      ? (typeof (product.images.find((img) => img?.isDefault) || product.images[0]) === "string"
+          ? (product.images.find((img) => img?.isDefault) || product.images[0])
+          : (product.images.find((img) => img?.isDefault) || product.images[0])?.url)
+      : "") ||
     "";
 
   const categoryName =
@@ -72,7 +74,12 @@ const ProductCard = ({
   const price = Number(product.price || 0);
   const discountPrice = Number(product.discountPrice || product.salePrice || 0);
   const comparePrice = Number(
-    product.old || product.oldPrice || product.originalPrice || product.mrp || 0,
+    product.compareAtPrice ||
+      product.old ||
+      product.oldPrice ||
+      product.originalPrice ||
+      product.mrp ||
+      0,
   );
 
   const hasDiscount = price > 0 && discountPrice > 0 && discountPrice < price;
@@ -104,21 +111,24 @@ const ProductCard = ({
     product.status === "draft" ||
     stock <= 0;
 
-  const rating = Number(product.averageRating ?? product.rating ?? 4.8);
+  const rating = Number(product.rating ?? product.averageRating ?? 0);
+  const reviewCount = Number(
+    product.numReviews ?? product.reviewCount ?? product.totalReviews ?? 0,
+  );
 
   const badges = [];
 
   if (product.tag) {
     badges.push({ type: "tag", text: product.tag });
-  } else if (product.bestSeller) {
+  } else if (product.isBestSeller || product.bestSeller) {
     badges.push({ type: "best_seller", text: "BESTSELLER" });
-  } else if (product.newArrival) {
+  } else if (product.isNewArrival || product.newArrival) {
     badges.push({ type: "new_arrival", text: "NEW" });
-  } else if (product.trending) {
+  } else if (product.isTrending || product.trending) {
     badges.push({ type: "trending", text: "TRENDING" });
-  } else if (product.flashSale) {
+  } else if (product.isFlashSale || product.flashSale) {
     badges.push({ type: "flash_sale", text: "SALE" });
-  } else if (product.featured) {
+  } else if (product.isFeatured || product.featured) {
     badges.push({ type: "featured", text: "POPULAR" });
   } else if (discountPercentage > 0) {
     badges.push({ type: "discount", text: `${discountPercentage}% OFF` });
@@ -245,7 +255,8 @@ const ProductCard = ({
         <div className="rating">
           ★★★★★{" "}
           <span className="muted">
-            ({rating > 0 ? rating.toFixed(1) : "4.8"})
+            ({rating > 0 ? rating.toFixed(1) : reviewCount > 0 ? "0.0" : "4.8"})
+            {reviewCount > 0 ? ` · ${reviewCount}` : ""}
           </span>
         </div>
 

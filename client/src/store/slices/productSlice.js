@@ -8,9 +8,12 @@ const initialState = {
   filters: {
     search: "",
     category: "",
+    categories: [],
     brand: "",
+    brands: [],
     minPrice: "",
     maxPrice: "",
+    inStock: false,
     rating: "",
     sort: "latest",
   },
@@ -104,9 +107,12 @@ const productSlice = createSlice({
       state.filters = {
         search: "",
         category: "",
+        categories: [],
         brand: "",
+        brands: [],
         minPrice: "",
         maxPrice: "",
+        inStock: false,
         rating: "",
         sort: "latest",
       };

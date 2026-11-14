@@ -22,6 +22,7 @@ const ProductPrice = ({
   // Original / MRP price
   const oldPrice = Number(
     originalPrice ??
+      product?.compareAtPrice ??
       product?.price ??
       product?.originalPrice ??
       product?.mrp ??

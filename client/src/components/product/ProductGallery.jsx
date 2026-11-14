@@ -2,7 +2,7 @@ import { useState } from "react";
 import ProductImage from "./ProductImage";
 
 const ProductGallery = ({ images = [], product }) => {
-  const productImages =
+  const rawImages =
     images.length > 0
       ? images
       : product?.images?.length
@@ -12,6 +12,14 @@ const ProductGallery = ({ images = [], product }) => {
           : product?.image
             ? [product.image]
             : [];
+
+  const productImages = [...rawImages].sort((a, b) => {
+    const aDef = typeof a === "object" && Boolean(a?.isDefault);
+    const bDef = typeof b === "object" && Boolean(b?.isDefault);
+    if (aDef && !bDef) return -1;
+    if (!aDef && bDef) return 1;
+    return 0;
+  });
 
   const normalizedImages = productImages
     .map((image) => {

@@ -17,6 +17,7 @@ import {
 } from "../../store/slices/wishlistThunk.js";
 
 import productService from "../../services/product.service";
+import categoryService from "../../services/category.service";
 
 const DEFAULT_CATEGORIES = [
   { name: "Fashion", icon: "👗", slug: "fashion" },
@@ -94,6 +95,36 @@ const Home = ({
 
   const [sectionsLoading, setSectionsLoading] = useState(true);
   const [sectionsError, setSectionsError] = useState("");
+
+  // =========================
+  // Live Categories State & Fetch
+  // =========================
+
+  const [categoriesList, setCategoriesList] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getCategories();
+        const data =
+          response?.data?.categories ||
+          (Array.isArray(response?.data) ? response.data : []) ||
+          (Array.isArray(response) ? response : []);
+
+        if (isMounted && data.length > 0) {
+          setCategoriesList(data.filter((c) => c.isActive !== false));
+        }
+      } catch (err) {
+        console.warn("Could not load categories for home page:", err);
+      }
+    };
+
+    fetchCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // =========================
   // Add Product To Cart
@@ -320,8 +351,40 @@ const Home = ({
 
   const activeBanner = banners?.[0] || null;
 
-  const displayCategories =
-    categories.length > 0 ? categories : DEFAULT_CATEGORIES;
+  const categoryIconMap = {
+    fashion: "👗",
+    electronics: "🎧",
+    "home-living": "🏡",
+    "home & living": "🏡",
+    beauty: "🌿",
+    accessories: "⌚",
+    lifestyle: "✨",
+  };
+
+  const displayCategories = useMemo(() => {
+    if (categories && categories.length > 0) return categories;
+    if (categoriesList && categoriesList.length > 0) {
+      return categoriesList.map((cat, idx) => {
+        const slug =
+          cat.slug ||
+          String(cat.name)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-");
+        return {
+          _id: cat._id,
+          name: cat.name,
+          slug: slug,
+          image: cat.image,
+          icon:
+            cat.icon ||
+            categoryIconMap[slug] ||
+            categoryIconMap[String(cat.name).toLowerCase()] ||
+            ["👗", "🎧", "🏡", "🌿", "⌚", "✨"][idx % 6],
+        };
+      });
+    }
+    return DEFAULT_CATEGORIES;
+  }, [categories, categoriesList]);
 
   const productSections = [
     {
@@ -454,13 +517,15 @@ const Home = ({
 
           return (
             <div
-              key={name}
+              key={cat._id || cat.slug || name}
               onClick={() => {
                 if (onCategoryClick) onCategoryClick(cat);
-                else
+                else {
+                  const target = cat.slug || cat._id || cat.name;
                   navigate(
-                    `/products?category=${encodeURIComponent(cat.slug || name)}`,
+                    `/products?category=${encodeURIComponent(target)}`,
                   );
+                }
               }}
               className="category"
             >

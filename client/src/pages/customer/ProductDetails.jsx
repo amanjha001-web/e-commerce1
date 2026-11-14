@@ -18,6 +18,7 @@ import Loader from "../../components/common/Loader";
 import Breadcrumb from "../../components/common/Breadcrumb";
 
 import productService from "../../services/product.service";
+import reviewService from "../../services/review.service";
 
 import { addCartProduct } from "../../store/slices/cartThunk";
 import {
@@ -110,6 +111,9 @@ const ProductDetails = ({
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [reviewsList, setReviewsList] = useState([]);
+  const [ratingSummary, setRatingSummary] = useState(null);
+  const [reviewsLoadingState, setReviewsLoadingState] = useState(false);
 
   const product = productProp || fetchedProduct;
 
@@ -201,6 +205,52 @@ const ProductDetails = ({
       isMounted = false;
     };
   }, [productId, productProp]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const activeId = product?._id || product?.id || productId;
+
+    if (!activeId) return;
+
+    const fetchReviewsAndSummary = async () => {
+      setReviewsLoadingState(true);
+      try {
+        const [reviewsRes, summaryRes] = await Promise.allSettled([
+          reviewService.getProductReviews(activeId),
+          reviewService.getProductRatingSummary(activeId),
+        ]);
+
+        if (!isMounted) return;
+
+        if (reviewsRes.status === "fulfilled" && reviewsRes.value) {
+          const resData = reviewsRes.value?.data || reviewsRes.value;
+          const items = Array.isArray(resData?.items)
+            ? resData.items
+            : Array.isArray(resData?.docs)
+              ? resData.docs
+              : Array.isArray(resData)
+                ? resData
+                : [];
+          setReviewsList(items);
+        }
+
+        if (summaryRes.status === "fulfilled" && summaryRes.value) {
+          const sData = summaryRes.value?.data || summaryRes.value;
+          setRatingSummary(sData);
+        }
+      } catch (err) {
+        console.warn("Could not load reviews or rating summary:", err);
+      } finally {
+        if (isMounted) setReviewsLoadingState(false);
+      }
+    };
+
+    fetchReviewsAndSummary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, product?._id, product?.id]);
 
   const variants = useMemo(() => {
     if (!product?.variants) return [];
@@ -391,12 +441,27 @@ const ProductDetails = ({
           <div className="rating">
             ★★★★★{" "}
             <span className="muted">
-              {(product.rating ?? product.averageRating ?? 4.8).toFixed(1)} ·{" "}
-              {product.reviewCount ??
-                product.totalReviews ??
-                reviews.length ??
-                124}{" "}
-              reviews
+              {(() => {
+                const avg = Number(
+                  ratingSummary?.averageRating ??
+                    product.rating ??
+                    product.averageRating ??
+                    0,
+                );
+                const count = Number(
+                  ratingSummary?.totalReviews ??
+                    product.numReviews ??
+                    product.reviewCount ??
+                    product.totalReviews ??
+                    (reviews.length > 0
+                      ? reviews.length
+                      : reviewsList.length) ??
+                    0,
+                );
+                return `${avg.toFixed(1)} · ${count} ${
+                  count === 1 ? "review" : "reviews"
+                }`;
+              })()}
             </span>
           </div>
 
@@ -405,11 +470,12 @@ const ProductDetails = ({
             ₹{Number(currentPrice).toLocaleString("en-IN")}
             {(() => {
               const rawOld = Number(
-                product.old ||
+                product.compareAtPrice ||
+                  product.old ||
                   product.oldPrice ||
                   product.originalPrice ||
                   product.mrp ||
-                  (product.price > currentPrice ? product.price : 0),
+                  0,
               );
               const fallbackOld =
                 currentPrice >= 100
@@ -417,7 +483,12 @@ const ProductDetails = ({
                   : currentPrice > 0
                     ? Math.round(currentPrice * 1.3)
                     : 0;
-              const displayOld = rawOld > currentPrice ? rawOld : fallbackOld;
+              const displayOld =
+                rawOld > currentPrice
+                  ? rawOld
+                  : product.price > currentPrice
+                    ? product.price
+                    : fallbackOld;
               return displayOld > currentPrice ? (
                 <span className="oldprice">
                   ₹{Number(displayOld).toLocaleString("en-IN")}
@@ -506,10 +577,35 @@ const ProductDetails = ({
           {/* Product Details Panel */}
           <div className="panel mt-5">
             <b className="text-sm text-[var(--text)]">Product details</b>
+            {product.description &&
+            product.shortDescription &&
+            product.description !== product.shortDescription ? (
+              <p className="muted mt-2 mb-2 text-xs leading-relaxed">
+                {product.description}
+              </p>
+            ) : null}
             <p className="muted mt-1 mb-0 text-xs">
               Quality checked · Secure packaging · Delivered in 3–6 business
               days.
             </p>
+            {product.brand?.name && (
+              <p className="muted mt-2 mb-0 text-xs">
+                Brand:{" "}
+                <strong className="text-[var(--text)]">
+                  {product.brand.name}
+                </strong>
+              </p>
+            )}
+            {product.vendorId?.storeName && (
+              <p className="muted mt-1 mb-0 text-xs">
+                Sold by:{" "}
+                <strong className="text-[var(--text)]">
+                  {product.vendorId.storeName}
+                </strong>
+                {product.vendorId.rating > 0 &&
+                  ` (★ ${product.vendorId.rating.toFixed(1)})`}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -523,14 +619,15 @@ const ProductDetails = ({
           </div>
         </div>
 
-        {reviewsLoading ? (
+        {reviewsLoading || reviewsLoadingState ? (
           <div className="panel flex min-h-[160px] items-center justify-center">
             <Loader />
           </div>
         ) : (
           <ProductReviews
             product={product}
-            reviews={reviews}
+            reviews={reviews.length > 0 ? reviews : reviewsList}
+            summary={ratingSummary}
             onSubmitReview={onSubmitReview}
           />
         )}

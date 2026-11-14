@@ -1,7 +1,31 @@
 import { useMemo } from "react";
 
-const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
+const ProductReviews = ({
+  reviews = [],
+  loading = false,
+  onWriteReview,
+  summary = null,
+}) => {
   const reviewStats = useMemo(() => {
+    if (
+      summary &&
+      (summary.totalReviews > 0 ||
+        summary.averageRating > 0 ||
+        summary.breakdown)
+    ) {
+      return {
+        total: Number(summary.totalReviews) || 0,
+        average: Number(summary.averageRating) || 0,
+        distribution: summary.breakdown || {
+          5: 0,
+          4: 0,
+          3: 0,
+          2: 0,
+          1: 0,
+        },
+      };
+    }
+
     const total = reviews.length;
 
     if (!total) {
@@ -46,7 +70,7 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
       average: totalRating / total,
       distribution,
     };
-  }, [reviews]);
+  }, [reviews, summary]);
 
   if (loading) {
     return (
@@ -163,16 +187,31 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
             );
 
             const reviewer =
+              review.userId?.fullName ||
+              review.userId?.name ||
               review.user?.fullName ||
               review.user?.name ||
               review.userName ||
               review.name ||
               "Anonymous";
 
+            const avatarUrl =
+              review.userId?.avatar?.url ||
+              (typeof review.userId?.avatar === "string"
+                ? review.userId?.avatar
+                : null) ||
+              review.user?.avatar?.url ||
+              (typeof review.user?.avatar === "string"
+                ? review.user?.avatar
+                : null);
+
             const comment =
               review.comment || review.content || review.review || "";
 
             const date = review.createdAt || review.date;
+            const isVerified = Boolean(
+              review.isVerifiedPurchase || review.verifiedPurchase,
+            );
 
             return (
               <article
@@ -181,9 +220,17 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
-                      {reviewer.charAt(0).toUpperCase()}
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={reviewer}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)] font-semibold text-white">
+                        {reviewer.charAt(0).toUpperCase()}
+                      </div>
+                    )}
 
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -222,10 +269,36 @@ const ProductReviews = ({ reviews = [], loading = false, onWriteReview }) => {
                   </p>
                 )}
 
-                {review.verifiedPurchase && (
+                {Array.isArray(review.images) && review.images.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {review.images.map((img, i) => {
+                      const imgUrl = typeof img === "string" ? img : img?.url;
+                      if (!imgUrl) return null;
+                      return (
+                        <img
+                          key={img._id || i}
+                          src={imgUrl}
+                          alt="Review attachment"
+                          className="h-16 w-16 rounded-lg border border-[var(--line)] object-cover"
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isVerified && (
                   <span className="mt-3 inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     ✓ Verified Purchase
                   </span>
+                )}
+
+                {review.vendorReply?.comment && (
+                  <div className="mt-3 rounded-lg border-l-2 border-[var(--primary)] bg-[var(--soft)] p-3 text-xs">
+                    <b className="text-[var(--primary)]">Vendor Response:</b>
+                    <p className="mt-1 mb-0 text-[var(--text)]">
+                      {review.vendorReply.comment}
+                    </p>
+                  </div>
                 )}
               </article>
             );
