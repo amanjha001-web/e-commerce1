@@ -65,8 +65,12 @@ const Checkout = ({
           const cData = cartRes?.data?.cart || cartRes?.data || cartRes;
           setInternalCart(cData);
 
-          const aData = addrRes?.data?.addresses || addrRes?.data || addrRes || [];
-          const addrList = Array.isArray(aData) ? aData : [];
+          let addrList = [];
+          if (Array.isArray(addrRes)) addrList = addrRes;
+          else if (Array.isArray(addrRes?.data)) addrList = addrRes.data;
+          else if (Array.isArray(addrRes?.data?.addresses)) addrList = addrRes.data.addresses;
+          else if (Array.isArray(addrRes?.addresses)) addrList = addrRes.addresses;
+          else if (Array.isArray(addrRes?.data?.data)) addrList = addrRes.data.data;
           setInternalAddresses(addrList);
 
           if (addrList.length > 0) {
@@ -87,29 +91,39 @@ const Checkout = ({
   const items = cart?.items || [];
 
   const subtotal = useMemo(() => {
-    if (cart?.subtotal !== undefined) {
-      return Number(cart.subtotal) || 0;
+    const rawSubtotal = Number(cart?.subtotal ?? cart?.totalAmount) || 0;
+    if (rawSubtotal > 0) {
+      return rawSubtotal;
     }
 
     return items.reduce((total, item) => {
+      const prod = item?.product || item;
       const price =
         Number(
           item?.price ??
-            item?.product?.salePrice ??
-            item?.product?.price ??
+            item?.unitPrice ??
+            prod?.price ??
+            prod?.sellingPrice ??
+            prod?.salePrice ??
             0,
         ) || 0;
 
-      return total + price * (Number(item?.quantity) || 0);
+      const qty = Number(item?.quantity ?? item?.qty ?? 1);
+      return total + price * qty;
     }, 0);
   }, [cart, items]);
 
-  let derivedDiscount = Number(cart?.discount || cart?.discountAmount || cart?.coupon?.discount || 0);
-  if (derivedDiscount <= 0 && cart?.coupon?.code && subtotal > 0) {
-    const codeMatch = String(cart.coupon.code).match(/(\d+)/);
+  const couponCodeStr =
+    typeof cart?.coupon === "string" ? cart.coupon : cart?.coupon?.code || "";
+  let derivedDiscount = Number(
+    cart?.discount || cart?.discountAmount || cart?.coupon?.discount || 0,
+  );
+  if (derivedDiscount <= 0 && couponCodeStr && subtotal > 0) {
+    const codeMatch = String(couponCodeStr).match(/(\d+)/);
     if (codeMatch) {
       const rate = parseFloat(codeMatch[1]) || 0;
-      derivedDiscount = rate <= 50 ? (subtotal * rate) / 100 : Math.min(rate, subtotal);
+      derivedDiscount =
+        rate <= 50 ? (subtotal * rate) / 100 : Math.min(rate, subtotal);
     }
   }
   const discount = Math.max(0, derivedDiscount);
@@ -137,8 +151,12 @@ const Checkout = ({
         const res = await addressService.addAddress(data);
         const newAddr = res?.data?.address || res?.data || data;
         const addrRes = await addressService.getAddresses();
-        const aData = addrRes?.data?.addresses || addrRes?.data || [];
-        setInternalAddresses(Array.isArray(aData) ? aData : [newAddr]);
+        let aList = [];
+        if (Array.isArray(addrRes)) aList = addrRes;
+        else if (Array.isArray(addrRes?.data)) aList = addrRes.data;
+        else if (Array.isArray(addrRes?.data?.addresses)) aList = addrRes.data.addresses;
+        else if (Array.isArray(addrRes?.addresses)) aList = addrRes.addresses;
+        setInternalAddresses(aList.length > 0 ? aList : [newAddr]);
         setInternalSelectedAddress(newAddr);
         toast.success("Delivery address added");
       } catch (err) {
@@ -176,7 +194,18 @@ const Checkout = ({
 
       const addressId = selectedAddress._id || selectedAddress.id;
       const orderPayload = {
+        addressId,
         shippingAddressId: addressId,
+        shippingAddress: {
+          fullName: selectedAddress.fullName || selectedAddress.name || "",
+          phone: selectedAddress.phone || "",
+          street: selectedAddress.street || selectedAddress.addressLine1 || "",
+          apartment: selectedAddress.apartment || selectedAddress.addressLine2 || "",
+          city: selectedAddress.city || "",
+          state: selectedAddress.state || "",
+          postalCode: selectedAddress.postalCode || selectedAddress.zipCode || "",
+          country: selectedAddress.country || "India",
+        },
         paymentMethod: selectedPaymentMethod.toLowerCase(),
         customerNote: "Placed via ShopSphere Checkout",
       };
@@ -194,22 +223,25 @@ const Checkout = ({
       if (selectedPaymentMethod.toLowerCase() === "cod") {
         navigate(`/orders/${orderId}`);
       } else {
-        // Online Payment Flow (Razorpay)
+        // Online Payment Flow (UPI / Cards / Razorpay)
         try {
           const payRes = await paymentService.createPaymentOrder(orderId);
           const payData = payRes?.data || payRes;
+          const rzpOrderId = payData?.razorpayOrderId || payData?.orderId || payData?.id;
+          const rzpKey = payData?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholder";
 
-          if (window.Razorpay && payData?.keyId && payData?.orderId) {
+          const openRazorpay = () => {
             const options = {
-              key: payData.keyId,
-              amount: payData.amount,
+              key: rzpKey,
+              amount: payData.amount || Math.round(total * 100),
               currency: payData.currency || "INR",
               name: "ShopSphere",
               description: `Order #${orderId}`,
-              order_id: payData.orderId,
+              order_id: rzpOrderId,
               handler: async (response) => {
                 try {
                   await paymentService.verifyPayment({
+                    orderId,
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_payment_id: response.razorpay_payment_id,
                     razorpay_signature: response.razorpay_signature,
@@ -228,12 +260,26 @@ const Checkout = ({
               theme: { color: "#881337" },
             };
             const rzp = new window.Razorpay(options);
+            rzp.on("payment.failed", (err) => {
+              toast.error(err?.error?.description || "Payment failed");
+            });
             rzp.open();
+          };
+
+          if (window.Razorpay) {
+            openRazorpay();
           } else {
-            // Test or fallback
-            navigate(`/orders/${orderId}`);
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => openRazorpay();
+            script.onerror = () => {
+              toast.error("Could not load payment gateway. Redirecting to order details.");
+              navigate(`/orders/${orderId}`);
+            };
+            document.body.appendChild(script);
           }
-        } catch {
+        } catch (payErr) {
+          console.error("Payment initiation error:", payErr);
           navigate(`/orders/${orderId}`);
         }
       }
@@ -392,7 +438,11 @@ const Checkout = ({
                 }
                 className="primarybtn mt-6 w-full !py-3 !text-sm !rounded-xl"
               >
-                {placingOrder ? "Placing order..." : "Place order →"}
+                {placingOrder
+                  ? "Processing order..."
+                  : selectedPaymentMethod?.toLowerCase() === "cod"
+                  ? `Place COD order (₹${total.toLocaleString("en-IN", { maximumFractionDigits: 2 })})`
+                  : `Pay ₹${total.toLocaleString("en-IN", { maximumFractionDigits: 2 })} via UPI / Razorpay →`}
               </button>
 
               <p className="mt-3 text-center text-[11px] text-[var(--muted)] leading-relaxed">

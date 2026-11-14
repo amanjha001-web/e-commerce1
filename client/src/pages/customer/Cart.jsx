@@ -137,9 +137,10 @@ const Cart = () => {
   const activeSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number(subtotal) || 0;
 
   // Authoritative discount derivation: from state discount, coupon.discount, or coupon code (e.g. SAVE15 -> 15%)
+  const couponCodeStr = typeof coupon === "string" ? coupon : coupon?.code || "";
   let derivedDiscount = Number(discount) || Number(coupon?.discount) || 0;
-  if (derivedDiscount <= 0 && coupon?.code && activeSubtotal > 0) {
-    const codeMatch = String(coupon.code).match(/(\d+)/);
+  if (derivedDiscount <= 0 && couponCodeStr && activeSubtotal > 0) {
+    const codeMatch = String(couponCodeStr).match(/(\d+)/);
     if (codeMatch) {
       const rate = parseFloat(codeMatch[1]) || 0;
       derivedDiscount = rate <= 50 ? (activeSubtotal * rate) / 100 : Math.min(rate, activeSubtotal);

@@ -32,7 +32,9 @@ const OrderSummary = ({
   );
 
   const finalSubtotal =
-    subtotal !== undefined ? Number(subtotal) : calculatedSubtotal;
+    subtotal !== undefined && Number(subtotal) > 0
+      ? Number(subtotal)
+      : calculatedSubtotal;
 
   const finalDiscount = Number(discount) || 0;
 

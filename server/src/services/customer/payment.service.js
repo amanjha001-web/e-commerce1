@@ -7,6 +7,7 @@ import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { createRazorpayOrder, createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
 import { verifyPaymentSignature } from '../../integrations/razorpay/razorpay.utils.js';
+import { env } from '../../config/env.js';
 
 export class CustomerPaymentService {
   async createPaymentOrder(userId, orderId) {
@@ -46,6 +47,7 @@ export class CustomerPaymentService {
     await order.save();
 
     return {
+      keyId: env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
       razorpayOrderId: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,

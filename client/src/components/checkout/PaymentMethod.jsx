@@ -1,4 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const DEFAULT_METHODS = [
+  {
+    id: "razorpay",
+    name: "Razorpay (UPI, Cards, Net Banking)",
+    description: "Instant pay via UPI (GPay, PhonePe, Paytm, QR), Debit/Credit Cards & Net Banking",
+    icon: "💳",
+  },
+  {
+    id: "cod",
+    name: "Cash on Delivery (COD)",
+    description: "Pay with cash or UPI upon delivery at your doorstep",
+    icon: "💵",
+  },
+];
 
 const PaymentMethod = ({
   value,
@@ -6,24 +21,17 @@ const PaymentMethod = ({
   onContinue,
   onBack,
   loading = false,
-  methods = [
-    {
-      id: "razorpay",
-      name: "Razorpay",
-      description: "UPI, Cards, Net Banking & Wallets",
-      icon: "💳",
-    },
-    {
-      id: "cod",
-      name: "Cash on Delivery",
-      description: "Pay when your order arrives",
-      icon: "💵",
-    },
-  ],
+  methods = DEFAULT_METHODS,
 }) => {
   const [selectedMethod, setSelectedMethod] = useState(
-    value || methods[0]?.id || "",
+    (value || methods[0]?.id || "razorpay").toLowerCase(),
   );
+
+  useEffect(() => {
+    if (value) {
+      setSelectedMethod(String(value).toLowerCase());
+    }
+  }, [value]);
 
   const handleSelect = (methodId) => {
     setSelectedMethod(methodId);
@@ -39,14 +47,14 @@ const PaymentMethod = ({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-5 dark:border-gray-800 dark:bg-card">
       {/* Header */}
       <div className="mb-5">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+        <h2 className="text-base font-bold text-[var(--text)] dark:text-white">
           Payment Method
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-[var(--muted)]">
           Choose how you want to pay for your order.
         </p>
       </div>
@@ -54,25 +62,25 @@ const PaymentMethod = ({
       {/* Methods */}
       <div className="space-y-3">
         {methods.map((method) => {
-          const isSelected = selectedMethod === method.id;
+          const isSelected = selectedMethod === method.id.toLowerCase();
 
           return (
             <button
               key={method.id}
               type="button"
-              onClick={() => handleSelect(method.id)}
+              onClick={() => handleSelect(method.id.toLowerCase())}
               disabled={loading || method.disabled}
-              className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition ${
+              className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition cursor-pointer ${
                 isSelected
-                  ? "border-secondary bg-secondary/10 dark:border-secondary/50 dark:bg-secondary/30"
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:bg-gray-800"
+                  ? "border-[var(--primary)] bg-[var(--soft)]/40 ring-1 ring-[var(--primary)]/30 dark:bg-card"
+                  : "border-[var(--line)] bg-white hover:border-[var(--primary)]/40 hover:bg-gray-50/50 dark:border-gray-800 dark:bg-card dark:hover:bg-gray-800/40"
               } ${method.disabled ? "cursor-not-allowed opacity-50" : ""}`}
             >
               {/* Icon */}
               <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl ${
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl ${
                   isSelected
-                    ? "bg-secondary/20 dark:bg-secondary/30"
+                    ? "bg-[var(--soft)] text-[var(--primary)]"
                     : "bg-gray-100 dark:bg-gray-800"
                 }`}
               >
@@ -81,12 +89,12 @@ const PaymentMethod = ({
 
               {/* Details */}
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-bold text-[var(--text)] dark:text-white">
                   {method.name}
                 </p>
 
                 {method.description && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">
                     {method.description}
                   </p>
                 )}
@@ -94,10 +102,10 @@ const PaymentMethod = ({
 
               {/* Radio */}
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${
                   isSelected
-                    ? "border-primary bg-primary dark:border-primary dark:bg-primary"
-                    : "border-gray-300 dark:border-gray-600"
+                    ? "border-[var(--primary)] bg-[var(--primary)]"
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
                 }`}
               >
                 {isSelected && (
@@ -110,15 +118,15 @@ const PaymentMethod = ({
       </div>
 
       {/* Security */}
-      <div className="mt-5 flex items-start gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/60">
+      <div className="mt-5 flex items-start gap-3 rounded-xl border border-[var(--line)]/60 bg-[var(--soft)]/30 p-3.5 dark:bg-gray-800/60">
         <span className="text-base">🔒</span>
 
         <div>
-          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+          <p className="text-xs font-bold text-[var(--text)] dark:text-gray-300">
             Secure Payment
           </p>
 
-          <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
             Your payment information is protected and securely processed.
           </p>
         </div>
@@ -131,7 +139,7 @@ const PaymentMethod = ({
             type="button"
             onClick={onBack}
             disabled={loading}
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="btnsm"
           >
             Back
           </button>
@@ -144,7 +152,7 @@ const PaymentMethod = ({
             type="button"
             onClick={handleContinue}
             disabled={loading || !selectedMethod}
-            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="primarybtn !py-2 !px-5 !text-xs !rounded-xl"
           >
             {loading ? "Processing..." : "Continue"}
           </button>

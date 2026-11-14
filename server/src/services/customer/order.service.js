@@ -15,15 +15,16 @@ import { sendOrderConfirmationEmail } from '../../integrations/email/email.clien
 
 export class CustomerOrderService {
   async createOrder(userId, orderPayload, user) {
-    const cart = await Cart.findOne({ userId }).populate('items.product');
+    const cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] }).populate('items.product');
     if (!cart || cart.items.length === 0) {
       throw ApiError.badRequest('Cannot place an order with an empty cart');
     }
 
     // Determine Shipping Address
     let shippingAddress = orderPayload.shippingAddress;
-    if (!shippingAddress && orderPayload.addressId) {
-      const addr = await Address.findOne({ _id: orderPayload.addressId, userId });
+    const targetAddressId = orderPayload.addressId || orderPayload.shippingAddressId;
+    if (!shippingAddress && targetAddressId) {
+      const addr = await Address.findOne({ _id: targetAddressId, $or: [{ userId }, { user: userId }] });
       if (addr) {
         shippingAddress = {
           fullName: addr.fullName,
@@ -38,7 +39,7 @@ export class CustomerOrderService {
       }
     }
 
-    if (!shippingAddress || !shippingAddress.street || !shippingAddress.city) {
+    if (!shippingAddress || (!shippingAddress.street && !shippingAddress.addressLine1) || !shippingAddress.city) {
       throw ApiError.badRequest('A valid shipping address is required');
     }
 
@@ -47,7 +48,8 @@ export class CustomerOrderService {
     const orderItems = [];
 
     for (const item of cart.items) {
-      const product = await Product.findById(item.product._id);
+      const productId = item.product?._id || item.product;
+      const product = await Product.findById(productId);
       if (!product || !product.isActive) {
         throw ApiError.badRequest(`Product '${product?.name || 'Item'}' is currently unavailable`);
       }

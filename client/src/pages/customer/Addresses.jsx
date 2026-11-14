@@ -33,8 +33,13 @@ const Addresses = ({
     try {
       setInternalLoading(true);
       const res = await addressService.getAddresses();
-      const list = res?.data?.addresses || res?.data || res?.addresses || [];
-      setInternalAddresses(Array.isArray(list) ? list : []);
+      let list = [];
+      if (Array.isArray(res)) list = res;
+      else if (Array.isArray(res?.data)) list = res.data;
+      else if (Array.isArray(res?.data?.addresses)) list = res.data.addresses;
+      else if (Array.isArray(res?.addresses)) list = res.addresses;
+      else if (Array.isArray(res?.data?.data)) list = res.data.data;
+      setInternalAddresses(list);
     } catch (err) {
       console.error("Failed to fetch addresses:", err);
       setInternalAddresses([]);

@@ -3,11 +3,11 @@ import { ApiError } from '../../utils/apiError.js';
 
 export class AddressService {
   async getAddresses(userId) {
-    return Address.find({ userId }).sort({ isDefault: -1, createdAt: -1 });
+    return Address.find({ $or: [{ userId }, { user: userId }] }).sort({ isDefault: -1, createdAt: -1 });
   }
 
   async getAddressById(addressId, userId) {
-    const address = await Address.findOne({ _id: addressId, userId });
+    const address = await Address.findOne({ _id: addressId, $or: [{ userId }, { user: userId }] });
     if (!address) throw ApiError.notFound('Address not found');
     return address;
   }
@@ -46,11 +46,11 @@ export class AddressService {
     }
 
     if (normalized.isDefault) {
-      await Address.updateMany({ userId, _id: { $ne: addressId } }, { isDefault: false });
+      await Address.updateMany({ $or: [{ userId }, { user: userId }], _id: { $ne: addressId } }, { isDefault: false });
     }
 
     const address = await Address.findOneAndUpdate(
-      { _id: addressId, userId },
+      { _id: addressId, $or: [{ userId }, { user: userId }] },
       normalized,
       { new: true, runValidators: true }
     );
@@ -59,11 +59,11 @@ export class AddressService {
   }
 
   async deleteAddress(addressId, userId) {
-    const address = await Address.findOneAndDelete({ _id: addressId, userId });
+    const address = await Address.findOneAndDelete({ _id: addressId, $or: [{ userId }, { user: userId }] });
     if (!address) throw ApiError.notFound('Address not found');
 
     if (address.isDefault) {
-      const nextAddr = await Address.findOne({ userId });
+      const nextAddr = await Address.findOne({ $or: [{ userId }, { user: userId }] });
       if (nextAddr) {
         nextAddr.isDefault = true;
         await nextAddr.save();
@@ -73,9 +73,9 @@ export class AddressService {
   }
 
   async setDefaultAddress(addressId, userId) {
-    await Address.updateMany({ userId }, { isDefault: false });
+    await Address.updateMany({ $or: [{ userId }, { user: userId }] }, { isDefault: false });
     const address = await Address.findOneAndUpdate(
-      { _id: addressId, userId },
+      { _id: addressId, $or: [{ userId }, { user: userId }] },
       { isDefault: true },
       { new: true }
     );
@@ -84,7 +84,7 @@ export class AddressService {
   }
 
   async getDefaultAddress(userId) {
-    const address = await Address.findOne({ userId, isDefault: true });
+    const address = await Address.findOne({ $or: [{ userId }, { user: userId }], isDefault: true });
     return address || null;
   }
 }
