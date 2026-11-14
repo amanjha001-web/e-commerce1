@@ -154,18 +154,31 @@ const Profile = () => {
     }
   };
 
-  // 4. Request Verification for Current Email (if unverified)
+  // 4. Request Verification for Email (Current or Pending)
   const handleVerifyCurrentEmail = async () => {
     try {
       setOtpLoading(true);
       setOtpError("");
-      await authService.sendVerificationOTP({ email: user.email });
-      setOtpTargetEmail(user.email);
-      setOtpMode("current_email_verify");
+      const target = formData.email.trim() || user?.email;
+      if (!target) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+
+      const emailChanged = target.toLowerCase() !== (user?.email || "").toLowerCase();
+      if (emailChanged) {
+        await userService.requestEmailUpdate(target);
+        setOtpMode("email_update");
+      } else {
+        await authService.sendVerificationOTP({ email: target });
+        setOtpMode("current_email_verify");
+      }
+
+      setOtpTargetEmail(target);
       setOtpCode("");
       setShowOtpModal(true);
       setResendCooldown(60);
-      toast.info(`Verification code sent to ${user.email}`);
+      toast.info(`Verification code sent to ${target}`);
     } catch (err) {
       console.error("Failed to send OTP:", err);
       toast.error(err.response?.data?.message || "Failed to send verification code.");
@@ -208,15 +221,18 @@ const Profile = () => {
     // Direct profile fields update (Name, Phone, Username, Gender, DOB, Bio)
     try {
       setSaving(true);
-      const res = await userService.updateProfile({
+      const payload = {
         name: formData.fullName.trim(),
         fullName: formData.fullName.trim(),
-        username: formData.username.trim() || undefined,
         phone: formData.phone.trim(),
         gender: formData.gender,
         dateOfBirth: formData.dateOfBirth || null,
         bio: formData.bio.trim(),
-      });
+      };
+      if (formData.username && formData.username.trim() !== "") {
+        payload.username = formData.username.trim();
+      }
+      const res = await userService.updateProfile(payload);
 
       const updatedUser = res?.data || res;
       if (updatedUser) {
@@ -250,17 +266,20 @@ const Profile = () => {
       setOtpError("");
 
       if (otpMode === "email_update") {
-        const res = await userService.verifyEmailUpdate({
+        const payload = {
           otp: otpCode.trim(),
           email: otpTargetEmail,
           name: formData.fullName.trim(),
           fullName: formData.fullName.trim(),
-          username: formData.username.trim() || undefined,
           phone: formData.phone.trim(),
           gender: formData.gender,
           dateOfBirth: formData.dateOfBirth || null,
           bio: formData.bio.trim(),
-        });
+        };
+        if (formData.username && formData.username.trim() !== "") {
+          payload.username = formData.username.trim();
+        }
+        const res = await userService.verifyEmailUpdate(payload);
 
         const updatedUser = res?.data || res;
         if (updatedUser) {
@@ -615,7 +634,7 @@ const Profile = () => {
                   >
                     Email Address <span className="text-[#dc2626]">*</span>
                   </label>
-                  {user?.isEmailVerified ? (
+                  {user?.isEmailVerified && formData.email.trim().toLowerCase() === (user?.email || "").trim().toLowerCase() ? (
                     <span className="text-[10px] font-bold text-[#059669]">
                       ✓ Verified
                     </span>
@@ -625,16 +644,37 @@ const Profile = () => {
                     </span>
                   )}
                 </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your.email@example.com"
-                  className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
-                />
+
+                <div className="relative mt-1.5 flex items-center">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="your.email@example.com"
+                    className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 pr-32 text-sm text-[var(--text)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card"
+                  />
+                  <div className="absolute right-1.5">
+                    {user?.isEmailVerified && formData.email.trim().toLowerCase() === (user?.email || "").trim().toLowerCase() ? (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-[#ecfdf5] px-2.5 py-1 text-[11px] font-bold text-[#059669] border border-[#a7f3d0]">
+                        ✓ Verified
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleVerifyCurrentEmail}
+                        disabled={otpLoading}
+                        className="inline-flex items-center gap-1 rounded-lg bg-[var(--primary)] px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:opacity-90 transition disabled:opacity-50"
+                        title="Click to verify this email with OTP"
+                      >
+                        {otpLoading ? "Sending..." : "✉ Verify Email"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {formData.email.trim().toLowerCase() !== (user?.email || "").trim().toLowerCase() && (
                   <p className="mt-1 text-[11px] font-semibold text-[#881337]">
                     ℹ️ Verification OTP will be sent to confirm this new email.

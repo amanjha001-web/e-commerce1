@@ -30,11 +30,18 @@ export class CustomerProfileService {
     }
 
     // Username
-    if (updateData.username && updateData.username.trim().toLowerCase() !== user.username) {
-      const normalizedUsername = updateData.username.trim().toLowerCase();
-      const existing = await User.findOne({ username: normalizedUsername, _id: { $ne: userId } });
-      if (existing) throw ApiError.conflict('Username is already taken');
-      user.username = normalizedUsername;
+    if (updateData.username !== undefined) {
+      const cleanUsername = String(updateData.username || '').trim().toLowerCase();
+      if (cleanUsername && cleanUsername !== user.username) {
+        const existing = await User.findOne({ username: cleanUsername, _id: { $ne: userId } });
+        if (existing) throw ApiError.conflict('Username is already taken');
+        user.username = cleanUsername;
+      } else if (!cleanUsername) {
+        user.username = undefined;
+      }
+    }
+    if (!user.username || String(user.username).trim() === '') {
+      user.username = undefined;
     }
 
     // Gender
@@ -86,7 +93,16 @@ export class CustomerProfileService {
       }
     }
 
-    await user.save();
+    try {
+      await user.save();
+    } catch (err) {
+      if (err.code === 11000 && (err.keyPattern?.username || err.message?.includes('username'))) {
+        await User.updateOne({ _id: userId }, { $unset: { username: 1 } });
+        const reloaded = await User.findById(userId);
+        return sanitizeUser(reloaded);
+      }
+      throw err;
+    }
     return sanitizeUser(user);
   }
 
@@ -164,7 +180,16 @@ export class CustomerProfileService {
     }
     if (updateData.bio !== undefined) user.bio = String(updateData.bio).trim();
 
-    await user.save();
+    try {
+      await user.save();
+    } catch (err) {
+      if (err.code === 11000 && (err.keyPattern?.username || err.message?.includes('username'))) {
+        await User.updateOne({ _id: userId }, { $unset: { username: 1 } });
+        const reloaded = await User.findById(userId);
+        return sanitizeUser(reloaded);
+      }
+      throw err;
+    }
     return sanitizeUser(user);
   }
 

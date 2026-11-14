@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
       lowercase: true,
+      set: (val) => (!val || String(val).trim() === '' || String(val).trim() === 'null' ? undefined : String(val).trim().toLowerCase()),
     },
     email: {
       type: String,
@@ -136,6 +137,9 @@ userSchema.pre('validate', function (next) {
   if (!this.name && !this.fullName) {
     this.name = this.username || (this.email ? this.email.split('@')[0] : 'User');
     this.fullName = this.name;
+  }
+  if (!this.username || String(this.username).trim() === '' || this.username === 'null') {
+    this.username = undefined;
   }
   next();
 });

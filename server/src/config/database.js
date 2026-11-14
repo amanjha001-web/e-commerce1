@@ -24,6 +24,17 @@ export const connectDatabase = async (uri = env.MONGODB_URI) => {
     try {
       const db = mongoose.connection.db;
       if (db) {
+        // Sanitize users collection so sparse unique index on username never hits duplicate null or empty string
+        try {
+          const userCol = db.collection('users');
+          await userCol.updateMany(
+            { $or: [{ username: null }, { username: '' }, { username: 'null' }] },
+            { $unset: { username: '' } }
+          );
+        } catch {
+          // Safe non-blocking
+        }
+
         const collections = ['carts', 'wishlists'];
         for (const colName of collections) {
           try {
