@@ -46,12 +46,28 @@ export class CartService {
   }
 
   async getCart(userId) {
-    let cart = await Cart.findOne({ userId })
+    let cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] })
       .populate('items.product', 'name slug images price stock isActive status vendorId')
       .populate('items.variant', 'title price stock sku attributes');
 
     if (!cart) {
-      cart = await Cart.create({ userId, items: [] });
+      try {
+        cart = await Cart.create({ userId, user: userId, items: [] });
+      } catch (err) {
+        if (err.code === 11000) {
+          cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] })
+            .populate('items.product', 'name slug images price stock isActive status vendorId')
+            .populate('items.variant', 'title price stock sku attributes');
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (cart && (!cart.userId || !cart.user)) {
+      cart.userId = cart.userId || cart.user || userId;
+      cart.user = cart.user || cart.userId || userId;
+      await cart.save().catch(() => {});
     }
 
     return cart;
@@ -78,9 +94,17 @@ export class CartService {
       throw ApiError.badRequest(`Insufficient stock. Only ${availableStock} items available.`);
     }
 
-    let cart = await Cart.findOne({ userId });
+    let cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (!cart) {
-      cart = new Cart({ userId, items: [] });
+      try {
+        cart = new Cart({ userId, user: userId, items: [] });
+      } catch (err) {
+        if (err.code === 11000) {
+          cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
+        } else {
+          throw err;
+        }
+      }
     }
 
     const existingIndex = cart.items.findIndex(
@@ -111,7 +135,7 @@ export class CartService {
   }
 
   async updateCartItem(userId, productId, { quantity, variant = null }) {
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (!cart) throw ApiError.notFound('Cart not found');
 
     const item = cart.items.find(
@@ -134,7 +158,7 @@ export class CartService {
   }
 
   async removeCartItem(userId, productId, variant = null) {
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (!cart) throw ApiError.notFound('Cart not found');
 
     cart.items = cart.items.filter(
@@ -150,7 +174,7 @@ export class CartService {
   }
 
   async clearCart(userId) {
-    let cart = await Cart.findOne({ userId });
+    let cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (cart) {
       cart.items = [];
       cart.coupon = undefined;
@@ -163,7 +187,7 @@ export class CartService {
   }
 
   async applyCoupon(userId, couponCode) {
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (!cart || cart.items.length === 0) {
       throw ApiError.badRequest('Cart is empty');
     }
@@ -187,7 +211,7 @@ export class CartService {
   }
 
   async removeCoupon(userId) {
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ $or: [{ userId }, { user: userId }] });
     if (!cart) throw ApiError.notFound('Cart not found');
 
     cart.coupon = undefined;

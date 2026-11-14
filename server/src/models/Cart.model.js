@@ -28,8 +28,12 @@ const cartSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      unique: true,
+      index: true,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
     },
     items: [cartItemSchema],
     coupon: {
@@ -54,6 +58,15 @@ const cartSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+cartSchema.pre('validate', function (next) {
+  if (this.userId && !this.user) {
+    this.user = this.userId;
+  } else if (this.user && !this.userId) {
+    this.userId = this.user;
+  }
+  next();
+});
 
 export const Cart = mongoose.model('Cart', cartSchema);
 export default Cart;

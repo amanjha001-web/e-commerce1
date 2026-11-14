@@ -20,6 +20,30 @@ export const connectDatabase = async (uri = env.MONGODB_URI) => {
     isConnected = !!conn.connections[0].readyState;
     logger.info(`MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
 
+    // Drop legacy conflicting unique indexes (e.g. user_1 vs userId_1)
+    try {
+      const db = mongoose.connection.db;
+      if (db) {
+        const collections = ['carts', 'wishlists'];
+        for (const colName of collections) {
+          try {
+            const col = db.collection(colName);
+            const indexes = await col.indexes();
+            for (const idx of indexes) {
+              if (idx.name === 'user_1' || (idx.key && idx.key.user && idx.unique)) {
+                await col.dropIndex(idx.name);
+                logger.info(`Dropped legacy conflicting unique index '${idx.name}' on '${colName}'`);
+              }
+            }
+          } catch {
+            // Ignore if index doesn't exist or collection is empty
+          }
+        }
+      }
+    } catch {
+      // Safe non-blocking
+    }
+
     mongoose.connection.on('error', (err) => {
       logger.error('MongoDB connection error:', err);
     });
