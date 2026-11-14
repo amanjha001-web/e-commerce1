@@ -18,6 +18,7 @@ import { addCartProduct } from "../../store/slices/cartThunk.js";
 
 import {
   setFilter,
+  setFilters,
   setPage,
   clearFilters,
 } from "../../store/slices/productSlice.js";
@@ -173,37 +174,47 @@ const Products = ({
   }, [wishlist]);
 
   /*
-   * Sync category query param if present
+   * Sync category query param on initial load or URL change
    */
   useEffect(() => {
     const urlCategory = searchParams.get("category");
-    if (urlCategory && urlCategory !== filters.category) {
+    if (urlCategory) {
       dispatch(setFilter({ name: "category", value: urlCategory }));
     }
-  }, [searchParams, dispatch, filters.category]);
+  }, [searchParams, dispatch]);
 
   /*
    * Fetch Products
    */
   useEffect(() => {
-    const activeCategory =
-      filters.category ||
-      (Array.isArray(filters.categories) && filters.categories.length > 0
-        ? filters.categories.join(",")
-        : "");
+    const categoryList = [];
+    if (filters.category && filters.category !== "All") {
+      categoryList.push(filters.category);
+    }
+    if (Array.isArray(filters.categories)) {
+      filters.categories.forEach((c) => {
+        if (c && c !== "All" && !categoryList.includes(c)) categoryList.push(c);
+      });
+    }
+    const activeCategory = categoryList.join(",");
 
-    const activeBrand =
-      filters.brand ||
-      (Array.isArray(filters.brands) && filters.brands.length > 0
-        ? filters.brands.join(",")
-        : "");
+    const brandList = [];
+    if (filters.brand && filters.brand !== "All") {
+      brandList.push(filters.brand);
+    }
+    if (Array.isArray(filters.brands)) {
+      filters.brands.forEach((b) => {
+        if (b && b !== "All" && !brandList.includes(b)) brandList.push(b);
+      });
+    }
+    const activeBrand = brandList.join(",");
 
     dispatch(
       fetchProducts({
         page: pagination.page || 1,
         limit: pagination.limit || 12,
 
-        search: filters.search || "",
+        search: filters.search || search || "",
         category: activeCategory,
         brand: activeBrand,
 
@@ -213,7 +224,8 @@ const Products = ({
 
         rating: filters.rating || "",
 
-        sortBy: filters.sort || "latest",
+        sortBy: filters.sort || sort || "latest",
+        sort: filters.sort || sort || "latest",
       }),
     );
   }, [
@@ -230,6 +242,7 @@ const Products = ({
     filters.inStock,
     filters.rating,
     filters.sort,
+    sort,
   ]);
 
   /*
@@ -264,11 +277,13 @@ const Products = ({
         value: normalized,
       }),
     );
-    if (!normalized && searchParams.has("category")) {
-      const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(searchParams);
+    if (normalized) {
+      next.set("category", normalized);
+    } else {
       next.delete("category");
-      setSearchParams(next);
     }
+    setSearchParams(next);
   };
 
   /*
@@ -298,14 +313,7 @@ const Products = ({
       return;
     }
 
-    Object.entries(filterData).forEach(([name, value]) => {
-      dispatch(
-        setFilter({
-          name,
-          value,
-        }),
-      );
-    });
+    dispatch(setFilters(filterData));
   };
 
   /*
@@ -362,6 +370,83 @@ const Products = ({
     }
     return DEFAULT_CATEGORIES.map((name) => ({ label: name, value: name }));
   }, [availableCategories]);
+
+  /*
+   * Client-side sort and filter guarantee
+   */
+  const displayProducts = useMemo(() => {
+    let list = Array.isArray(products) ? [...products] : [];
+
+    if (filters.inStock === true) {
+      list = list.filter((p) => {
+        const st = Number(p.stock ?? p.quantity ?? 1);
+        return st > 0 && p.inStock !== false && p.isActive !== false;
+      });
+    }
+
+    if (filters.minPrice !== "" && filters.minPrice !== undefined) {
+      const min = Number(filters.minPrice);
+      if (!isNaN(min)) {
+        list = list.filter((p) => Number(p.price || 0) >= min);
+      }
+    }
+
+    if (filters.maxPrice !== "" && filters.maxPrice !== undefined) {
+      const max = Number(filters.maxPrice);
+      if (!isNaN(max)) {
+        list = list.filter((p) => Number(p.price || 0) <= max);
+      }
+    }
+
+    if (filters.rating !== "" && filters.rating !== undefined) {
+      const r = Number(filters.rating);
+      if (!isNaN(r) && r > 0) {
+        list = list.filter(
+          (p) => Number(p.rating ?? p.averageRating ?? 0) >= r,
+        );
+      }
+    }
+
+    const sortVal = String(sort || filters.sort || "latest").toLowerCase();
+
+    if (sortVal === "price_asc" || sortVal.includes("low to high")) {
+      list.sort((a, b) => {
+        const pA = Number(a?.discountPrice || a?.salePrice || a?.price || 0);
+        const pB = Number(b?.discountPrice || b?.salePrice || b?.price || 0);
+        return pA - pB;
+      });
+    } else if (sortVal === "price_desc" || sortVal.includes("high to low")) {
+      list.sort((a, b) => {
+        const pA = Number(a?.discountPrice || a?.salePrice || a?.price || 0);
+        const pB = Number(b?.discountPrice || b?.salePrice || b?.price || 0);
+        return pB - pA;
+      });
+    } else if (sortVal === "rating" || sortVal.includes("rating")) {
+      list.sort((a, b) => {
+        const rA = Number(a?.rating ?? a?.averageRating ?? 0);
+        const rB = Number(b?.rating ?? b?.averageRating ?? 0);
+        return rB - rA;
+      });
+    } else if (sortVal === "name_asc" || sortVal.includes("a to z")) {
+      list.sort((a, b) =>
+        String(a?.name || "").localeCompare(String(b?.name || "")),
+      );
+    } else if (sortVal === "name_desc" || sortVal.includes("z to a")) {
+      list.sort((a, b) =>
+        String(b?.name || "").localeCompare(String(a?.name || "")),
+      );
+    }
+
+    return list;
+  }, [
+    products,
+    sort,
+    filters.sort,
+    filters.inStock,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.rating,
+  ]);
 
   /*
    * Error
@@ -537,7 +622,7 @@ const Products = ({
             onWishlist={handleWishlist}
             wishlistIds={wishlistIds}
           />
-        ) : products.length === 0 ? (
+        ) : displayProducts.length === 0 ? (
           <div className="panel py-12 text-center">
             <EmptyState
               title="No products found"
@@ -563,7 +648,7 @@ const Products = ({
           </div>
         ) : (
           <ProductGrid
-            products={products}
+            products={displayProducts}
             onProductSelect={onProductSelect}
             onAddToCart={handleAddToCart}
             onWishlist={handleWishlist}

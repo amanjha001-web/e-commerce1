@@ -53,7 +53,14 @@ export const parsePagination = (query) => {
     case 'rating_desc':
     case 'rating-high':
     case 'top-rated':
+    case 'customer rating':
       sortObj = { rating: -1, createdAt: -1 };
+      break;
+    case 'popular':
+    case 'bestseller':
+    case 'most-popular':
+    case 'most popular':
+      sortObj = { isBestSeller: -1, numReviews: -1, rating: -1, createdAt: -1 };
       break;
     case 'oldest':
       sortObj = { createdAt: 1 };

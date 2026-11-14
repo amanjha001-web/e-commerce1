@@ -40,14 +40,17 @@ export class ProductService {
         if (mongoose.Types.ObjectId.isValid(trimmed) && String(new mongoose.Types.ObjectId(trimmed)) === trimmed) {
           objectIds.push(new mongoose.Types.ObjectId(trimmed));
         } else {
-          const matched = await Category.findOne({
+          const safeStr = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const matched = await Category.find({
             $or: [
               { slug: trimmed.toLowerCase() },
-              { name: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+              { slug: { $regex: new RegExp(`^${safeStr}$`, 'i') } },
+              { name: { $regex: new RegExp(`^${safeStr}$`, 'i') } },
+              { name: { $regex: new RegExp(safeStr, 'i') } },
             ],
           }).select('_id');
-          if (matched) {
-            objectIds.push(matched._id);
+          if (matched && matched.length > 0) {
+            matched.forEach((m) => objectIds.push(m._id));
           }
         }
       }
@@ -81,14 +84,17 @@ export class ProductService {
         if (mongoose.Types.ObjectId.isValid(trimmed) && String(new mongoose.Types.ObjectId(trimmed)) === trimmed) {
           brandIds.push(new mongoose.Types.ObjectId(trimmed));
         } else {
-          const matched = await Brand.findOne({
+          const safeStr = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const matched = await Brand.find({
             $or: [
               { slug: trimmed.toLowerCase() },
-              { name: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+              { slug: { $regex: new RegExp(`^${safeStr}$`, 'i') } },
+              { name: { $regex: new RegExp(`^${safeStr}$`, 'i') } },
+              { name: { $regex: new RegExp(safeStr, 'i') } },
             ],
           }).select('_id');
-          if (matched) {
-            brandIds.push(matched._id);
+          if (matched && matched.length > 0) {
+            matched.forEach((m) => brandIds.push(m._id));
           }
         }
       }

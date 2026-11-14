@@ -235,17 +235,33 @@ const ProductCard = ({
         {/* Floating Tag */}
         {badges.length > 0 && <span className="tag">{badges[0].text}</span>}
 
-        {isOutOfStock && (
+        {isOutOfStock ? (
           <span
             className="tag"
             style={{
               left: "auto",
               right: "12px",
-              background: "#ffeaec",
-              color: "var(--red)",
+              background: "#fee2e2",
+              color: "#dc2626",
+              border: "1px solid #fca5a5",
+              fontWeight: 700,
             }}
           >
-            SOLD OUT
+            Out of stock
+          </span>
+        ) : (
+          <span
+            className="tag"
+            style={{
+              left: "auto",
+              right: "12px",
+              background: "#ecfdf5",
+              color: "#059669",
+              border: "1px solid #a7f3d0",
+              fontWeight: 700,
+            }}
+          >
+            In stock
           </span>
         )}
       </Link>
@@ -266,15 +282,23 @@ const ProductCard = ({
           </h3>
         </Link>
 
-        <div>
-          <span className="price">
-            ₹{Number(displayPrice).toLocaleString("en-IN")}
-          </span>
-          {oldPrice > displayPrice && (
-            <span className="oldprice">
-              ₹{Number(oldPrice).toLocaleString("en-IN")}
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="price">
+              ₹{Number(displayPrice).toLocaleString("en-IN")}
             </span>
-          )}
+            {oldPrice > displayPrice && (
+              <span className="oldprice">
+                ₹{Number(oldPrice).toLocaleString("en-IN")}
+              </span>
+            )}
+          </div>
+          <span
+            className="text-[11px] font-bold"
+            style={{ color: isOutOfStock ? "#dc2626" : "#059669" }}
+          >
+            {isOutOfStock ? "● Out of stock" : "● In stock"}
+          </span>
         </div>
 
         <div className="productactions">

@@ -109,7 +109,8 @@ const Categories = () => {
         brand: filters.brand || "",
         minPrice: filters.minPrice || "",
         maxPrice: filters.maxPrice || "",
-        sort: filters.sort || "latest",
+        sortBy: filters.sort || sort || "latest",
+        sort: filters.sort || sort || "latest",
       }),
     );
   }, [
@@ -120,10 +121,53 @@ const Categories = () => {
     filters.minPrice,
     filters.maxPrice,
     filters.sort,
+    sort,
     pagination.page,
     pagination.currentPage,
     pagination.limit,
   ]);
+
+  const displayProducts = useMemo(() => {
+    let list = Array.isArray(products) ? [...products] : [];
+    const sortVal = String(sort || filters.sort || "latest").toLowerCase();
+
+    if (sortVal === "price_asc" || sortVal.includes("low to high")) {
+      list.sort((a, b) => {
+        const pA = Number(a?.discountPrice || a?.salePrice || a?.price || 0);
+        const pB = Number(b?.discountPrice || b?.salePrice || b?.price || 0);
+        return pA - pB;
+      });
+    } else if (sortVal === "price_desc" || sortVal.includes("high to low")) {
+      list.sort((a, b) => {
+        const pA = Number(a?.discountPrice || a?.salePrice || a?.price || 0);
+        const pB = Number(b?.discountPrice || b?.salePrice || b?.price || 0);
+        return pB - pA;
+      });
+    } else if (sortVal === "rating" || sortVal.includes("rating")) {
+      list.sort((a, b) => {
+        const rA = Number(a?.rating ?? a?.averageRating ?? 0);
+        const rB = Number(b?.rating ?? b?.averageRating ?? 0);
+        return rB - rA;
+      });
+    } else if (sortVal === "name_asc" || sortVal.includes("a to z")) {
+      list.sort((a, b) =>
+        String(a?.name || "").localeCompare(String(b?.name || "")),
+      );
+    } else if (sortVal === "name_desc" || sortVal.includes("z to a")) {
+      list.sort((a, b) =>
+        String(b?.name || "").localeCompare(String(a?.name || "")),
+      );
+    } else if (sortVal === "popular") {
+      list.sort((a, b) => {
+        const popA =
+          (a?.isBestSeller ? 100 : 0) + Number(a?.numReviews || 0);
+        const popB =
+          (b?.isBestSeller ? 100 : 0) + Number(b?.numReviews || 0);
+        return popB - popA;
+      });
+    }
+    return list;
+  }, [products, sort, filters.sort]);
 
   // Wishlist item IDs
   const wishlistIds = useMemo(() => {
@@ -280,11 +324,22 @@ const Categories = () => {
                             : category.image?.url
                         }
                         alt={category.name}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          const fallback = e.currentTarget.parentElement?.querySelector(".cat-icon-fallback");
+                          if (fallback) fallback.style.display = "block";
+                        }}
                         className="mx-auto h-11 w-11 rounded-full object-cover"
                       />
-                    ) : (
-                      icon
-                    )}
+                    ) : null}
+                    <span
+                      className="cat-icon-fallback"
+                      style={{
+                        display: category.image ? "none" : "block",
+                      }}
+                    >
+                      {icon}
+                    </span>
                   </div>
 
                   <b>{category.name}</b>
@@ -309,7 +364,7 @@ const Categories = () => {
 
           <div className="flex flex-wrap items-center gap-3">
             <span className="pill">
-              {pagination.total || products.length} products
+              {pagination.total || displayProducts.length} products
             </span>
             <ProductSort value={sort} onChange={handleSort} />
           </div>
@@ -319,7 +374,7 @@ const Categories = () => {
           <div className="flex min-h-[220px] items-center justify-center">
             <Loader />
           </div>
-        ) : products.length === 0 ? (
+        ) : displayProducts.length === 0 ? (
           <div className="panel p-8 text-center">
             <EmptyState
               title="No products in this category"
@@ -330,7 +385,7 @@ const Categories = () => {
           </div>
         ) : (
           <ProductGrid
-            products={products}
+            products={displayProducts}
             onAddToCart={handleAddToCart}
             onWishlist={handleWishlist}
             wishlistIds={wishlistIds}
