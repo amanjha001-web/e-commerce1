@@ -65,6 +65,34 @@ cartSchema.pre('validate', function (next) {
   } else if (this.user && !this.userId) {
     this.userId = this.user;
   }
+
+  // Prevent NaN or null cast failures on numeric fields
+  if (this.totalAmount === undefined || this.totalAmount === null || Number.isNaN(Number(this.totalAmount))) {
+    this.totalAmount = 0;
+  } else {
+    this.totalAmount = Number(this.totalAmount);
+  }
+
+  if (this.discountAmount === undefined || this.discountAmount === null || Number.isNaN(Number(this.discountAmount))) {
+    this.discountAmount = 0;
+  } else {
+    this.discountAmount = Number(this.discountAmount);
+  }
+
+  if (this.finalAmount === undefined || this.finalAmount === null || Number.isNaN(Number(this.finalAmount))) {
+    this.finalAmount = Math.max(0, this.totalAmount - this.discountAmount);
+  } else {
+    this.finalAmount = Number(this.finalAmount);
+  }
+
+  if (this.coupon) {
+    if (this.coupon.discount === undefined || this.coupon.discount === null || Number.isNaN(Number(this.coupon.discount))) {
+      this.coupon.discount = 0;
+    } else {
+      this.coupon.discount = Number(this.coupon.discount);
+    }
+  }
+
   next();
 });
 

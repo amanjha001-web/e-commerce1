@@ -29,8 +29,11 @@ export class CartService {
           cart.totalAmount,
           cart.userId
         );
-        cart.discountAmount = val.coupon.discountCalculated;
-        cart.coupon.discount = cart.discountAmount;
+        const safeDiscount = Math.max(0, Number(val?.coupon?.discountCalculated) || 0);
+        cart.discountAmount = safeDiscount;
+        if (cart.coupon) {
+          cart.coupon.discount = safeDiscount;
+        }
       } catch {
         // If coupon no longer valid, clear it
         cart.coupon = undefined;
@@ -204,18 +207,38 @@ export class CartService {
       throw ApiError.badRequest('Cart is empty');
     }
 
+    // Ensure totalAmount is calculated from items if 0, undefined, or NaN
+    let subtotal = Number(cart.totalAmount) || 0;
+    if (subtotal <= 0 || Number.isNaN(subtotal)) {
+      subtotal = 0;
+      for (const item of cart.items) {
+        let itemPrice = Number(item.price) || 0;
+        if (itemPrice <= 0 && item.product) {
+          const product = await Product.findById(item.product);
+          if (product) {
+            itemPrice = Number(product.price) || 0;
+            item.price = itemPrice;
+          }
+        }
+        subtotal += itemPrice * (Number(item.quantity) || 1);
+      }
+      cart.totalAmount = roundToTwoDecimals(subtotal);
+    }
+
     const val = await couponCommonService.validateCoupon(
       couponCode,
       cart.totalAmount,
       userId
     );
 
+    const safeDiscount = Math.max(0, Number(val?.coupon?.discountCalculated) || 0);
+
     cart.coupon = {
       code: val.coupon.code,
-      discount: val.coupon.discountCalculated,
-      discountType: val.coupon.discountType,
+      discount: safeDiscount,
+      discountType: val.coupon.discountType || 'percentage',
     };
-    cart.discountAmount = val.coupon.discountCalculated;
+    cart.discountAmount = safeDiscount;
     cart.finalAmount = roundToTwoDecimals(Math.max(0, cart.totalAmount - cart.discountAmount));
 
     await cart.save();

@@ -45,7 +45,7 @@ const normalizeCart = (payload) => {
     0,
   );
 
-  const discount = Number(data?.discountAmount ?? data?.discount) || 0;
+  const discount = Number(data?.discountAmount ?? data?.discount ?? data?.coupon?.discount) || 0;
   const shipping = subtotal >= 999 || items.length === 0 ? 0 : (Number(data?.shipping) > 0 ? Number(data.shipping) : 50);
   const tax = Number(data?.tax) || 0;
 

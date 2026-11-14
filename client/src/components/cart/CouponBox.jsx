@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CouponBox = ({
   appliedCoupon = null,
+  coupon = null,
   onApply,
   onRemove,
   loading = false,
@@ -9,7 +10,16 @@ const CouponBox = ({
   success = "",
   placeholder = "Coupon code (e.g. WELCOME10)",
 }) => {
-  const [couponCode, setCouponCode] = useState(appliedCoupon?.code || "");
+  const currentCoupon = appliedCoupon || coupon;
+  const [couponCode, setCouponCode] = useState(currentCoupon?.code || "");
+
+  useEffect(() => {
+    if (currentCoupon?.code) {
+      setCouponCode(currentCoupon.code);
+    } else {
+      setCouponCode("");
+    }
+  }, [currentCoupon?.code]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -29,7 +39,7 @@ const CouponBox = ({
     }
 
     setCouponCode("");
-    await onRemove?.(appliedCoupon);
+    await onRemove?.(currentCoupon);
   };
 
   return (
@@ -38,17 +48,17 @@ const CouponBox = ({
         Have a coupon?
       </h3>
 
-      {appliedCoupon ? (
+      {currentCoupon ? (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#c3ebda] bg-[#e7f6ef] px-3.5 py-2.5">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#16845b]">
-              {appliedCoupon.code}
+              {currentCoupon.code}
             </p>
 
-            {appliedCoupon.discount !== undefined && (
+            {currentCoupon.discount !== undefined && (
               <p className="mt-0.5 text-xs font-medium text-[#16845b]/80">
                 You saved ₹
-                {Number(appliedCoupon.discount).toLocaleString("en-IN")}
+                {Number(currentCoupon.discount).toLocaleString("en-IN")}
               </p>
             )}
           </div>

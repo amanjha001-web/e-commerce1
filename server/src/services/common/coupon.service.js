@@ -31,32 +31,43 @@ export class CouponCommonService {
       }
     }
 
-    if (cartTotal < coupon.minPurchaseAmount) {
+    const numericCartTotal = Math.max(0, Number(cartTotal) || 0);
+    const minPurchase = Number(coupon.minPurchaseAmount) || 0;
+
+    if (numericCartTotal < minPurchase) {
       throw ApiError.badRequest(
-        `Minimum purchase amount of ₹${coupon.minPurchaseAmount} required for this coupon`
+        `Minimum purchase amount of ₹${minPurchase} required for this coupon`
       );
     }
 
+    const discountAmountValue = Math.max(
+      0,
+      Number(coupon.discountAmount ?? coupon.discountValue ?? coupon.discount ?? 0)
+    );
+    const discountType = (coupon.discountType || 'percentage').toLowerCase();
+    const maxDiscount = Number(coupon.maxDiscountAmount) || 0;
+
     let discount = 0;
-    if (coupon.discountType === 'percentage') {
-      discount = (cartTotal * coupon.discountAmount) / 100;
-      if (coupon.maxDiscountAmount > 0) {
-        discount = Math.min(discount, coupon.maxDiscountAmount);
+    if (discountType === 'percentage') {
+      discount = (numericCartTotal * discountAmountValue) / 100;
+      if (maxDiscount > 0) {
+        discount = Math.min(discount, maxDiscount);
       }
     } else {
-      discount = coupon.discountAmount;
+      discount = discountAmountValue;
     }
 
-    discount = Math.min(discount, cartTotal);
+    discount = Math.min(discount, numericCartTotal);
+    const finalCalculatedDiscount = Number.isNaN(discount) ? 0 : Math.round(discount * 100) / 100;
 
     return {
       isValid: true,
       coupon: {
         id: coupon._id,
         code: coupon.code,
-        discountType: coupon.discountType,
-        discountAmount: coupon.discountAmount,
-        discountCalculated: Math.round(discount * 100) / 100,
+        discountType: discountType === 'fixed' ? 'fixed' : 'percentage',
+        discountAmount: discountAmountValue,
+        discountCalculated: finalCalculatedDiscount,
       },
     };
   }

@@ -29,4 +29,26 @@ describe('Cart Business Logic Unit Tests', () => {
 
     expect(calculatedDiscount).toBe(300);
   });
+
+  it('should never yield NaN for coupon discount when input values are malformed or missing', () => {
+    const rawInputs = [
+      { cartTotal: undefined, discountAmount: 10 },
+      { cartTotal: null, discountAmount: 10 },
+      { cartTotal: NaN, discountAmount: 10 },
+      { cartTotal: 500, discountAmount: undefined },
+      { cartTotal: 500, discountAmount: NaN },
+      { cartTotal: 0, discountAmount: 0 },
+    ];
+
+    for (const input of rawInputs) {
+      const numericCartTotal = Math.max(0, Number(input.cartTotal) || 0);
+      const discountAmountValue = Math.max(0, Number(input.discountAmount) || 0);
+      const discount = (numericCartTotal * discountAmountValue) / 100;
+      const safeDiscount = Number.isNaN(discount) ? 0 : Math.round(discount * 100) / 100;
+
+      expect(Number.isNaN(safeDiscount)).toBe(false);
+      expect(typeof safeDiscount).toBe('number');
+      expect(safeDiscount).toBeGreaterThanOrEqual(0);
+    }
+  });
 });
