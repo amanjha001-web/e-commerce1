@@ -172,7 +172,7 @@ export class CustomerOrderService {
 
   async getMyOrders(userId, params = {}) {
     const { page, limit, skip, sort } = parsePagination(params);
-    const filter = { userId };
+    const filter = { $or: [{ userId }, { user: userId }] };
 
     if (params.status) filter.orderStatus = params.status;
 
@@ -197,7 +197,7 @@ export class CustomerOrderService {
   }
 
   async getOrderById(orderId, userId) {
-    const order = await Order.findOne({ _id: orderId, userId })
+    const order = await Order.findOne({ _id: orderId, $or: [{ userId }, { user: userId }] })
       .populate('items.product', 'name slug images price')
       .populate('items.vendorId', 'storeName slug email phone');
 

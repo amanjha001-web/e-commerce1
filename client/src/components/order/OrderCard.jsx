@@ -7,27 +7,26 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
   }
 
   const orderId = order._id || order.id;
-
+  const orderNumber = order.orderNumber || (orderId ? String(orderId).slice(-10) : "");
   const items = order.items || order.orderItems || [];
-
   const total = order.totalAmount ?? order.total ?? 0;
-
   const createdAt = order.createdAt || order.orderDate;
+  const status = order.orderStatus || order.status || "pending";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 transition hover:shadow-sm dark:border-gray-800 dark:bg-gray-900">
-      <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-5 transition-all duration-200 hover:shadow-xs dark:border-gray-800 dark:bg-card">
+      <div className="flex flex-col gap-3 border-b border-[var(--line)] pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Order ID</p>
+          <p className="text-xs text-[var(--muted)]">Order ID</p>
 
-          <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-            #{String(orderId).slice(-10)}
+          <p className="mt-0.5 text-sm font-extrabold text-[var(--text)] dark:text-white">
+            #{orderNumber}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {createdAt && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-medium text-[var(--muted)]">
               {new Date(createdAt).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "short",
@@ -36,18 +35,21 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
             </span>
           )}
 
-          <OrderStatus status={order.status} />
+          <OrderStatus status={status} />
         </div>
       </div>
 
       <div className="py-4">
         {items.slice(0, 3).map((item, index) => {
           const product = item.product || item;
-
-          const productName = product.name || item.productName || "Product";
-
-          const image = product.image || product.thumbnail || item.image;
-
+          const productName =
+            item.name || product?.name || item.productName || "Product";
+          const image =
+            item.image ||
+            product?.images?.[0]?.url ||
+            product?.image ||
+            product?.thumbnail ||
+            "";
           const quantity = item.quantity || 1;
 
           return (
@@ -59,21 +61,21 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
                 <img
                   src={image}
                   alt={productName}
-                  className="h-14 w-14 rounded-lg object-cover"
+                  className="h-14 w-14 rounded-xl object-cover border border-[var(--line)]/50"
                 />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-xl dark:bg-gray-800">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--soft)] text-xl border border-[var(--line)]/50">
                   📦
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                <p className="truncate text-sm font-bold text-[var(--text)] dark:text-white">
                   {productName}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Qty: {quantity}
+                <p className="mt-0.5 text-xs text-[var(--muted)]">
+                  Qty: {quantity} · ₹{Number(item.price || product?.price || 0).toLocaleString("en-IN")}
                 </p>
               </div>
             </div>
@@ -87,30 +89,30 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
+      <div className="flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
         <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-[var(--muted)]">
             Total Amount
           </span>
 
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
-            ₹{Number(total).toLocaleString("en-IN")}
+          <p className="text-base font-black text-[var(--primary)] dark:text-white">
+            ₹{Number(total).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             to={`/orders/${orderId}`}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="btnsm !text-xs !py-1.5 !px-3"
           >
-            View Details
+            View Details →
           </Link>
 
           {onCancel && (
             <button
               type="button"
               onClick={() => onCancel(order)}
-              className="rounded-lg border border-red-500 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              className="rounded-xl border border-red-200 bg-red-50/50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 cursor-pointer dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
             >
               Cancel
             </button>
@@ -120,7 +122,7 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
             <button
               type="button"
               onClick={() => onReturn(order)}
-              className="rounded-lg bg-secondary px-3 py-2 text-xs font-semibold text-white hover:bg-primary"
+              className="primarybtn !py-1.5 !px-3 !text-xs !rounded-xl"
             >
               Return
             </button>

@@ -33,7 +33,7 @@ const getStatus = (order) =>
 const getOrderId = (order) => order?._id || order?.id || order?.orderId || "";
 
 const Orders = ({
-  orders: propOrders = [],
+  orders: propOrders,
   loading: propLoading = false,
   onViewOrder,
   onTrackOrder,
@@ -43,30 +43,41 @@ const Orders = ({
 }) => {
   const navigate = useNavigate();
   const [internalOrders, setInternalOrders] = useState([]);
-  const [internalLoading, setInternalLoading] = useState(!propOrders?.length);
+  const [internalLoading, setInternalLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const orders = propOrders?.length > 0 ? propOrders : internalOrders;
-  const loading = propOrders?.length > 0 ? propLoading : internalLoading;
+  const orders =
+    propOrders && propOrders.length > 0 ? propOrders : internalOrders;
+  const loading =
+    propOrders && propOrders.length > 0 ? propLoading : internalLoading;
+
+  const loadOrders = useCallback(async () => {
+    try {
+      setInternalLoading(true);
+      const res = await orderService.getMyOrders();
+      let list = [];
+      if (Array.isArray(res)) list = res;
+      else if (Array.isArray(res?.data?.orders)) list = res.data.orders;
+      else if (Array.isArray(res?.data)) list = res.data;
+      else if (Array.isArray(res?.orders)) list = res.orders;
+      else if (Array.isArray(res?.data?.data)) list = res.data.data;
+      setInternalOrders(list);
+    } catch (err) {
+      console.error("Failed to fetch customer orders:", err);
+      setInternalOrders([]);
+    } finally {
+      setInternalLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!propOrders || propOrders.length === 0) {
-      setInternalLoading(true);
-      orderService
-        .getMyOrders()
-        .then((res) => {
-          const list = res?.data?.orders || res?.data || res?.orders || [];
-          setInternalOrders(Array.isArray(list) ? list : []);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch customer orders:", err);
-        })
-        .finally(() => {
-          setInternalLoading(false);
-        });
+      loadOrders();
+    } else {
+      setInternalLoading(false);
     }
-  }, [propOrders]);
+  }, [propOrders?.length, loadOrders]);
 
   const handleViewOrder = (order) => {
     if (onViewOrder) return onViewOrder(order);
@@ -80,9 +91,7 @@ const Orders = ({
     try {
       await orderService.cancelOrder(id, "Cancelled by customer");
       toast.success("Order cancelled successfully");
-      const res = await orderService.getMyOrders();
-      const list = res?.data?.orders || res?.data || res?.orders || [];
-      setInternalOrders(Array.isArray(list) ? list : []);
+      await loadOrders();
     } catch (err) {
       toast.error(
         err?.response?.data?.message || err?.message || "Failed to cancel order"

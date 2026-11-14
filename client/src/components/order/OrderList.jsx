@@ -49,7 +49,7 @@ const OrderList = ({ orders = [], onCancel, onReturn, loading = false }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-5">
       {orders.map((order, index) => (
         <OrderCard
           key={order._id || order.id || index}
