@@ -201,7 +201,7 @@ const OrderDetails = ({
             </Button>
           )}
 
-          <Button variant="outline" onClick={() => onNavigate?.("/orders")}>
+          <Button variant="outline" onClick={() => handleNavigate("/orders")}>
             Back to Orders
           </Button>
         </div>

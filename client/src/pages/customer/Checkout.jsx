@@ -128,11 +128,15 @@ const Checkout = ({
   }
   const discount = Math.max(0, derivedDiscount);
   const shipping = Number(
-    cart?.shippingCharge ?? cart?.shipping ?? 0,
+    cart?.shippingPrice ?? cart?.shippingCharge ?? cart?.shipping ?? 0,
   );
-  const tax = Number(cart?.tax || 0);
-
-  const effectiveShipping = subtotal >= 999 || items.length === 0 ? 0 : (shipping > 0 ? shipping : 50);
+  const effectiveShipping =
+    subtotal >= 999 || items.length === 0 ? 0 : (shipping > 0 ? shipping : 50);
+  const tax = Number(
+    cart?.taxPrice ??
+      cart?.tax ??
+      Math.round(Math.max(0, subtotal - discount) * 0.18 * 100) / 100,
+  );
   const total = Math.max(0, subtotal - discount + effectiveShipping + tax);
 
   const handleAddressSelect = (address) => {

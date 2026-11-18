@@ -156,21 +156,32 @@ const SellerRequestStatus = () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={async () => {
-              setLoading(true);
-              try {
-                await loadRequest();
-              } finally {
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-            className="btnsm outlinebtn disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Refreshing..." : "Refresh Status"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {application?._id && status !== "approved" && (
+              <Link
+                to="/become-seller?edit=true"
+                className="btnsm primarybtn"
+              >
+                ✎ Edit Application
+              </Link>
+            )}
+
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await loadRequest();
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="btnsm outlinebtn disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Refreshing..." : "Refresh Status"}
+            </button>
+          </div>
         </header>
 
         {loading ? (
@@ -324,19 +335,36 @@ const SellerRequestStatus = () => {
             <Section title="Business Address">
               <Detail
                 label="Address Line 1"
-                value={application.address?.addressLine1}
+                value={
+                  application.address?.addressLine1 ||
+                  application.businessAddress?.street
+                }
               />
               <Detail
                 label="Address Line 2"
                 value={application.address?.addressLine2}
               />
-              <Detail label="City" value={application.address?.city} />
-              <Detail label="State" value={application.address?.state} />
+              <Detail
+                label="City"
+                value={application.address?.city || application.businessAddress?.city}
+              />
+              <Detail
+                label="State"
+                value={application.address?.state || application.businessAddress?.state}
+              />
               <Detail
                 label="Postal Code"
-                value={application.address?.postalCode}
+                value={
+                  application.address?.postalCode ||
+                  application.businessAddress?.postalCode
+                }
               />
-              <Detail label="Country" value={application.address?.country} />
+              <Detail
+                label="Country"
+                value={
+                  application.address?.country || application.businessAddress?.country
+                }
+              />
             </Section>
 
             <Section title="Bank Details">

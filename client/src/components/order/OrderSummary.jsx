@@ -25,9 +25,18 @@ const OrderSummary = ({
     discount ?? order?.discount ?? order?.discountAmount ?? 0;
 
   const calculatedShipping =
-    shippingCharge ?? order?.shippingCharge ?? order?.shipping ?? 0;
+    shippingCharge ??
+    order?.shippingPrice ??
+    order?.shippingCharge ??
+    order?.shipping ??
+    0;
 
-  const calculatedTax = tax ?? order?.tax ?? order?.taxAmount ?? 0;
+  const calculatedTax =
+    tax ??
+    order?.taxPrice ??
+    order?.taxAmount ??
+    order?.tax ??
+    0;
 
   const calculatedTotal =
     total ??
@@ -80,7 +89,7 @@ const OrderSummary = ({
 
         {calculatedTax > 0 && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Tax</span>
+            <span className="text-gray-500 dark:text-gray-400">Tax (GST 18%)</span>
 
             <span className="font-medium text-gray-900 dark:text-white">
               {formatCurrency(calculatedTax)}

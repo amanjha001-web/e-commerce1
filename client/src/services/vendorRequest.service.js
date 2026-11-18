@@ -20,6 +20,12 @@ const vendorRequestService = {
     return response.data;
   },
 
+  // Customer: edit own application
+  updateRequest: async (requestId, requestData) => {
+    const response = await api.patch(`/vendor-requests/${requestId}`, requestData);
+    return response.data;
+  },
+
   cancelRequest: async (requestId) => {
     const response = await api.patch(`/vendor-requests/${requestId}/cancel`);
     return response.data;

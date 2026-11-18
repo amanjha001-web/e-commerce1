@@ -17,6 +17,15 @@ export const getMyRequests = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, requests, 'Your vendor applications');
 });
 
+export const updateRequest = asyncHandler(async (req, res) => {
+  const request = await vendorRequestService.updateRequest(
+    req.user._id,
+    req.params.requestId,
+    req.body
+  );
+  return ApiResponse.success(res, request, 'Application updated successfully');
+});
+
 export const cancelRequest = asyncHandler(async (req, res) => {
   const request = await vendorRequestService.cancelRequest(req.user._id, req.params.requestId);
   return ApiResponse.success(res, request, 'Application cancelled');

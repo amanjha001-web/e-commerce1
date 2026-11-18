@@ -13,6 +13,16 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
   const createdAt = order.createdAt || order.orderDate;
   const status = order.orderStatus || order.status || "pending";
 
+  const canCancelOrder =
+    Boolean(onCancel) &&
+    !["cancelled", "delivered", "returned", "completed"].includes(
+      String(status).toLowerCase(),
+    );
+
+  const canReturnOrder =
+    Boolean(onReturn) &&
+    ["delivered", "completed"].includes(String(status).toLowerCase());
+
   return (
     <div className="rounded-2xl border border-[var(--line)] bg-white p-5 transition-all duration-200 hover:shadow-xs dark:border-gray-800 dark:bg-card">
       <div className="flex flex-col gap-3 border-b border-[var(--line)] pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800">
@@ -108,7 +118,7 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
             View Details →
           </Link>
 
-          {onCancel && (
+          {canCancelOrder && (
             <button
               type="button"
               onClick={() => onCancel(order)}
@@ -118,7 +128,7 @@ const OrderCard = ({ order, onCancel, onReturn }) => {
             </button>
           )}
 
-          {onReturn && (
+          {canReturnOrder && (
             <button
               type="button"
               onClick={() => onReturn(order)}

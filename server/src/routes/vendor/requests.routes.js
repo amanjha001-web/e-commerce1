@@ -10,5 +10,6 @@ router.post('/', vendorRequestController.createRequest);
 router.get('/me', vendorRequestController.getMyRequest);
 router.get('/my-requests', vendorRequestController.getMyRequests);
 router.patch('/:requestId/cancel', vendorRequestController.cancelRequest);
+router.patch('/:requestId', vendorRequestController.updateRequest);
 
 export default router;

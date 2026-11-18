@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import vendorRequestService from "../../services/vendorRequest.service";
 
@@ -144,11 +144,87 @@ function FormField({
 
 export default function BecomeSeller() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isEditMode = searchParams.get("edit") === "true";
 
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [editingRequestId, setEditingRequestId] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(isEditMode);
+
+  // Edit mode: prefill form with the user's existing application
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    let cancelled = false;
+
+    const loadExisting = async () => {
+      try {
+        const response = await vendorRequestService.getMyRequest();
+        const request = response?.data;
+
+        if (cancelled) return;
+
+        if (!request?._id) {
+          setApiError("No existing application found to edit.");
+          return;
+        }
+
+        if (String(request.status).toLowerCase() === "approved") {
+          setApiError("Approved applications cannot be edited.");
+          return;
+        }
+
+        const addr = request.address || {};
+        const bAddr = request.businessAddress || {};
+        const bank = request.bankDetails || {};
+
+        setEditingRequestId(request._id);
+        setForm({
+          shopName: request.shopName || request.storeName || "",
+          businessName: request.businessName || "",
+          description: request.description || "",
+          email: request.email || "",
+          phone: request.phone || "",
+          website: request.website || "",
+          address: {
+            country: addr.country || bAddr.country || "India",
+            state: addr.state || bAddr.state || "",
+            city: addr.city || bAddr.city || "",
+            postalCode: addr.postalCode || bAddr.postalCode || "",
+            addressLine1: addr.addressLine1 || bAddr.street || "",
+            addressLine2: addr.addressLine2 || "",
+          },
+          bankDetails: {
+            accountHolderName: bank.accountHolderName || "",
+            accountNumber: bank.accountNumber || "",
+            ifscCode: bank.ifscCode || "",
+            bankName: bank.bankName || "",
+            branchName: bank.branchName || "",
+            upiId: bank.upiId || "",
+          },
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setApiError(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Unable to load your application.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
+    };
+
+    loadExisting();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode]);
 
   const handleChange = (event, section = null) => {
     const { name, value } = event.target;
@@ -325,7 +401,10 @@ export default function BecomeSeller() {
       setSubmitting(true);
       setApiError("");
 
-      const response = await vendorRequestService.createRequest(payload);
+      const response =
+        isEditMode && editingRequestId
+          ? await vendorRequestService.updateRequest(editingRequestId, payload)
+          : await vendorRequestService.createRequest(payload);
 
       if (response?.success === false) {
         throw new Error(response.message || "Request submission failed.");
@@ -365,12 +444,13 @@ export default function BecomeSeller() {
           </span>
 
           <h1 className="mt-2 text-2xl font-black tracking-tight text-[var(--text)] sm:text-3xl dark:text-foreground">
-            Become a ShopSphere Seller
+            {isEditMode ? "Edit Seller Application" : "Become a ShopSphere Seller"}
           </h1>
 
           <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--muted)]">
-            Submit your business and bank details for admin review. You can
-            check your application status after submission.
+            {isEditMode
+              ? "Update your business, address and bank details. Rejected applications are re-submitted for admin review after saving."
+              : "Submit your business and bank details for admin review. You can check your application status after submission."}
           </p>
         </header>
 
@@ -495,10 +575,18 @@ export default function BecomeSeller() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || loadingExisting || (isEditMode && !editingRequestId)}
               className="primarybtn shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "Submitting Request..." : "Submit Seller Request →"}
+              {isEditMode
+                ? submitting
+                  ? "Saving Changes..."
+                  : loadingExisting
+                    ? "Loading Application..."
+                    : "Save Changes →"
+                : submitting
+                  ? "Submitting Request..."
+                  : "Submit Seller Request →"}
             </button>
           </div>
         </form>

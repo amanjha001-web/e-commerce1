@@ -43,6 +43,27 @@ const vendorRequestSchema = new mongoose.Schema(
       postalCode: String,
       country: String,
     },
+    website: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    address: {
+      country: String,
+      state: String,
+      city: String,
+      postalCode: String,
+      addressLine1: String,
+      addressLine2: String,
+    },
+    bankDetails: {
+      accountHolderName: { type: String, trim: true, default: '' },
+      accountNumber: { type: String, trim: true, default: '' },
+      ifscCode: { type: String, trim: true, uppercase: true, default: '' },
+      bankName: { type: String, trim: true, default: '' },
+      branchName: { type: String, trim: true, default: '' },
+      upiId: { type: String, trim: true, default: '' },
+    },
     businessType: {
       type: String,
       default: 'individual',
