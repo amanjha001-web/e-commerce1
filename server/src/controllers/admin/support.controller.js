@@ -13,18 +13,49 @@ export const getSupportTicketById = asyncHandler(async (req, res) => {
 });
 
 export const replyToSupportTicket = asyncHandler(async (req, res) => {
-  const message = req.body.message || req.body.reply;
-  const ticket = await adminSupportService.replyToSupportTicket(req.params.ticketId, message, req.user._id);
+  const message = req.body?.message || req.body?.reply;
+  const ticket = await adminSupportService.replyToSupportTicket(
+    req.params.ticketId,
+    message,
+    req.user._id
+  );
   return ApiResponse.success(res, ticket, 'Reply posted');
 });
 
 export const updateSupportTicketStatus = asyncHandler(async (req, res) => {
-  const ticket = await adminSupportService.updateSupportTicketStatus(req.params.ticketId, req.body.status);
+  const ticket = await adminSupportService.updateSupportTicketStatus(
+    req.params.ticketId,
+    req.body?.status,
+    req.body?.resolution
+  );
   return ApiResponse.success(res, ticket, 'Ticket status updated');
 });
 
+export const updateSupportTicketPriority = asyncHandler(async (req, res) => {
+  const ticket = await adminSupportService.updateSupportTicketPriority(
+    req.params.ticketId,
+    req.body?.priority
+  );
+  return ApiResponse.success(res, ticket, 'Ticket priority updated');
+});
+
+export const addInternalNote = asyncHandler(async (req, res) => {
+  const note = req.body?.note || req.body?.message;
+  const ticket = await adminSupportService.addInternalNote(
+    req.params.ticketId,
+    note,
+    req.user._id
+  );
+  return ApiResponse.success(res, ticket, 'Internal note added');
+});
+
+export const getTicketHistory = asyncHandler(async (req, res) => {
+  const result = await adminSupportService.getTicketHistory(req.params.ticketId);
+  return ApiResponse.success(res, result, 'Ticket history retrieved');
+});
+
 export const assignSupportTicket = asyncHandler(async (req, res) => {
-  const userId = req.body.userId || req.body.assignedTo;
+  const userId = req.body?.userId || req.body?.assignedTo;
   const ticket = await adminSupportService.assignSupportTicket(req.params.ticketId, userId);
   return ApiResponse.success(res, ticket, 'Ticket assigned');
 });

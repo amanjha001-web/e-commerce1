@@ -42,7 +42,7 @@ const supportTicketSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['order', 'payment', 'product', 'account', 'general'],
+      enum: ['order', 'payment', 'product', 'account', 'delivery', 'payout', 'general'],
       default: 'general',
     },
     priority: {
@@ -52,7 +52,7 @@ const supportTicketSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['open', 'in_progress', 'resolved', 'closed'],
+      enum: ['open', 'pending', 'in_progress', 'waiting_for_customer', 'resolved', 'closed'],
       default: 'open',
       index: true,
     },
@@ -61,6 +61,13 @@ const supportTicketSchema = new mongoose.Schema(
       ref: 'User',
     },
     messages: [ticketMessageSchema],
+    internalNotes: [
+      {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        note: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     resolution: {
       type: String,
       default: '',

@@ -2,69 +2,45 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import adminService from "../../services/admin.service";
 
-const DEMO_TICKETS = [
-  {
-    ticket: "#TK-201",
-    customer: "Aman Jha",
-    subject: "Payment not updated",
-    priority: "Payment",
-    status: "Open",
-    isDemo: true,
-  },
-  {
-    ticket: "#TK-202",
-    customer: "Aman Jha",
-    subject: "Order delivery delay",
-    priority: "Delivery",
-    status: "Pending",
-    isDemo: true,
-  },
-  {
-    ticket: "#TK-203",
-    customer: "Aman Jha",
-    subject: "Product exchange request",
-    priority: "Order",
-    status: "Resolved",
-    isDemo: true,
-  },
-];
+const statusClass = (s) => {
+  const val = String(s || "").toLowerCase();
+  if (["delivered", "active", "resolved"].includes(val)) return "green";
+  if (["pending", "processing", "open", "in_progress", "waiting_for_customer"].includes(val)) {
+    return "amber";
+  }
+  if (["blocked", "cancelled", "rejected", "closed"].includes(val)) return "red";
+  return "";
+};
 
-const statusClass = (s) =>
-  s === "Delivered" || s === "Active" || s === "Resolved" || s === "Published"
-    ? "green"
-    : s === "Pending" ||
-        s === "Processing" ||
-        s === "Open" ||
-        s === "In_progress"
-      ? "amber"
-      : s === "Blocked" ||
-          s === "Cancelled" ||
-          s === "Rejected" ||
-          s === "Closed"
-        ? "red"
-        : "";
+const formatLabel = (val) =>
+  String(val || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
 const Support = ({ tickets: propTickets = [] }) => {
   const [apiTickets, setApiTickets] = useState([]);
-  const [demoTickets, setDemoTickets] = useState(DEMO_TICKETS);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [activeTicket, setActiveTicket] = useState(null);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [replyText, setReplyText] = useState("");
   const [internalNote, setInternalNote] = useState("");
-  const [resolutionText, setResolutionText] = useState("");
   const [saving, setSaving] = useState(false);
 
   const fetchTickets = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await adminService.getSupportTickets({ limit: 50 });
       const data = response?.data ?? response;
       const list = data?.tickets || data || [];
-      if (Array.isArray(list) && list.length > 0) {
-        setApiTickets(list);
-      }
-    } catch {
-      // Fallback to demo tickets when unmapped
+      setApiTickets(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to fetch admin tickets:", err);
+      toast.error(err?.response?.data?.message || "Failed to load support tickets");
+      setApiTickets([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -73,218 +49,212 @@ const Support = ({ tickets: propTickets = [] }) => {
   }, [fetchTickets]);
 
   const rows = useMemo(() => {
-    const source =
-      propTickets.length > 0
-        ? propTickets
-        : apiTickets.length > 0
-          ? apiTickets
-          : demoTickets;
+    const source = propTickets.length > 0 ? propTickets : apiTickets;
 
     return source.map((t, i) => {
-      if (t.ticket && t.customer && t.subject) return t;
-      const rawStatus = t.status || "OPEN";
-      const statusLabel =
-        rawStatus === "IN_PROGRESS"
-          ? "Pending"
-          : rawStatus === "RESOLVED"
-            ? "Resolved"
-            : rawStatus === "CLOSED"
-              ? "Closed"
-              : String(rawStatus).charAt(0).toUpperCase() +
-                String(rawStatus).slice(1).toLowerCase();
+      const rawStatus = String(t.status || "open").toLowerCase();
+      const rawPriority = String(t.priority || "medium").toLowerCase();
+      const senderFallback = t.messages?.find(
+        (m) =>
+          m?.sender &&
+          typeof m.sender === "object" &&
+          !["admin", "super_admin"].includes(String(m.sender.role || "").toLowerCase()),
+      )?.sender;
+      const userObj =
+        (typeof t.userId === "object" && t.userId) ||
+        (typeof t.customer === "object" && t.customer) ||
+        (typeof t.user === "object" && t.user) ||
+        senderFallback ||
+        {};
+      const customerEmail = userObj.email || t.email || "";
 
       return {
         ...t,
-        ticket: t.ticketNumber || t.id || `#TK-${201 + i}`,
+        ticket: t.ticketId || t.ticketNumber || t.id || `#TK-${201 + i}`,
         customer:
-          t.customer?.fullName || t.user?.fullName || t.user?.email || "Aman Jha",
+          userObj.fullName ||
+          userObj.name ||
+          userObj.username ||
+          t.userName ||
+          t.customerName ||
+          (customerEmail ? customerEmail.split("@")[0] : "Customer"),
+        customerEmail,
         subject: t.subject || t.title || "Support request",
-        priority: t.category || t.priority || "General",
-        status: statusLabel,
+        rawPriority,
+        priority: formatLabel(rawPriority),
+        rawStatus,
+        status: formatLabel(rawStatus),
       };
     });
-  }, [propTickets, apiTickets, demoTickets]);
+  }, [propTickets, apiTickets]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return rows;
     const q = search.trim().toLowerCase();
-    return rows.filter((r) =>
-      `${r.ticket} ${r.customer} ${r.subject} ${r.priority} ${r.status}`
+    return rows.filter((r) => {
+      const matchesStatus =
+        statusFilter === "all" || r.rawStatus === statusFilter;
+      if (!matchesStatus) return false;
+      if (!q) return true;
+      return `${r.ticket} ${r.customer} ${r.customerEmail} ${r.subject} ${r.priority} ${r.status}`
         .toLowerCase()
-        .includes(q),
-    );
-  }, [rows, search]);
+        .includes(q);
+    });
+  }, [rows, search, statusFilter]);
+
+  const refreshActiveTicket = async (ticketId) => {
+    const [detailRes, histRes] = await Promise.allSettled([
+      adminService.getSupportTicketById(ticketId),
+      adminService.getSupportTicketHistory(ticketId),
+    ]);
+
+    if (detailRes.status === "fulfilled") {
+      const detail = detailRes.value?.data ?? detailRes.value;
+      if (detail && typeof detail === "object") {
+        setActiveTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...detail,
+                rawStatus: String(detail.status || prev.rawStatus || "open").toLowerCase(),
+                status: formatLabel(detail.status || prev.rawStatus || "open"),
+                rawPriority: String(detail.priority || prev.rawPriority || "medium").toLowerCase(),
+                priority: formatLabel(detail.priority || prev.rawPriority || "medium"),
+              }
+            : detail,
+        );
+      }
+    }
+
+    if (histRes.status === "fulfilled") {
+      const histData = histRes.value?.data ?? histRes.value;
+      setTicketHistory(histData?.history || []);
+    }
+  };
 
   const handleOpenTicket = async (t) => {
     setActiveTicket(t);
     setReplyText("");
     setInternalNote("");
-    setResolutionText(t.resolution || "");
     setTicketHistory([]);
 
-    if (!t.isDemo && t._id) {
-      try {
-        const [detailRes, histRes] = await Promise.allSettled([
-          adminService.getSupportTicketById(t._id),
-          adminService.getSupportTicketHistory(t._id),
-        ]);
-        if (detailRes.status === "fulfilled") {
-          const detail = detailRes.value?.data ?? detailRes.value;
-          if (detail && typeof detail === "object") {
-            setActiveTicket((prev) => (prev ? { ...prev, ...detail } : prev));
-          }
-        }
-        if (histRes.status === "fulfilled") {
-          const histData = histRes.value?.data ?? histRes.value;
-          setTicketHistory(histData?.history || []);
-        }
-      } catch {
-        // Ignore detail fetch error
-      }
+    if (t._id) {
+      await refreshActiveTicket(t._id);
     }
   };
 
   const handleSendReply = async () => {
-    if (!activeTicket) return;
-    if (!activeTicket.isDemo && activeTicket._id && replyText.trim()) {
-      try {
-        setSaving(true);
-        await adminService.replyToSupportTicket(
-          activeTicket._id,
-          replyText.trim(),
-        );
-        toast.success("Reply sent");
-        setActiveTicket(null);
-        fetchTickets();
-        return;
-      } catch (err) {
-        toast.error(err?.response?.data?.message || "Failed to send reply");
-        return;
-      } finally {
-        setSaving(false);
-      }
+    if (!activeTicket?._id) return;
+    if (!replyText.trim()) {
+      toast.error("Please enter a reply message");
+      return;
     }
-    setActiveTicket(null);
-    toast.success("Reply sent");
+
+    try {
+      setSaving(true);
+      await adminService.replyToSupportTicket(
+        activeTicket._id,
+        replyText.trim(),
+      );
+      toast.success("Reply sent to customer");
+      setReplyText("");
+      await Promise.all([refreshActiveTicket(activeTicket._id), fetchTickets()]);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to send reply");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddNote = async () => {
-    if (!activeTicket || !internalNote.trim()) return;
-    if (!activeTicket.isDemo && activeTicket._id) {
-      try {
-        setSaving(true);
-        await adminService.addSupportTicketNote(
-          activeTicket._id,
-          internalNote.trim(),
-        );
-        toast.success("Internal note added");
-        setInternalNote("");
-        fetchTickets();
-        return;
-      } catch (err) {
-        toast.error(err?.response?.data?.message || "Failed to add note");
-        return;
-      } finally {
-        setSaving(false);
-      }
+    if (!activeTicket?._id || !internalNote.trim()) return;
+
+    try {
+      setSaving(true);
+      await adminService.addSupportTicketNote(
+        activeTicket._id,
+        internalNote.trim(),
+      );
+      toast.success("Internal note added");
+      setInternalNote("");
+      await refreshActiveTicket(activeTicket._id);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to add note");
+    } finally {
+      setSaving(false);
     }
-    setInternalNote("");
-    toast.success("Internal note added");
   };
 
   const handleStatusUpdate = async (nextStatus) => {
-    if (!activeTicket) return;
-    if (!activeTicket.isDemo && activeTicket._id) {
-      try {
-        setSaving(true);
-        await adminService.updateSupportTicketStatus(
-          activeTicket._id,
-          nextStatus,
-        );
-        toast.success(`Ticket status updated to ${nextStatus}`);
-        fetchTickets();
-      } catch (err) {
-        toast.error(err?.response?.data?.message || "Failed to update status");
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      setDemoTickets((prev) =>
-        prev.map((item) =>
-          item.ticket === activeTicket.ticket
-            ? {
-                ...item,
-                status:
-                  nextStatus === "RESOLVED"
-                    ? "Resolved"
-                    : nextStatus === "IN_PROGRESS"
-                      ? "Pending"
-                      : "Open",
-              }
-            : item,
-        ),
+    if (!activeTicket?._id) return;
+    const normalized = String(nextStatus || "").toLowerCase();
+
+    try {
+      setSaving(true);
+      await adminService.updateSupportTicketStatus(activeTicket._id, normalized);
+      setActiveTicket((prev) =>
+        prev
+          ? { ...prev, rawStatus: normalized, status: formatLabel(normalized) }
+          : prev,
       );
-      toast.success("Ticket status updated");
+      toast.success(`Ticket status updated to ${formatLabel(normalized)}`);
+      fetchTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update status");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handlePriorityUpdate = async (nextPriority) => {
-    if (!activeTicket) return;
-    if (!activeTicket.isDemo && activeTicket._id) {
-      try {
-        setSaving(true);
-        await adminService.updateSupportTicketPriority(
-          activeTicket._id,
-          nextPriority,
-        );
-        toast.success(`Priority updated to ${nextPriority}`);
-        fetchTickets();
-      } catch (err) {
-        toast.error(
-          err?.response?.data?.message || "Failed to update priority",
-        );
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      toast.success(`Priority updated to ${nextPriority}`);
+    if (!activeTicket?._id) return;
+    const normalized = String(nextPriority || "").toLowerCase();
+
+    try {
+      setSaving(true);
+      await adminService.updateSupportTicketPriority(
+        activeTicket._id,
+        normalized,
+      );
+      setActiveTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              rawPriority: normalized,
+              priority: formatLabel(normalized),
+            }
+          : prev,
+      );
+      toast.success(`Priority updated to ${formatLabel(normalized)}`);
+      fetchTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update priority");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleCloseOrReopen = async () => {
-    if (!activeTicket) return;
-    const isClosed =
-      String(activeTicket.status).toUpperCase() === "CLOSED";
-    if (!activeTicket.isDemo && activeTicket._id) {
-      try {
-        setSaving(true);
-        if (isClosed) {
-          await adminService.reopenSupportTicket(activeTicket._id);
-          toast.success("Ticket reopened");
-        } else {
-          await adminService.closeSupportTicket(
-            activeTicket._id,
-            resolutionText.trim() || "Resolved by support team",
-          );
-          toast.success("Ticket closed");
-        }
-        setActiveTicket(null);
-        fetchTickets();
-      } catch (err) {
-        toast.error(err?.response?.data?.message || "Action failed");
-      } finally {
-        setSaving(false);
+    if (!activeTicket?._id) return;
+    const isClosed = activeTicket.rawStatus === "closed";
+
+    try {
+      setSaving(true);
+      if (isClosed) {
+        await adminService.reopenSupportTicket(activeTicket._id);
+        toast.success("Ticket reopened");
+      } else {
+        await adminService.closeSupportTicket(
+          activeTicket._id,
+          "Resolved by support team",
+        );
+        toast.success("Ticket closed");
       }
-    } else {
-      setDemoTickets((prev) =>
-        prev.map((item) =>
-          item.ticket === activeTicket.ticket
-            ? { ...item, status: isClosed ? "Open" : "Resolved" }
-            : item,
-        ),
-      );
       setActiveTicket(null);
-      toast.success(isClosed ? "Ticket reopened" : "Ticket closed");
+      fetchTickets();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Action failed");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -298,20 +268,35 @@ const Support = ({ tickets: propTickets = [] }) => {
       </div>
 
       <div className="panel">
-        <div className="toolbar">
+        <div className="toolbar" style={{ flexWrap: "wrap", gap: "10px" }}>
           <input
             className="field"
-            placeholder="Search..."
+            placeholder="Search tickets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button
-            type="button"
-            className="primarybtn"
-            onClick={() => toast.success("New support form opened")}
-          >
-            + Add new
-          </button>
+
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+            {["all", "open", "in_progress", "resolved", "closed"].map((st) => (
+              <button
+                key={st}
+                type="button"
+                className={statusFilter === st ? "primarybtn" : "btnsm"}
+                onClick={() => setStatusFilter(st)}
+              >
+                {st === "all" ? "All" : formatLabel(st)}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="outlinebtn"
+              disabled={loading}
+              onClick={fetchTickets}
+            >
+              {loading ? "Loading..." : "↻ Refresh"}
+            </button>
+          </div>
         </div>
 
         <div id="simpleTable" className="tablewrap">
@@ -327,28 +312,49 @@ const Support = ({ tickets: propTickets = [] }) => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t) => (
-                <tr key={t._id || t.ticket}>
-                  <td>{t.ticket}</td>
-                  <td>{t.customer}</td>
-                  <td>{t.subject}</td>
-                  <td>{t.priority}</td>
-                  <td>
-                    <span className={`status ${statusClass(t.status)}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => handleOpenTicket(t)}
-                    >
-                      Open
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "24px" }}>
+                    Loading support tickets...
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "24px" }}>
+                    No support tickets found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((t) => (
+                  <tr key={t._id || t.ticket}>
+                    <td>{t.ticket}</td>
+                    <td>
+                      <div>{t.customer}</div>
+                      {t.customerEmail && (
+                        <div style={{ fontSize: "11px", color: "var(--muted)" }}>
+                          {t.customerEmail}
+                        </div>
+                      )}
+                    </td>
+                    <td>{t.subject}</td>
+                    <td>{t.priority}</td>
+                    <td>
+                      <span className={`status ${statusClass(t.rawStatus)}`}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btnsm"
+                        onClick={() => handleOpenTicket(t)}
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -361,9 +367,9 @@ const Support = ({ tickets: propTickets = [] }) => {
             if (e.target === e.currentTarget) setActiveTicket(null);
           }}
         >
-          <div className="modal">
+          <div className="modal" style={{ maxWidth: "620px" }}>
             <div className="modalhead">
-              <h2>{activeTicket.ticket}</h2>
+              <h2>#{activeTicket.ticket}</h2>
               <button
                 type="button"
                 className="iconbtn"
@@ -372,13 +378,54 @@ const Support = ({ tickets: propTickets = [] }) => {
                 ✕
               </button>
             </div>
-            <p>
+            <p style={{ marginBottom: "10px" }}>
               <b>Subject:</b> {activeTicket.subject} · <b>Customer:</b>{" "}
               {activeTicket.customer}
             </p>
 
+            {/* Messages Thread */}
+            <div style={{ maxHeight: "220px", overflowY: "auto", marginBottom: "12px" }}>
+              {(activeTicket.messages || []).length === 0 ? (
+                <div className="notice">No messages recorded on this ticket.</div>
+              ) : (
+                (activeTicket.messages || []).map((m, idx) => {
+                  const isAdminMsg = ["admin", "super_admin"].includes(
+                    String(m.sender?.role || "").toLowerCase(),
+                  );
+                  return (
+                    <div
+                      key={m._id || idx}
+                      className="notice"
+                      style={{
+                        marginBottom: "8px",
+                        borderLeft: isAdminMsg
+                          ? "3px solid var(--primary)"
+                          : "3px solid var(--gold)",
+                      }}
+                    >
+                      <div style={{ fontSize: "11px", fontWeight: 700, marginBottom: "3px" }}>
+                        {isAdminMsg
+                          ? `${
+                              m.sender?.fullName ||
+                              m.sender?.name ||
+                              m.sender?.username ||
+                              "Admin"
+                            } (Support)`
+                          : activeTicket.customer}{" "}
+                        ·{" "}
+                        {m.createdAt
+                          ? new Date(m.createdAt).toLocaleString("en-IN")
+                          : ""}
+                      </div>
+                      <div style={{ whiteSpace: "pre-wrap" }}>{m.message}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             {ticketHistory.length > 0 && (
-              <div className="notice" style={{ marginBottom: "10px" }}>
+              <div className="notice" style={{ marginBottom: "10px", fontSize: "11px" }}>
                 <b>Recent activity:</b>{" "}
                 {ticketHistory
                   .slice(0, 3)
@@ -392,36 +439,39 @@ const Support = ({ tickets: propTickets = [] }) => {
                 <label>Update status</label>
                 <select
                   className="field full"
-                  defaultValue="IN_PROGRESS"
+                  value={activeTicket.rawStatus || "open"}
+                  disabled={saving}
                   onChange={(e) => handleStatusUpdate(e.target.value)}
                 >
-                  <option value="OPEN">OPEN</option>
-                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                  <option value="WAITING_FOR_CUSTOMER">
-                    WAITING_FOR_CUSTOMER
-                  </option>
-                  <option value="RESOLVED">RESOLVED</option>
+                  <option value="open">Open</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="waiting_for_customer">Waiting for Customer</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
                 </select>
               </div>
               <div className="formgroup">
                 <label>Update priority</label>
                 <select
                   className="field full"
-                  defaultValue="MEDIUM"
+                  value={activeTicket.rawPriority || "medium"}
+                  disabled={saving}
                   onChange={(e) => handlePriorityUpdate(e.target.value)}
                 >
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="URGENT">URGENT</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
                 </select>
               </div>
             </div>
 
             <textarea
               className="field full"
+              rows={3}
               style={{ width: "100%", marginTop: "10px" }}
-              placeholder="Reply"
+              placeholder="Write a reply to the customer..."
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
             />
@@ -442,7 +492,7 @@ const Support = ({ tickets: propTickets = [] }) => {
               <button
                 type="button"
                 className="btnsm"
-                disabled={saving}
+                disabled={saving || !internalNote.trim()}
                 onClick={handleAddNote}
               >
                 Add note
@@ -460,10 +510,10 @@ const Support = ({ tickets: propTickets = [] }) => {
               <button
                 type="button"
                 className="primarybtn"
-                disabled={saving}
+                disabled={saving || !replyText.trim()}
                 onClick={handleSendReply}
               >
-                Send reply
+                {saving ? "Saving..." : "Send reply"}
               </button>
               <button
                 type="button"
@@ -471,7 +521,7 @@ const Support = ({ tickets: propTickets = [] }) => {
                 disabled={saving}
                 onClick={handleCloseOrReopen}
               >
-                {String(activeTicket.status).toUpperCase() === "CLOSED"
+                {activeTicket.rawStatus === "closed"
                   ? "Reopen ticket"
                   : "Close ticket"}
               </button>

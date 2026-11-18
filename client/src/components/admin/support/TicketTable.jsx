@@ -1,32 +1,90 @@
 
 
+const isUserObject = (val) =>
+  Boolean(val) && typeof val === "object" && !Array.isArray(val);
+
+const ADMIN_ROLES = new Set(["admin", "super_admin"]);
+
 const TicketTable = ({
   tickets = [],
   loading = false,
+  fallbackUser = null,
   onViewTicket,
   onEditTicket,
   onDeleteTicket,
   onStatusChange,
 }) => {
   const getTicketId = (ticket) =>
-    ticket?._id ||
-    ticket?.id ||
     ticket?.ticketId ||
     ticket?.ticketNumber ||
+    ticket?._id ||
+    ticket?.id ||
     "—";
 
-  const getUser = (ticket) => ticket?.user || ticket?.customer || {};
+  const formatTicketDisplayId = (id) => {
+    const str = String(id || "—");
+    return str.startsWith("TCK-") || str.length <= 12 ? str : str.slice(-8);
+  };
+
+  const getUser = (ticket) => {
+    const candidates = [
+      ticket?.userId,
+      ticket?.user,
+      ticket?.customer,
+      ticket?.messages?.find(
+        (m) =>
+          isUserObject(m?.sender) &&
+          !ADMIN_ROLES.has(String(m.sender.role || "").toLowerCase()),
+      )?.sender,
+    ].filter(isUserObject);
+
+    const primary = candidates[0] || {};
+    if (!isUserObject(fallbackUser)) return primary;
+
+    const primaryId = primary?._id || primary?.id;
+    const rawUserId =
+      typeof ticket?.userId === "string"
+        ? ticket.userId
+        : ticket?.userId?._id || ticket?.userId?.id;
+    const fallbackId = fallbackUser?._id || fallbackUser?.id;
+
+    // Fill missing profile details only when ticket belongs to fallbackUser or userId is unpopulated
+    const canApplyFallback =
+      !primaryId ||
+      !fallbackId ||
+      String(primaryId) === String(fallbackId) ||
+      (!isUserObject(ticket?.userId) &&
+        (!rawUserId || String(rawUserId) === String(fallbackId)));
+
+    if (!canApplyFallback) return primary;
+
+    return {
+      ...fallbackUser,
+      ...primary,
+      fullName: primary.fullName || fallbackUser.fullName,
+      name: primary.name || fallbackUser.name,
+      username: primary.username || fallbackUser.username,
+      email: primary.email || fallbackUser.email,
+    };
+  };
 
   const getUserName = (ticket) => {
     const user = getUser(ticket);
-
-    return (
+    const resolved =
       user?.fullName ||
       user?.name ||
+      user?.username ||
       ticket?.userName ||
-      ticket?.customerName ||
-      "Unknown User"
-    );
+      ticket?.customerName;
+
+    if (resolved && String(resolved).trim()) return String(resolved).trim();
+
+    const email = user?.email || ticket?.email;
+    if (email && String(email).includes("@")) {
+      return String(email).split("@")[0];
+    }
+
+    return "Customer";
   };
 
   const getUserEmail = (ticket) => {
@@ -97,9 +155,10 @@ const TicketTable = ({
 
   const getStatusClasses = (status) => {
     const classes = {
-      open: "bg-blue-50 text-blue-700 ring-secondary/30",
-      pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
-      in_progress: "bg-purple-50 text-purple-700 ring-purple-600/20",
+      open: "bg-[var(--soft)] text-[var(--primary)] ring-[var(--primary)]/25",
+      pending: "bg-amber-50 text-amber-800 ring-amber-600/20",
+      in_progress: "bg-amber-50 text-amber-800 ring-amber-600/20",
+      waiting_for_customer: "bg-amber-50 text-amber-800 ring-amber-600/20",
       resolved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
       closed: "bg-gray-100 text-gray-700 ring-gray-500/20",
     };
@@ -113,7 +172,7 @@ const TicketTable = ({
   const getPriorityClasses = (priority) => {
     const classes = {
       low: "bg-gray-100 text-gray-700 ring-gray-500/20",
-      medium: "bg-blue-50 text-blue-700 ring-secondary/30",
+      medium: "bg-[var(--soft)] text-[var(--primary)] ring-[var(--primary)]/25",
       high: "bg-orange-50 text-orange-700 ring-orange-600/20",
       urgent: "bg-red-50 text-red-700 ring-red-600/20",
     };
@@ -281,9 +340,9 @@ const TicketTable = ({
                     <button
                       type="button"
                       onClick={() => handleView(ticket)}
-                      className="font-semibold text-primary transition hover:underline"
+                      className="cursor-pointer font-semibold text-[var(--primary)] transition hover:underline"
                     >
-                      #{String(id).slice(-8)}
+                      #{formatTicketDisplayId(id)}
                     </button>
                   </td>
 
@@ -348,37 +407,45 @@ const TicketTable = ({
 
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleView(ticket)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
-                      >
-                        View
-                      </button>
+                      {onViewTicket && (
+                        <button
+                          type="button"
+                          onClick={() => handleView(ticket)}
+                          className="btnsm cursor-pointer !text-xs !py-1.5 !px-3"
+                        >
+                          View Details →
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(ticket)}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
-                      >
-                        Edit
-                      </button>
+                      {onEditTicket && (
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(ticket)}
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange(ticket)}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
-                      >
-                        Status
-                      </button>
+                      {onStatusChange && (
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange(ticket)}
+                          className="rounded-lg bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 cursor-pointer"
+                        >
+                          Status
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(ticket)}
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                      {onDeleteTicket && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ticket)}
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -406,13 +473,13 @@ const TicketTable = ({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => handleView(ticket)}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    #{String(id).slice(-8)}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleView(ticket)}
+                      className="cursor-pointer font-semibold text-[var(--primary)] hover:underline"
+                    >
+                      #{formatTicketDisplayId(id)}
+                    </button>
 
                   <h3 className="mt-1 truncate text-sm font-semibold text-foreground">
                     {subject}
@@ -487,43 +554,51 @@ const TicketTable = ({
                   </p>
 
                   <p className="mt-1 truncate text-sm font-medium text-foreground">
-                    #{String(id).slice(-8)}
+                    #{formatTicketDisplayId(id)}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <button
-                  type="button"
-                  onClick={() => handleView(ticket)}
-                  className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
-                >
-                  View
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {onViewTicket && (
+                  <button
+                    type="button"
+                    onClick={() => handleView(ticket)}
+                    className="btnsm flex-1 cursor-pointer !text-xs !py-2"
+                  >
+                    View Details →
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => handleEdit(ticket)}
-                  className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted"
-                >
-                  Edit
-                </button>
+                {onEditTicket && (
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(ticket)}
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(ticket)}
-                  className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
-                >
-                  Status
-                </button>
+                {onStatusChange && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange(ticket)}
+                    className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 cursor-pointer"
+                  >
+                    Status
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(ticket)}
-                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                >
-                  Delete
-                </button>
+                {onDeleteTicket && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(ticket)}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           );

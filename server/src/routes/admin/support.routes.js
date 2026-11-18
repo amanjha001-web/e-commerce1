@@ -7,27 +7,37 @@ const router = Router();
 
 router.use(authenticate, requireAdmin);
 
+const withForcedStatus = (status) => (req, res, next) => {
+  req.body = { ...(req.body || {}), status };
+  return supportController.updateSupportTicketStatus(req, res, next);
+};
+
+// Collection routes
 router.get('/', supportController.getSupportTickets);
 router.get('/tickets', supportController.getSupportTickets);
-router.get('/:ticketId', supportController.getSupportTicketById);
+
+// Specific `/tickets/:ticketId` routes first
+router.get('/tickets/:ticketId/history', supportController.getTicketHistory);
 router.get('/tickets/:ticketId', supportController.getSupportTicketById);
-router.post('/:ticketId/reply', supportController.replyToSupportTicket);
 router.post('/tickets/:ticketId/reply', supportController.replyToSupportTicket);
-router.patch('/:ticketId/status', supportController.updateSupportTicketStatus);
+router.post('/tickets/:ticketId/notes', supportController.addInternalNote);
 router.patch('/tickets/:ticketId/status', supportController.updateSupportTicketStatus);
-router.patch('/:ticketId/close', (req, res, next) => { req.body.status = 'closed'; return supportController.updateSupportTicketStatus(req, res, next); });
-router.patch('/tickets/:ticketId/close', (req, res, next) => { req.body.status = 'closed'; return supportController.updateSupportTicketStatus(req, res, next); });
-router.patch('/:ticketId/reopen', (req, res, next) => { req.body.status = 'open'; return supportController.updateSupportTicketStatus(req, res, next); });
-router.patch('/tickets/:ticketId/reopen', (req, res, next) => { req.body.status = 'open'; return supportController.updateSupportTicketStatus(req, res, next); });
-router.patch('/:ticketId/priority', supportController.updateSupportTicketStatus);
-router.patch('/tickets/:ticketId/priority', supportController.updateSupportTicketStatus);
-router.post('/:ticketId/notes', supportController.replyToSupportTicket);
-router.post('/tickets/:ticketId/notes', supportController.replyToSupportTicket);
-router.get('/:ticketId/history', supportController.getSupportTicketById);
-router.get('/tickets/:ticketId/history', supportController.getSupportTicketById);
-router.patch('/:ticketId/assign', supportController.assignSupportTicket);
+router.patch('/tickets/:ticketId/priority', supportController.updateSupportTicketPriority);
+router.patch('/tickets/:ticketId/close', withForcedStatus('closed'));
+router.patch('/tickets/:ticketId/reopen', withForcedStatus('open'));
 router.patch('/tickets/:ticketId/assign', supportController.assignSupportTicket);
-router.delete('/:ticketId', supportController.deleteTicket);
 router.delete('/tickets/:ticketId', supportController.deleteTicket);
+
+// Direct `/:ticketId` alias routes
+router.get('/:ticketId/history', supportController.getTicketHistory);
+router.get('/:ticketId', supportController.getSupportTicketById);
+router.post('/:ticketId/reply', supportController.replyToSupportTicket);
+router.post('/:ticketId/notes', supportController.addInternalNote);
+router.patch('/:ticketId/status', supportController.updateSupportTicketStatus);
+router.patch('/:ticketId/priority', supportController.updateSupportTicketPriority);
+router.patch('/:ticketId/close', withForcedStatus('closed'));
+router.patch('/:ticketId/reopen', withForcedStatus('open'));
+router.patch('/:ticketId/assign', supportController.assignSupportTicket);
+router.delete('/:ticketId', supportController.deleteTicket);
 
 export default router;
