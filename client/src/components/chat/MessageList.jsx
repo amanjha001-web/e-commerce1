@@ -2,21 +2,26 @@ import { useEffect, useRef } from "react";
 import MessageItem from "./MessageItem";
 
 const MessageList = ({ messages = [], currentUserId, loading = false }) => {
-  const bottomRef = useRef(null);
+  const containerRef = useRef(null);
+  const lastCountRef = useRef(0);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (messages.length !== lastCountRef.current) {
+      el.scrollTop = el.scrollHeight;
+      lastCountRef.current = messages.length;
+    }
   }, [messages]);
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-[400px] items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]" />
+      <div className="flex h-full min-h-[260px] items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[var(--primary)]/60" />
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[var(--primary)]/60 [animation-delay:150ms]" />
+          <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-[var(--primary)]/60 [animation-delay:300ms]" />
         </div>
       </div>
     );
@@ -24,16 +29,16 @@ const MessageList = ({ messages = [], currentUserId, loading = false }) => {
 
   if (!messages.length) {
     return (
-      <div className="flex h-full min-h-[400px] items-center justify-center px-6 text-center">
+      <div className="flex h-full min-h-[260px] items-center justify-center px-6 text-center">
         <div>
           <div className="text-4xl">💬</div>
 
-          <h3 className="mt-3 text-sm font-semibold text-gray-900 dark:text-white">
+          <h3 className="mt-3 text-sm font-bold text-[var(--text)] dark:text-white">
             No messages yet
           </h3>
 
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Send a message to start the conversation.
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Send a message below to start the conversation.
           </p>
         </div>
       </div>
@@ -41,7 +46,7 @@ const MessageList = ({ messages = [], currentUserId, loading = false }) => {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-5">
+    <div ref={containerRef} className="h-full overflow-y-auto px-4 py-5">
       <div className="space-y-3">
         {messages.map((message, index) => (
           <MessageItem
@@ -54,8 +59,6 @@ const MessageList = ({ messages = [], currentUserId, loading = false }) => {
             currentUserId={currentUserId}
           />
         ))}
-
-        <div ref={bottomRef} />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { notificationService } from './notification.service.js';
 import { ADMIN_ROLES } from '../../constants/roles.constant.js';
 
 const PARTICIPANT_SELECT = 'fullName name username email avatar role';
+const SUPPORT_ROLE_FILTER = [...new Set([...ADMIN_ROLES, 'admin', 'super_admin', 'ADMIN', 'SUPER_ADMIN'])];
 
 const formatDisplayName = (user, fallback = 'Someone') =>
   user?.fullName || user?.name || user?.username || fallback;
@@ -24,15 +25,15 @@ export class ChatService {
   async getAvailableContacts(userId) {
     const [supportUsers, approvedVendors] = await Promise.all([
       User.find({
-        role: { $in: ADMIN_ROLES },
-        isActive: true,
+        role: { $in: SUPPORT_ROLE_FILTER },
+        isActive: { $ne: false },
         _id: { $ne: userId },
       })
         .select(PARTICIPANT_SELECT)
         .limit(10),
       Vendor.find({
         status: 'approved',
-        isActive: true,
+        isActive: { $ne: false },
         userId: { $ne: userId },
       })
         .populate('userId', PARTICIPANT_SELECT)
@@ -129,8 +130,8 @@ export class ChatService {
 
     if (payload.type === 'support' || targetRecipientId === 'support') {
       const supportUser = await User.findOne({
-        role: { $in: ADMIN_ROLES },
-        isActive: true,
+        role: { $in: SUPPORT_ROLE_FILTER },
+        isActive: { $ne: false },
         _id: { $ne: userId },
       }).select('_id');
       if (!supportUser) {

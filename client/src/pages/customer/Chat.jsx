@@ -1,11 +1,18 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ReactReduxContext } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import chatService from "../../services/chat.service";
 import ConversationList from "../../components/chat/ConversationList";
 import ChatHeader from "../../components/chat/ChatHeader";
-import ChatWindow from "../../components/chat/ChatWindow";
+import MessageList from "../../components/chat/MessageList";
 import MessageInput from "../../components/chat/MessageInput";
 import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
@@ -17,6 +24,9 @@ import {
   extractMessagesList,
   resolveAvatarUrl,
 } from "../../utils/chatHelpers";
+
+const getConversationId = (conversation) =>
+  conversation?._id || conversation?.id || null;
 
 const Chat = ({
   conversations: propConversations = null,
@@ -34,6 +44,7 @@ const Chat = ({
   const { conversationId: routeConversationId } = useParams();
   const navigate = useNavigate();
   const reduxCtx = useContext(ReactReduxContext);
+  const fetchedRouteIdRef = useRef(null);
 
   const [authUser, setAuthUser] = useState(
     () => propUser || reduxCtx?.store?.getState()?.auth?.user || null,
@@ -80,12 +91,10 @@ const Chat = ({
   const messages = isControlledMessages ? propMessages : internalMessages;
   const selectedConversation =
     propActiveConversation !== null ? propActiveConversation : internalActiveConv;
+  const activeConvId = getConversationId(selectedConversation);
   const loading = propLoading || internalLoading;
   const messagesLoading = propMessagesLoading || internalMessagesLoading;
   const sending = propSending || internalSending;
-
-  const getConversationId = (conversation) =>
-    conversation?._id || conversation?.id;
 
   const loadConversations = useCallback(
     async ({ silent = false } = {}) => {
@@ -116,21 +125,43 @@ const Chat = ({
   );
 
   const loadMessages = useCallback(
-    async (convId, { silent = false } = {}) => {
+    async (convId, { silent = false, signal = null } = {}) => {
       if (!convId || isControlledMessages) return;
       try {
         if (!silent) setInternalMessagesLoading(true);
         const res = await chatService.getMessages(convId);
-        setInternalMessages(extractMessagesList(res));
+        if (signal?.cancelled) return;
+
+        const nextMessages = extractMessagesList(res);
+        setInternalMessages((prev) => {
+          if (
+            silent &&
+            prev.length === nextMessages.length &&
+            (prev[prev.length - 1]?._id || prev[prev.length - 1]?.id) ===
+              (nextMessages[nextMessages.length - 1]?._id ||
+                nextMessages[nextMessages.length - 1]?.id)
+          ) {
+            return prev;
+          }
+          return nextMessages;
+        });
+
         chatService.markConversationAsRead(convId).catch(() => {});
-        setInternalConversations((prev) =>
-          prev.map((c) =>
+        setInternalConversations((prev) => {
+          const needsClear = prev.some(
+            (c) =>
+              String(getConversationId(c)) === String(convId) &&
+              Number(c.unreadCount || 0) > 0,
+          );
+          if (!needsClear) return prev;
+          return prev.map((c) =>
             String(getConversationId(c)) === String(convId)
               ? { ...c, unreadCount: 0 }
               : c,
-          ),
-        );
+          );
+        });
       } catch (err) {
+        if (signal?.cancelled) return;
         console.error("Failed to fetch messages:", err);
         if (!silent) {
           toast.error(
@@ -138,7 +169,9 @@ const Chat = ({
           );
         }
       } finally {
-        if (!silent) setInternalMessagesLoading(false);
+        if (!silent && !signal?.cancelled) {
+          setInternalMessagesLoading(false);
+        }
       }
     },
     [isControlledMessages],
@@ -148,20 +181,34 @@ const Chat = ({
     loadConversations();
   }, [loadConversations]);
 
-  // Sync deep-linked /chat/:conversationId URL param
+  // Sync selected conversation cleanly with URL param without re-triggering message fetches
   useEffect(() => {
-    if (!routeConversationId || propActiveConversation !== null) return;
+    if (propActiveConversation !== null) return;
+
+    if (!routeConversationId) {
+      fetchedRouteIdRef.current = null;
+      return;
+    }
 
     const match = conversations.find(
       (c) => String(getConversationId(c)) === String(routeConversationId),
     );
     if (match) {
-      setInternalActiveConv(match);
-      loadMessages(routeConversationId);
+      fetchedRouteIdRef.current = routeConversationId;
+      setInternalActiveConv((prev) =>
+        String(getConversationId(prev)) === String(routeConversationId)
+          ? prev
+          : match,
+      );
       return;
     }
 
-    if (!isControlledConversations && !internalLoading) {
+    if (
+      !isControlledConversations &&
+      !internalLoading &&
+      fetchedRouteIdRef.current !== routeConversationId
+    ) {
+      fetchedRouteIdRef.current = routeConversationId;
       chatService
         .getConversationById(routeConversationId)
         .then((res) => {
@@ -173,10 +220,12 @@ const Chat = ({
                 ? prev
                 : [conv, ...prev],
             );
-            loadMessages(conv._id);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          toast.error("Conversation not found");
+          navigate("/chat", { replace: true });
+        });
     }
   }, [
     routeConversationId,
@@ -184,20 +233,32 @@ const Chat = ({
     propActiveConversation,
     isControlledConversations,
     internalLoading,
-    loadMessages,
+    navigate,
   ]);
 
-  // Keep open conversation updated cleanly via background refresh
+  // Fetch messages ONLY when activeConvId changes + keep open chat polled silently
   useEffect(() => {
-    const activeId = getConversationId(selectedConversation);
-    if (!activeId || isControlledMessages) return undefined;
+    if (!activeConvId || isControlledMessages) {
+      if (!activeConvId && !isControlledMessages) {
+        setInternalMessages([]);
+        setInternalMessagesLoading(false);
+      }
+      return undefined;
+    }
+
+    const signal = { cancelled: false };
+    setInternalMessages([]);
+    loadMessages(activeConvId, { silent: false, signal });
 
     const timer = setInterval(() => {
-      loadMessages(activeId, { silent: true });
+      loadMessages(activeConvId, { silent: true, signal });
     }, 5000);
 
-    return () => clearInterval(timer);
-  }, [selectedConversation, isControlledMessages, loadMessages]);
+    return () => {
+      signal.cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeConvId, isControlledMessages, loadMessages]);
 
   const handleSelectConversation = (conversation) => {
     const convId =
@@ -223,24 +284,24 @@ const Chat = ({
       null;
 
     setInternalActiveConv(found);
-    loadMessages(convId);
     if (String(routeConversationId || "") !== String(convId)) {
       navigate(`/chat/${convId}`);
     }
   };
 
   const handleSendMessage = async (text) => {
-    const activeId = getConversationId(selectedConversation);
     const cleanText = String(text || "").trim();
-    if (!activeId || !cleanText) return false;
+    if (!activeConvId || !cleanText) return false;
 
     if (onSendMessage) {
-      return onSendMessage(activeId, cleanText);
+      return onSendMessage(activeConvId, cleanText);
     }
 
     try {
       setInternalSending(true);
-      const res = await chatService.sendMessage(activeId, { content: cleanText });
+      const res = await chatService.sendMessage(activeConvId, {
+        content: cleanText,
+      });
       const createdMsg = extractMessageObject(res);
 
       if (createdMsg) {
@@ -255,7 +316,7 @@ const Chat = ({
 
       setInternalConversations((prev) => {
         const updated = prev.map((c) =>
-          String(getConversationId(c)) === String(activeId)
+          String(getConversationId(c)) === String(activeConvId)
             ? {
                 ...c,
                 lastMessage: createdMsg || { content: cleanText },
@@ -289,7 +350,7 @@ const Chat = ({
       setInternalConversations((prev) =>
         prev.filter((c) => String(getConversationId(c)) !== String(convId)),
       );
-      if (String(getConversationId(selectedConversation)) === String(convId)) {
+      if (String(activeConvId) === String(convId)) {
         setInternalActiveConv(null);
         setInternalMessages([]);
         if (routeConversationId) navigate("/chat");
@@ -322,12 +383,12 @@ const Chat = ({
       setStartingChat(true);
       const res = await chatService.createConversation(payload);
       const created = extractConversationObject(res);
-      if (!created?._id && !created?.id) {
+      const createdId = getConversationId(created);
+      if (!createdId) {
         toast.error("Unable to open conversation");
         return;
       }
 
-      const createdId = getConversationId(created);
       setInternalConversations((prev) => {
         const exists = prev.some(
           (c) => String(getConversationId(c)) === String(createdId),
@@ -338,7 +399,8 @@ const Chat = ({
       handleSelectConversation(created);
     } catch (err) {
       toast.error(
-        err?.response?.data?.message || "No support or seller contact available right now",
+        err?.response?.data?.message ||
+          "No support or seller contact available right now",
       );
     } finally {
       setStartingChat(false);
@@ -398,13 +460,13 @@ const Chat = ({
             </div>
 
             {/* Conversation List */}
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {loading ? (
                 <div className="flex min-h-[200px] items-center justify-center">
                   <Loader />
                 </div>
               ) : fetchError ? (
-                <div className="p-6 text-center">
+                <div className="overflow-y-auto p-6 text-center">
                   <EmptyState
                     title="Unable to load messages"
                     message={fetchError}
@@ -413,7 +475,7 @@ const Chat = ({
                   />
                 </div>
               ) : conversations.length === 0 ? (
-                <div className="p-6 text-center">
+                <div className="overflow-y-auto p-6 text-center">
                   <EmptyState
                     title="No conversations"
                     message="Your chats with sellers and customer support will appear here."
@@ -455,14 +517,11 @@ const Chat = ({
                 onDelete={handleDeleteConversation}
               />
 
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <ChatWindow
-                  embedded
-                  conversation={selectedConversation}
+              <div className="min-h-0 flex-1 overflow-hidden bg-[var(--bg)]/40">
+                <MessageList
                   messages={messages}
-                  loading={messagesLoading}
-                  currentUser={currentUser}
                   currentUserId={currentUserId}
+                  loading={messagesLoading}
                 />
               </div>
 
