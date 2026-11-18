@@ -17,6 +17,7 @@ import { sendOtpEmail, sendWelcomeEmail, sendPasswordResetEmail } from '../../in
 import { verifyGoogleIdToken } from '../../integrations/google/google.client.js';
 import { env } from '../../config/env.js';
 import { ROLES } from '../../constants/roles.constant.js';
+import { notificationService } from './notification.service.js';
 
 export class AuthService {
   async register(payload) {
@@ -81,6 +82,16 @@ export class AuthService {
 
     user.refreshToken = refreshToken;
     await user.save();
+
+    notificationService
+      .createNotification({
+        userId: user._id,
+        title: 'Welcome to ShopSphere!',
+        message: `Hi ${user.name}, welcome to ShopSphere. Explore curated products and exclusive deals.`,
+        type: 'system',
+        link: '/products',
+      })
+      .catch(() => {});
 
     return {
       user: sanitizeUser(user),

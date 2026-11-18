@@ -23,6 +23,7 @@ export const sanitizeUser = (user) => {
   delete obj.otpExpires;
   delete obj.pendingEmail;
   delete obj.pendingProfileUpdate;
+  delete obj.notificationsSynced;
   obj.fullName = obj.fullName || obj.name || '';
   obj.name = obj.name || obj.fullName || '';
   return obj;

@@ -7,6 +7,7 @@ import { parsePagination, slugify } from '../../utils/helpers.js';
 import { VENDOR_STATUS } from '../../constants/vendorStatus.constant.js';
 import { ROLES } from '../../constants/roles.constant.js';
 import { sendVendorStatusEmail } from '../../integrations/email/email.client.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class AdminVendorRequestService {
   async getRequests(params = {}) {
@@ -94,6 +95,17 @@ export class AdminVendorRequestService {
 
     sendVendorStatusEmail(request.email, request.storeName, 'approved').catch(() => {});
 
+    notificationService
+      .createNotification({
+        userId: request.userId,
+        title: 'Seller Application Approved',
+        message: `Congratulations! Your seller application for "${request.storeName}" has been approved.`,
+        type: 'vendor',
+        link: '/vendor',
+        data: { requestId: request._id, vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
+      })
+      .catch(() => {});
+
     return { request, vendor };
   }
 
@@ -109,6 +121,17 @@ export class AdminVendorRequestService {
 
     sendVendorStatusEmail(request.email, request.storeName, 'rejected', reason).catch(() => {});
 
+    notificationService
+      .createNotification({
+        userId: request.userId,
+        title: 'Seller Application Rejected',
+        message: `Your seller application for "${request.storeName}" was rejected.${reason ? ` Reason: ${reason}` : ''}`,
+        type: 'vendor',
+        link: '/seller/request-status',
+        data: { requestId: request._id, status: VENDOR_STATUS.REJECTED },
+      })
+      .catch(() => {});
+
     return request;
   }
 
@@ -121,6 +144,17 @@ export class AdminVendorRequestService {
     request.reviewedBy = adminId;
     request.reviewedAt = new Date();
     await request.save();
+
+    notificationService
+      .createNotification({
+        userId: request.userId,
+        title: 'Seller Application Under Review',
+        message: `Your seller application for "${request.storeName}" is now under review.`,
+        type: 'vendor',
+        link: '/seller/request-status',
+        data: { requestId: request._id, status: VENDOR_STATUS.UNDER_REVIEW },
+      })
+      .catch(() => {});
 
     return request;
   }

@@ -121,6 +121,11 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    notificationsSynced: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
   },
   {
     timestamps: true,

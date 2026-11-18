@@ -18,8 +18,12 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['order', 'payment', 'product', 'vendor', 'system', 'chat'],
+      enum: ['order', 'payment', 'product', 'vendor', 'system', 'chat', 'promotion', 'general'],
       default: 'system',
+    },
+    link: {
+      type: String,
+      default: '',
     },
     data: {
       type: mongoose.Schema.Types.Mixed,

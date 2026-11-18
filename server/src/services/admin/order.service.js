@@ -9,6 +9,7 @@ import { parsePagination } from '../../utils/helpers.js';
 import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class AdminOrderService {
   async getOrders(params = {}) {
@@ -71,6 +72,18 @@ export class AdminOrderService {
     }
 
     await order.save();
+
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Order Status Updated',
+        message: `Your order #${order.orderNumber} status is now ${String(status).replace(/_/g, ' ')}.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status },
+      })
+      .catch(() => {});
+
     return order;
   }
 
@@ -112,6 +125,17 @@ export class AdminOrderService {
         performedBy: adminId,
       });
     }
+
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Order Cancelled',
+        message: `Your order #${order.orderNumber} was cancelled by support.${reason ? ` Reason: ${reason}` : ''}`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: ORDER_STATUS.CANCELLED },
+      })
+      .catch(() => {});
 
     return order;
   }
@@ -164,6 +188,17 @@ export class AdminOrderService {
     payment.status = PAYMENT_STATUS.REFUNDED;
     await payment.save();
 
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Refund Processed',
+        message: `A refund of ₹${refundAmount} for order #${order.orderNumber} has been processed.`,
+        type: 'payment',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, refundId: refund._id },
+      })
+      .catch(() => {});
+
     return { order, refund };
   }
 
@@ -179,6 +214,17 @@ export class AdminOrderService {
     };
     order.orderStatus = ORDER_STATUS.SHIPPED;
     await order.save();
+
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Order Shipped',
+        message: `Your order #${order.orderNumber} has been shipped${carrier ? ` via ${carrier}` : ''}${trackingNumber ? ` (Tracking: ${trackingNumber})` : ''}.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: ORDER_STATUS.SHIPPED },
+      })
+      .catch(() => {});
 
     return order;
   }
@@ -199,6 +245,17 @@ export class AdminOrderService {
     });
     await order.save();
 
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Return Request Approved',
+        message: `Your return request for order #${order.orderNumber} has been approved.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, status: ORDER_STATUS.RETURN_APPROVED },
+      })
+      .catch(() => {});
+
     return order;
   }
 
@@ -218,6 +275,17 @@ export class AdminOrderService {
       timestamp: new Date(),
     });
     await order.save();
+
+    notificationService
+      .createNotification({
+        userId: order.userId,
+        title: 'Return Request Rejected',
+        message: `Your return request for order #${order.orderNumber} was rejected.${reason ? ` Reason: ${reason}` : ''}`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, status: ORDER_STATUS.RETURN_REJECTED },
+      })
+      .catch(() => {});
 
     return order;
   }

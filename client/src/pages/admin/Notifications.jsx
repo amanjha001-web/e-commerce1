@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import Button from "../../components/common/Button";
@@ -18,6 +19,7 @@ const Notifications = ({
   onClearAll,
   onNavigate,
 }) => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [localNotifications, setLocalNotifications] = useState([]);
@@ -148,8 +150,13 @@ const Notifications = ({
       handleMarkAsRead(id);
     }
 
-    if (notification.link) {
-      onNavigate?.(notification.link);
+    const targetLink = notification.link || notification.data?.link;
+    if (targetLink) {
+      if (onNavigate) {
+        onNavigate(targetLink);
+      } else {
+        navigate(targetLink);
+      }
     }
   };
 
@@ -260,17 +267,12 @@ const Notifications = ({
                         key={id}
                         className="group relative transition hover:bg-muted/20"
                       >
-                        <button
-                          type="button"
+                        <NotificationItem
+                          notification={notification}
                           onClick={() => handleNotificationClick(notification)}
-                          className="block w-full text-left"
-                        >
-                          <NotificationItem
-                            notification={notification}
-                            onRead={() => handleMarkAsRead(id)}
-                            onDelete={() => handleDeleteNotification(id)}
-                          />
-                        </button>
+                          onRead={() => handleMarkAsRead(id)}
+                          onDelete={() => handleDeleteNotification(id)}
+                        />
                       </div>
                     );
                   })}

@@ -8,6 +8,7 @@ import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { createRazorpayOrder, createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
 import { verifyPaymentSignature } from '../../integrations/razorpay/razorpay.utils.js';
 import { env } from '../../config/env.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class CustomerPaymentService {
   async createPaymentOrder(userId, orderId) {
@@ -126,6 +127,17 @@ export class CustomerPaymentService {
       }
     }
 
+    notificationService
+      .createNotification({
+        userId: payment.userId || userId,
+        title: 'Payment Confirmed',
+        message: `Payment of ₹${payment.amount} for order #${order?.orderNumber || payment.orderId} succeeded.`,
+        type: 'payment',
+        link: `/orders/${payment.orderId}`,
+        data: { orderId: payment.orderId, paymentId: payment._id },
+      })
+      .catch(() => {});
+
     return {
       success: true,
       message: 'Payment verified and confirmed successfully',
@@ -172,6 +184,27 @@ export class CustomerPaymentService {
       reason,
       status: 'pending',
     });
+
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Refund Request Submitted',
+        message: `Your refund request of ₹${payment.amount} is pending review.`,
+        type: 'payment',
+        link: `/orders/${payment.orderId}`,
+        data: { orderId: payment.orderId, refundId: refund._id },
+      })
+      .catch(() => {});
+
+    notificationService
+      .notifyAdmins({
+        title: 'New Refund Request',
+        message: `Refund of ₹${payment.amount} requested for order ${payment.orderId}.`,
+        type: 'payment',
+        link: '/admin/refunds',
+        data: { orderId: payment.orderId, refundId: refund._id },
+      })
+      .catch(() => {});
 
     return refund;
   }

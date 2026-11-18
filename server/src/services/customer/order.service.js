@@ -13,6 +13,7 @@ import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS, PAYMENT_METHODS } from '../../constants/paymentStatus.constant.js';
 import { roundToTwoDecimals, parsePagination } from '../../utils/helpers.js';
 import { sendOrderConfirmationEmail } from '../../integrations/email/email.client.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class CustomerOrderService {
   async createOrder(userId, orderPayload, user) {
@@ -167,6 +168,51 @@ export class CustomerOrderService {
       () => {}
     );
 
+    // Notify customer & vendors
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Order Placed Successfully',
+        message: `Your order #${order.orderNumber} of ₹${order.totalAmount} has been placed.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: order.orderStatus },
+      })
+      .catch(() => {});
+
+    const uniqueVendorIds = [...new Set(orderItems.map((i) => i.vendorId).filter(Boolean).map(String))];
+    if (uniqueVendorIds.length > 0) {
+      Vendor.find({ _id: { $in: uniqueVendorIds } })
+        .select('userId')
+        .then((vendors) => {
+          vendors.forEach((v) => {
+            if (v?.userId) {
+              notificationService
+                .createNotification({
+                  userId: v.userId,
+                  title: 'New Order Received',
+                  message: `New order #${order.orderNumber} received for your store.`,
+                  type: 'order',
+                  link: '/vendor/orders',
+                  data: { orderId: order._id, orderNumber: order.orderNumber },
+                })
+                .catch(() => {});
+            }
+          });
+        })
+        .catch(() => {});
+    }
+
+    notificationService
+      .notifyAdmins({
+        title: 'New Order Placed',
+        message: `Order #${order.orderNumber} (₹${order.totalAmount}) was placed by ${user?.name || 'a customer'}.`,
+        type: 'order',
+        link: '/admin/orders',
+        data: { orderId: order._id, orderNumber: order.orderNumber },
+      })
+      .catch(() => {});
+
     return order;
   }
 
@@ -248,6 +294,17 @@ export class CustomerOrderService {
       });
     }
 
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Order Cancelled',
+        message: `Your order #${order.orderNumber} has been cancelled.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: ORDER_STATUS.CANCELLED },
+      })
+      .catch(() => {});
+
     return order;
   }
 
@@ -279,6 +336,27 @@ export class CustomerOrderService {
       reason,
       status: 'pending',
     });
+
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Return Request Submitted',
+        message: `Return request for order #${order.orderNumber} has been submitted for review.`,
+        type: 'order',
+        link: `/orders/${order._id}`,
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: ORDER_STATUS.RETURN_REQUESTED },
+      })
+      .catch(() => {});
+
+    notificationService
+      .notifyAdmins({
+        title: 'New Return Request',
+        message: `Return requested for order #${order.orderNumber}.`,
+        type: 'order',
+        link: '/admin/refunds',
+        data: { orderId: order._id, orderNumber: order.orderNumber },
+      })
+      .catch(() => {});
 
     return order;
   }

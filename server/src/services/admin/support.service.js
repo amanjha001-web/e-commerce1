@@ -1,6 +1,7 @@
 import { SupportTicket } from '../../models/SupportTicket.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class AdminSupportService {
   async getSupportTickets(params = {}) {
@@ -57,6 +58,17 @@ export class AdminSupportService {
     }
     await ticket.save();
 
+    notificationService
+      .createNotification({
+        userId: ticket.userId?._id || ticket.userId,
+        title: `Support Reply (#${ticket.ticketId})`,
+        message: `Support replied to "${ticket.subject}": ${String(message).slice(0, 120)}`,
+        type: 'system',
+        link: '/support',
+        data: { ticketId: ticket._id, ticketCode: ticket.ticketId },
+      })
+      .catch(() => {});
+
     return ticket;
   }
 
@@ -67,6 +79,18 @@ export class AdminSupportService {
       { new: true }
     );
     if (!ticket) throw ApiError.notFound('Ticket not found');
+
+    notificationService
+      .createNotification({
+        userId: ticket.userId,
+        title: `Support Ticket #${ticket.ticketId} Updated`,
+        message: `Your support ticket "${ticket.subject}" status is now ${String(status).replace(/_/g, ' ')}.`,
+        type: 'system',
+        link: '/support',
+        data: { ticketId: ticket._id, ticketCode: ticket.ticketId, status },
+      })
+      .catch(() => {});
+
     return ticket;
   }
 

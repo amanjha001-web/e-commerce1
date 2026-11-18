@@ -12,6 +12,11 @@ export const getUnreadCount = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, 'Unread count retrieved');
 });
 
+export const getNotificationById = asyncHandler(async (req, res) => {
+  const notification = await notificationService.getNotificationById(req.params.notificationId, req.user._id);
+  return ApiResponse.success(res, notification, 'Notification retrieved');
+});
+
 export const markAsRead = asyncHandler(async (req, res) => {
   const notification = await notificationService.markAsRead(req.params.notificationId, req.user._id);
   return ApiResponse.success(res, notification, 'Notification marked as read');

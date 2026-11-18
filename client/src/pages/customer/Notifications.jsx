@@ -1,15 +1,44 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import notificationService from "../../services/notification.service";
+import {
+  clearNotifications as clearNotificationsAction,
+  markAllAsRead as markAllAsReadAction,
+  markAsRead as markAsReadAction,
+  removeNotification as removeNotificationAction,
+  setNotifications,
+} from "../../store/slices/notificationSlice";
 import { toast } from "sonner";
 
 import NotificationList from "../../components/notification/NotificationList";
-import Button from "../../components/common/Button";
 import EmptyState from "../../components/common/EmptyState";
 import Loader from "../../components/common/Loader";
 import CustomerWorkspace from "../../components/layout/CustomerWorkspace";
 
+const extractNotificationId = (target) => {
+  if (!target) return "";
+  if (typeof target === "string" || typeof target === "number") {
+    return String(target);
+  }
+  return target._id || target.id || "";
+};
+
+const extractNotificationsList = (res) => {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data?.notifications)) return res.data.notifications;
+  if (Array.isArray(res?.notifications)) return res.notifications;
+  if (Array.isArray(res?.data?.data?.notifications)) return res.data.data.notifications;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  return [];
+};
+
+const getIsRead = (notification) =>
+  Boolean(notification?.read ?? notification?.isRead ?? false);
+
 const Notifications = ({
-  notifications: propNotifications = [],
+  notifications: propNotifications,
   loading: propLoading = false,
   onMarkAsRead,
   onMarkAllAsRead,
@@ -17,42 +46,63 @@ const Notifications = ({
   onClearAll,
   onNavigate,
 }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
   const [internalNotifications, setInternalNotifications] = useState([]);
   const [internalLoading, setInternalLoading] = useState(!propNotifications?.length);
+  const [fetchError, setFetchError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const notifications = propNotifications?.length > 0 ? propNotifications : internalNotifications;
-  const loading = propNotifications?.length > 0 ? propLoading : internalLoading;
+  const hasPropNotifications = Array.isArray(propNotifications) && propNotifications.length > 0;
+  const notifications = hasPropNotifications ? propNotifications : internalNotifications;
+  const loading = hasPropNotifications ? propLoading : internalLoading;
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setInternalLoading(true);
-      const res = await notificationService.getNotifications();
-      const list = res?.data?.notifications || res?.data || res?.notifications || [];
-      setInternalNotifications(Array.isArray(list) ? list : []);
+      setFetchError("");
+      const res = await notificationService.getNotifications({ limit: 50 });
+      const list = extractNotificationsList(res);
+      setInternalNotifications(list);
+      dispatch(setNotifications(list));
     } catch (err) {
       console.error("Failed to load customer notifications:", err);
+      setFetchError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to load notifications right now.",
+      );
+      setInternalNotifications([]);
     } finally {
       setInternalLoading(false);
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     if (!propNotifications || propNotifications.length === 0) {
       loadNotifications();
+    } else {
+      setInternalLoading(false);
     }
-  }, [propNotifications]);
+  }, [propNotifications?.length, loadNotifications]);
 
-  const handleMarkAsRead = async (id) => {
+  const handleMarkAsRead = async (target) => {
+    const id = extractNotificationId(target);
+    if (!id) return;
+
     if (onMarkAsRead) return onMarkAsRead(id);
     try {
       await notificationService.markAsRead(id);
       setInternalNotifications((prev) =>
-        prev.map((n) => (n._id === id || n.id === id ? { ...n, isRead: true, read: true } : n))
+        prev.map((n) =>
+          (n._id || n.id) === id ? { ...n, isRead: true, read: true } : n,
+        ),
       );
+      dispatch(markAsReadAction(id));
     } catch (err) {
-      toast.error("Failed to mark as read");
+      toast.error(err?.response?.data?.message || "Failed to mark as read");
     }
   };
 
@@ -60,21 +110,30 @@ const Notifications = ({
     if (onMarkAllAsRead) return onMarkAllAsRead();
     try {
       await notificationService.markAllAsRead();
+      setInternalNotifications((prev) =>
+        prev.map((n) => ({ ...n, isRead: true, read: true })),
+      );
+      dispatch(markAllAsReadAction());
       toast.success("All notifications marked as read");
-      await loadNotifications();
     } catch (err) {
-      toast.error("Failed to mark all as read");
+      toast.error(err?.response?.data?.message || "Failed to mark all as read");
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (target) => {
+    const id = extractNotificationId(target);
+    if (!id) return;
+
     if (onDeleteNotification) return onDeleteNotification(id);
     try {
       await notificationService.deleteNotification(id);
+      setInternalNotifications((prev) =>
+        prev.filter((n) => (n._id || n.id) !== id),
+      );
+      dispatch(removeNotificationAction(id));
       toast.success("Notification removed");
-      await loadNotifications();
     } catch (err) {
-      toast.error("Failed to remove notification");
+      toast.error(err?.response?.data?.message || "Failed to remove notification");
     }
   };
 
@@ -82,19 +141,33 @@ const Notifications = ({
     if (onClearAll) return onClearAll();
     try {
       await notificationService.clearNotifications();
-      toast.success("All notifications cleared");
       setInternalNotifications([]);
+      dispatch(clearNotificationsAction());
+      toast.success("All notifications cleared");
     } catch (err) {
-      toast.error("Failed to clear notifications");
+      toast.error(err?.response?.data?.message || "Failed to clear notifications");
     }
   };
 
-  const getIsRead = (notification) =>
-    notification?.read ?? notification?.isRead ?? false;
+  const handleNotificationClick = async (notification) => {
+    const id = extractNotificationId(notification);
+    if (id && !getIsRead(notification)) {
+      await handleMarkAsRead(id);
+    }
+    const targetLink = notification?.link || notification?.data?.link;
+    if (targetLink) {
+      if (onNavigate) {
+        onNavigate(targetLink);
+      } else {
+        navigate(targetLink);
+      }
+    }
+  };
 
   const unreadCount = notifications.filter(
     (notification) => !getIsRead(notification),
   ).length;
+  const readCount = Math.max(0, notifications.length - unreadCount);
 
   const filteredNotifications = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -114,7 +187,8 @@ const Notifications = ({
       return (
         notification?.title?.toLowerCase().includes(keyword) ||
         notification?.message?.toLowerCase().includes(keyword) ||
-        notification?.description?.toLowerCase().includes(keyword)
+        notification?.description?.toLowerCase().includes(keyword) ||
+        notification?.type?.toLowerCase().includes(keyword)
       );
     });
   }, [notifications, search, filter]);
@@ -124,15 +198,36 @@ const Notifications = ({
       title="Notifications"
       eyebrow="Customer workspace"
       action={
-        unreadCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={handleMarkAllAsRead}
-            className="btnsm cursor-pointer"
+            onClick={loadNotifications}
+            disabled={loading}
+            className="outlinebtn !py-2 !px-3 !text-xs cursor-pointer disabled:opacity-50"
           >
-            Mark all read
+            {loading ? "Loading..." : "↻ Refresh"}
           </button>
-        ) : null
+
+          {unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkAllAsRead}
+              className="btnsm cursor-pointer"
+            >
+              ✓ Mark all read
+            </button>
+          )}
+
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="rounded-xl border border-red-200 bg-red-50/50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 cursor-pointer dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
       }
     >
       {/* Stats Cards */}
@@ -160,30 +255,57 @@ const Notifications = ({
             Read
           </span>
           <strong className="mt-1 block text-2xl font-black text-[#16845b]">
-            {notifications.length - unreadCount}
+            {readCount}
           </strong>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="mb-6 flex gap-2">
-        {["all", "unread", "read"].map((tab) => {
-          const isActive = filter === tab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setFilter(tab)}
-              className={`rounded-xl border px-3.5 py-1.5 text-xs font-bold capitalize transition-all cursor-pointer ${
-                isActive
-                  ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                  : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
+      {/* Search & Filter Toolbar */}
+      <div className="mb-6 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-xs dark:bg-card dark:border-line">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full sm:max-w-xs">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search notifications..."
+              className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-xs font-medium text-[var(--text)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[#881337]/15 dark:bg-card dark:text-foreground"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: "all", label: "All", count: notifications.length },
+              { key: "unread", label: "Unread", count: unreadCount },
+              { key: "read", label: "Read", count: readCount },
+            ].map((tab) => {
+              const isActive = filter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFilter(tab.key)}
+                  className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                      : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--primary)] hover:bg-[var(--soft)] hover:text-[var(--primary)] dark:bg-card"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-[var(--soft)] text-[var(--primary)]"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Notifications List Container */}
@@ -192,18 +314,34 @@ const Notifications = ({
           <div className="flex min-h-[300px] items-center justify-center">
             <Loader />
           </div>
+        ) : fetchError ? (
+          <div className="p-10 text-center">
+            <EmptyState
+              title="Unable to load notifications"
+              message={fetchError}
+              action={loadNotifications}
+              actionText="Try Again"
+            />
+          </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="p-10 text-center">
             <EmptyState
               title="No notifications"
-              message="You have no notifications in this category."
+              message={
+                search.trim()
+                  ? "No notifications match your search."
+                  : "You have no notifications in this category."
+              }
             />
           </div>
         ) : (
           <NotificationList
             notifications={filteredNotifications}
+            onRead={handleMarkAsRead}
             onMarkAsRead={handleMarkAsRead}
             onDelete={handleDelete}
+            onItemClick={handleNotificationClick}
+            maxHeightClass=""
           />
         )}
       </div>

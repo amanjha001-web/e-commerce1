@@ -3,6 +3,7 @@ import { Message } from '../../models/Message.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { getIO } from '../../config/socket.js';
 import { uploadToCloudinary } from '../../integrations/cloudinary/cloudinary.client.js';
+import { notificationService } from './notification.service.js';
 
 export class ChatService {
   async getConversations(userId) {
@@ -71,6 +72,21 @@ export class ChatService {
 
     // Emit live message via Socket.IO
     getIO().to(`conversation:${conversationId}`).emit('new_message', msg);
+
+    const targetRecipient =
+      recipientId || conv.participants.find((p) => String(p) !== String(userId));
+    if (targetRecipient && String(targetRecipient) !== String(userId)) {
+      notificationService
+        .createNotification({
+          userId: targetRecipient,
+          title: 'New Message Received',
+          message: `${msg.sender?.name || 'Someone'}: ${String(content || '').slice(0, 120)}`,
+          type: 'chat',
+          link: '/chat',
+          data: { conversationId, messageId: msg._id },
+        })
+        .catch(() => {});
+    }
 
     return msg;
   }

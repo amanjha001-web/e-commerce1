@@ -8,7 +8,7 @@ const NotificationDropdown = ({
   onClose,
 }) => {
   const unreadCount = notifications.filter(
-    (notification) => !notification.read,
+    (notification) => !(notification?.read ?? notification?.isRead ?? false),
   ).length;
 
   return (

@@ -1,5 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const isItemRead = (item) => Boolean(item?.isRead ?? item?.read ?? false);
+const getItemId = (item) => item?._id || item?.id;
+
 const initialState = {
   notifications: [],
   unreadCount: 0,
@@ -21,10 +24,10 @@ const notificationSlice = createSlice({
     fetchNotificationsSuccess: (state, action) => {
       state.loading = false;
 
-      state.notifications = action.payload.notifications || [];
+      state.notifications = action.payload?.notifications || [];
       state.unreadCount =
-        action.payload.unreadCount ??
-        state.notifications.filter((notification) => !notification.isRead)
+        action.payload?.unreadCount ??
+        state.notifications.filter((notification) => !isItemRead(notification))
           .length;
 
       state.error = null;
@@ -38,18 +41,19 @@ const notificationSlice = createSlice({
     addNotification: (state, action) => {
       state.notifications.unshift(action.payload);
 
-      if (!action.payload.isRead) {
+      if (!isItemRead(action.payload)) {
         state.unreadCount += 1;
       }
     },
 
     markAsRead: (state, action) => {
       const notification = state.notifications.find(
-        (item) => item._id === action.payload,
+        (item) => String(getItemId(item)) === String(action.payload),
       );
 
-      if (notification && !notification.isRead) {
+      if (notification && !isItemRead(notification)) {
         notification.isRead = true;
+        notification.read = true;
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
     },
@@ -57,6 +61,7 @@ const notificationSlice = createSlice({
     markAllAsRead: (state) => {
       state.notifications.forEach((notification) => {
         notification.isRead = true;
+        notification.read = true;
       });
 
       state.unreadCount = 0;
@@ -64,15 +69,15 @@ const notificationSlice = createSlice({
 
     removeNotification: (state, action) => {
       const notification = state.notifications.find(
-        (item) => item._id === action.payload,
+        (item) => String(getItemId(item)) === String(action.payload),
       );
 
-      if (notification && !notification.isRead) {
+      if (notification && !isItemRead(notification)) {
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
 
       state.notifications = state.notifications.filter(
-        (item) => item._id !== action.payload,
+        (item) => String(getItemId(item)) !== String(action.payload),
       );
     },
 
@@ -82,15 +87,15 @@ const notificationSlice = createSlice({
     },
 
     setNotifications: (state, action) => {
-      state.notifications = action.payload || [];
+      state.notifications = Array.isArray(action.payload) ? action.payload : [];
 
       state.unreadCount = state.notifications.filter(
-        (notification) => !notification.isRead,
+        (notification) => !isItemRead(notification),
       ).length;
     },
 
     setUnreadCount: (state, action) => {
-      state.unreadCount = Math.max(0, action.payload);
+      state.unreadCount = Math.max(0, Number(action.payload) || 0);
     },
 
     setNotificationLoading: (state, action) => {

@@ -1,6 +1,7 @@
 import { SupportTicket } from '../../models/SupportTicket.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class SupportService {
   async createTicket(userId, { subject, category, priority, message }) {
@@ -20,6 +21,28 @@ export class SupportService {
         },
       ],
     });
+
+    notificationService
+      .createNotification({
+        userId,
+        title: `Support Ticket #${ticketId}`,
+        message: `Your support ticket "${subject}" has been created. Our team will respond soon.`,
+        type: 'system',
+        link: '/support',
+        data: { ticketId: ticket._id, ticketCode: ticketId },
+      })
+      .catch(() => {});
+
+    notificationService
+      .notifyAdmins({
+        title: `New Support Ticket #${ticketId}`,
+        message: `Subject: ${subject}`,
+        type: 'system',
+        link: '/admin/support',
+        data: { ticketId: ticket._id, ticketCode: ticketId },
+      })
+      .catch(() => {});
+
     return ticket;
   }
 

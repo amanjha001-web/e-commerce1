@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import useAuth from "../../hooks/useAuth";
 import { fetchWishlist } from "../../store/slices/wishlistThunk.js";
 import { fetchCart } from "../../store/slices/cartThunk.js";
+import notificationService from "../../services/notification.service";
+import { setUnreadCount } from "../../store/slices/notificationSlice";
 
 const Navbar = ({
   logo,
@@ -56,9 +58,27 @@ const Navbar = ({
         )
       : 0;
 
+  // Notification unread count from Redux
+  const unreadNotifications = useSelector(
+    (state) => state.notification?.unreadCount || 0,
+  );
+  const notificationBadge = isAuthenticated ? unreadNotifications : 0;
+
   // Only customers should fetch customer cart and wishlist.
   useEffect(() => {
-    if (!isAuthenticated || !isCustomer) {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    notificationService
+      .getUnreadCount()
+      .then((res) => {
+        const count = res?.data?.unreadCount ?? res?.unreadCount ?? 0;
+        dispatch(setUnreadCount(count));
+      })
+      .catch(() => {});
+
+    if (!isCustomer) {
       return;
     }
 
@@ -255,6 +275,19 @@ const Navbar = ({
                               className="block px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
                             >
                               ♡ Wishlist
+                            </Link>
+
+                            <Link
+                              to="/notifications"
+                              onClick={closeAccount}
+                              className="flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-[var(--text)] transition hover:bg-[var(--soft)] hover:text-[var(--primary)]"
+                            >
+                              <span>🔔 Notifications</span>
+                              {notificationBadge > 0 && (
+                                <span className="rounded-full bg-[var(--primary)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                  {notificationBadge > 99 ? "99+" : notificationBadge}
+                                </span>
+                              )}
                             </Link>
 
                             <Link

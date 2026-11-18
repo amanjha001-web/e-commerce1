@@ -3,12 +3,17 @@ import NotificationItem from "./NotificationItem";
 const NotificationList = ({
   notifications = [],
   onRead,
+  onMarkAsRead,
   onDelete,
+  onItemClick,
   loading = false,
+  maxHeightClass = "max-h-96 overflow-y-auto",
 }) => {
+  const handleRead = onRead || onMarkAsRead;
+
   if (loading) {
     return (
-      <div className="max-h-96 overflow-y-auto p-3">
+      <div className={`${maxHeightClass} p-3`}>
         <div className="space-y-3">
           {[1, 2, 3, 4].map((item) => (
             <div key={item} className="flex animate-pulse gap-3 p-2">
@@ -36,20 +41,21 @@ const NotificationList = ({
         </h3>
 
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          You're all caught up.
+          You&apos;re all caught up.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="max-h-96 overflow-y-auto">
+    <div className={maxHeightClass}>
       {notifications.map((notification, index) => (
         <NotificationItem
           key={notification._id || notification.id || index}
           notification={notification}
-          onRead={onRead}
+          onRead={handleRead}
           onDelete={onDelete}
+          onClick={onItemClick}
         />
       ))}
     </div>

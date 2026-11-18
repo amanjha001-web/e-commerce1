@@ -86,6 +86,7 @@ export class VendorOrderService {
         title: 'Order Status Update',
         message: `Your order #${order.orderNumber} is now ${status}.`,
         type: 'order',
+        link: `/orders/${order._id}`,
         data: { orderId: order._id, status },
       })
       .catch(() => {});

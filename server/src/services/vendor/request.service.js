@@ -1,6 +1,7 @@
 import { VendorRequest } from '../../models/VendorRequest.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { VENDOR_STATUS } from '../../constants/vendorStatus.constant.js';
+import { notificationService } from '../common/notification.service.js';
 
 export class VendorRequestService {
   async createRequest(userId, requestData) {
@@ -31,7 +32,7 @@ export class VendorRequestService {
       country: requestData.address?.country || 'India',
     };
 
-    return VendorRequest.create({
+    const created = await VendorRequest.create({
       ...requestData,
       storeName,
       shopName: storeName,
@@ -40,6 +41,29 @@ export class VendorRequestService {
       userId,
       status: VENDOR_STATUS.PENDING,
     });
+
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Seller Application Submitted',
+        message: `Your seller application for "${storeName}" has been submitted for admin review.`,
+        type: 'vendor',
+        link: '/seller/request-status',
+        data: { requestId: created._id, status: VENDOR_STATUS.PENDING },
+      })
+      .catch(() => {});
+
+    notificationService
+      .notifyAdmins({
+        title: 'New Seller Application',
+        message: `New seller application received for "${storeName}".`,
+        type: 'vendor',
+        link: '/admin/vendor-requests',
+        data: { requestId: created._id },
+      })
+      .catch(() => {});
+
+    return created;
   }
 
   async getMyRequest(userId) {
@@ -117,6 +141,18 @@ export class VendorRequestService {
     }
 
     await request.save();
+
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Seller Application Updated',
+        message: `Your seller application for "${request.storeName}" has been updated.`,
+        type: 'vendor',
+        link: '/seller/request-status',
+        data: { requestId: request._id, status: request.status },
+      })
+      .catch(() => {});
+
     return request;
   }
 
@@ -131,6 +167,17 @@ export class VendorRequestService {
     request.status = VENDOR_STATUS.REJECTED;
     request.rejectionReason = 'Cancelled by applicant';
     await request.save();
+
+    notificationService
+      .createNotification({
+        userId,
+        title: 'Seller Application Cancelled',
+        message: `Your seller application for "${request.storeName}" was cancelled.`,
+        type: 'vendor',
+        link: '/seller/request-status',
+        data: { requestId: request._id, status: request.status },
+      })
+      .catch(() => {});
 
     return request;
   }
