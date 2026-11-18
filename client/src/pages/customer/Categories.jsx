@@ -293,7 +293,7 @@ const Categories = () => {
             <Loader />
           </div>
         ) : (
-          <div className="categorygrid">
+          <div className="categorygrid categorygrid-scroll">
             {categories.map((category, idx) => {
               const id = category._id || category.id || category.slug;
               const isSelected =
