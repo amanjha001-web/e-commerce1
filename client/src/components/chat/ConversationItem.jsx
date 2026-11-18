@@ -1,113 +1,154 @@
 import { Link } from "react-router-dom";
+import {
+  getConversationParticipant,
+  getUserDisplayName,
+  resolveAvatarUrl,
+} from "../../utils/chatHelpers";
 
-const ConversationItem = ({ conversation, isActive = false, onClick }) => {
+const ConversationItem = ({
+  conversation,
+  isActive = false,
+  currentUserId,
+  onClick,
+  onDelete,
+}) => {
   if (!conversation) {
     return null;
   }
 
-  const user =
-    conversation.user || conversation.vendor || conversation.participant;
-
-  const name =
-    user?.fullName || user?.name || conversation.name || "Unknown User";
-
-  const avatar = user?.avatar || conversation.avatar || null;
+  const participant = getConversationParticipant(conversation, currentUserId);
+  const name = getUserDisplayName(
+    participant,
+    conversation.name || "Customer Support",
+  );
+  const avatar =
+    resolveAvatarUrl(participant?.avatar) ||
+    resolveAvatarUrl(conversation.avatar);
 
   const lastMessage =
     conversation.lastMessage?.content ||
     conversation.lastMessage?.text ||
-    conversation.lastMessage ||
+    conversation.lastMessage?.message ||
+    (typeof conversation.lastMessage === "string"
+      ? conversation.lastMessage
+      : "") ||
     "No messages yet";
 
-  const unreadCount = conversation.unreadCount || 0;
-
-  const isOnline = conversation.isOnline ?? user?.isOnline ?? false;
-
+  const unreadCount = Number(conversation.unreadCount || 0);
+  const isOnline = conversation.isOnline ?? participant?.isOnline ?? false;
   const conversationId = conversation._id || conversation.id;
-
-  const handleClick = () => {
-    onClick?.(conversation);
-  };
+  const roleLabel =
+    participant?.role === "vendor"
+      ? "Seller"
+      : ["admin", "super_admin"].includes(String(participant?.role || "").toLowerCase())
+        ? "Support"
+        : "";
 
   return (
-    <Link
-      to={conversationId ? `/chat/${conversationId}` : "#"}
-      onClick={(event) => {
-        if (!conversationId) {
-          event.preventDefault();
-        }
-
-        handleClick();
-      }}
-      className={`flex gap-3 border-b border-gray-100 px-4 py-3 transition dark:border-gray-800 ${
+    <div
+      className={`group relative flex items-center border-b border-[var(--line)] transition ${
         isActive
-          ? "bg-secondary/10 dark:bg-blue-950/30"
-          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          ? "border-l-[3px] border-l-[var(--primary)] bg-[var(--soft)]/70"
+          : "hover:bg-[var(--bg)]/70"
       }`}
     >
-      <div className="relative shrink-0">
-        {avatar ? (
-          <img
-            src={avatar}
-            alt={name}
-            className="h-11 w-11 rounded-full object-cover"
+      <Link
+        to={conversationId ? `/chat/${conversationId}` : "#"}
+        onClick={(event) => {
+          if (onClick) {
+            event.preventDefault();
+            onClick(conversation);
+          } else if (!conversationId) {
+            event.preventDefault();
+          }
+        }}
+        className="flex min-w-0 flex-1 gap-3 px-4 py-3"
+      >
+        <div className="relative shrink-0">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={name}
+              className="h-11 w-11 rounded-full border border-[var(--line)] object-cover"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--soft)] text-sm font-bold text-[var(--primary)]">
+              {name.charAt(0).toUpperCase()}
+            </div>
+          )}
+
+          <span
+            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
+              isOnline ? "bg-emerald-500" : "bg-stone-300"
+            }`}
           />
-        ) : (
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground dark:bg-secondary dark:text-secondary-foreground">
-            {name.charAt(0).toUpperCase()}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h3
+                className={`truncate text-sm ${
+                  unreadCount > 0
+                    ? "font-bold text-[var(--text)]"
+                    : "font-semibold text-[var(--text)]"
+                }`}
+              >
+                {name}
+              </h3>
+              {roleLabel && (
+                <span className="shrink-0 rounded-full bg-[var(--soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--primary)]">
+                  {roleLabel}
+                </span>
+              )}
+            </div>
+
+            {conversation.updatedAt && (
+              <span className="shrink-0 text-[11px] text-[var(--muted)]">
+                {new Date(conversation.updatedAt).toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                })}
+              </span>
+            )}
           </div>
-        )}
 
-        <span
-          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
-            isOnline ? "bg-green-500" : "bg-gray-400"
-          }`}
-        />
-      </div>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p
+              className={`truncate text-xs ${
+                unreadCount > 0
+                  ? "font-semibold text-[var(--text)]"
+                  : "text-[var(--muted)]"
+              }`}
+            >
+              {lastMessage}
+            </p>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <h3
-            className={`truncate text-sm ${
-              unreadCount > 0
-                ? "font-bold text-gray-900 dark:text-white"
-                : "font-medium text-gray-800 dark:text-gray-200"
-            }`}
-          >
-            {name}
-          </h3>
-
-          {conversation.updatedAt && (
-            <span className="shrink-0 text-[11px] text-gray-400">
-              {new Date(conversation.updatedAt).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-              })}
-            </span>
-          )}
+            {unreadCount > 0 && (
+              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] px-1.5 text-[10px] font-bold text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
         </div>
+      </Link>
 
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p
-            className={`truncate text-xs ${
-              unreadCount > 0
-                ? "font-medium text-gray-700 dark:text-gray-300"
-                : "text-gray-500 dark:text-gray-400"
-            }`}
-          >
-            {lastMessage}
-          </p>
-
-          {unreadCount > 0 && (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-secondary px-1.5 text-[10px] font-bold text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </div>
-      </div>
-    </Link>
+      {onDelete && conversationId && (
+        <button
+          type="button"
+          title="Remove conversation"
+          aria-label="Remove conversation"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(conversationId);
+          }}
+          className="mr-2 hidden h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-xs text-[var(--muted)] hover:bg-red-50 hover:text-red-600 group-hover:flex"
+        >
+          ✕
+        </button>
+      )}
+    </div>
   );
 };
 
 export default ConversationItem;
-

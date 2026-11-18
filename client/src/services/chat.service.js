@@ -1,7 +1,13 @@
 import api from "./api";
 
 const chatService = {
-  // Conversations
+  // Contacts & Conversations
+
+  getContacts: async () => {
+    const response = await api.get("/chat/contacts");
+
+    return response.data;
+  },
 
   getConversations: async (params = {}) => {
     const response = await api.get("/chat/conversations", {
@@ -43,9 +49,13 @@ const chatService = {
   },
 
   sendMessage: async (conversationId, messageData) => {
+    const payload =
+      typeof messageData === "string"
+        ? { content: messageData }
+        : messageData;
     const response = await api.post(
       `/chat/conversations/${conversationId}/messages`,
-      messageData,
+      payload,
     );
 
     return response.data;

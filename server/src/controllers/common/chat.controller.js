@@ -2,6 +2,11 @@ import { chatService } from '../../services/common/chat.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiResponse } from '../../utils/apiResponse.js';
 
+export const getAvailableContacts = asyncHandler(async (req, res) => {
+  const contacts = await chatService.getAvailableContacts(req.user._id);
+  return ApiResponse.success(res, contacts, 'Contacts retrieved');
+});
+
 export const getConversations = asyncHandler(async (req, res) => {
   const conversations = await chatService.getConversations(req.user._id);
   return ApiResponse.success(res, conversations, 'Conversations retrieved');
@@ -35,6 +40,16 @@ export const markMessageAsRead = asyncHandler(async (req, res) => {
 export const markConversationAsRead = asyncHandler(async (req, res) => {
   const result = await chatService.markConversationAsRead(req.params.conversationId, req.user._id);
   return ApiResponse.success(res, result, 'Conversation marked as read');
+});
+
+export const deleteConversation = asyncHandler(async (req, res) => {
+  const result = await chatService.deleteConversation(req.params.conversationId, req.user._id);
+  return ApiResponse.success(res, result, 'Conversation removed');
+});
+
+export const deleteMessage = asyncHandler(async (req, res) => {
+  const result = await chatService.deleteMessage(req.params.messageId, req.user._id);
+  return ApiResponse.success(res, result, 'Message removed');
 });
 
 export const getUnreadCount = asyncHandler(async (req, res) => {
