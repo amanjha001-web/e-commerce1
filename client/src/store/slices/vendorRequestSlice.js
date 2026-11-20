@@ -7,61 +7,26 @@ const getPayloadData = (response) => response?.data ?? response;
 const getErrorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
 
-// Fetch all vendor requests (combines /admin/vendor-requests and /vendor-requests)
+// Fetch all vendor requests (/admin/vendor-requests)
 export const fetchVendorRequests = createAsyncThunk(
   "vendorRequests/fetchAll",
   async (params = {}, { rejectWithValue }) => {
     try {
-      const [vrRes, adminVrRes] = await Promise.allSettled([
-        vendorRequestService.getAdminRequests(params),
-        params?.onlyPending
-          ? adminService.getPendingVendorRequests(params)
-          : adminService.getVendorRequests(params),
-      ]);
+      const response = params?.onlyPending
+        ? await adminService.getPendingVendorRequests(params)
+        : await adminService.getVendorRequests(params);
 
-      const vrData =
-        vrRes.status === "fulfilled" ? getPayloadData(vrRes.value) : null;
-      const adminData =
-        adminVrRes.status === "fulfilled"
-          ? getPayloadData(adminVrRes.value)
-          : null;
-
-      const listA = Array.isArray(vrData?.requests)
-        ? vrData.requests
-        : Array.isArray(vrData)
-          ? vrData
+      const data = getPayloadData(response);
+      const list = Array.isArray(data?.requests)
+        ? data.requests
+        : Array.isArray(data)
+          ? data
           : [];
-      const listB = Array.isArray(adminData?.requests)
-        ? adminData.requests.map((item) => ({ ...item, _source: "adminVendor" }))
-        : Array.isArray(adminData)
-          ? adminData.map((item) => ({ ...item, _source: "adminVendor" }))
-          : [];
-
-      const seen = new Set();
-      const merged = [];
-      for (const item of [...listA, ...listB]) {
-        const key = String(item?._id || item?.id || "");
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          merged.push(item);
-        }
-      }
-
-      if (
-        vrRes.status === "rejected" &&
-        adminVrRes.status === "rejected"
-      ) {
-        return rejectWithValue(
-          getErrorMessage(
-            vrRes.reason || adminVrRes.reason,
-            "Failed to fetch vendor requests.",
-          ),
-        );
-      }
 
       return {
-        requests: merged,
-        pagination: vrData?.pagination || adminData?.pagination || {},
+        requests: list,
+        summary: data?.summary || null,
+        pagination: data?.pagination || {},
       };
     } catch (error) {
       return rejectWithValue(
@@ -257,6 +222,7 @@ export const deleteVendorRequest = createAsyncThunk(
 
 const initialState = {
   requests: [],
+  summary: null,
   selectedRequest: null,
 
   pagination: {
@@ -300,6 +266,7 @@ const vendorRequestSlice = createSlice({
       .addCase(fetchVendorRequests.fulfilled, (state, action) => {
         state.loading = false;
         state.requests = action.payload.requests;
+        state.summary = action.payload.summary || state.summary;
         state.pagination = {
           ...state.pagination,
           ...action.payload.pagination,
