@@ -1,21 +1,45 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Modal from "../../common/Modal";
 import Badge from "../../common/Badge";
 import Button from "../../common/Button";
 
-/* -------------------- Form Data -------------------- */
+/* -------------------- Helpers -------------------- */
+
+const extractImageUrl = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return value.url || value.secure_url || "";
+  }
+  return "";
+};
 
 const createFormData = (vendor) => {
   const address = vendor?.address || {};
+  const userObj = vendor?.user || (typeof vendor?.userId === "object" ? vendor.userId : null);
 
   return {
     shopName:
       vendor?.shopName || vendor?.storeName || vendor?.businessName || "",
-    email: vendor?.email || vendor?.user?.email || "",
-    phone: vendor?.phone || vendor?.user?.phone || "",
+    email: vendor?.email || userObj?.email || "",
+    phone: vendor?.phone || userObj?.phone || "",
     website: vendor?.website || "",
+    businessType:
+      vendor?.businessType ||
+      vendor?.storeType ||
+      vendor?.businessDetails?.businessLicense ||
+      "",
+    gstNumber:
+      vendor?.gstNumber ||
+      vendor?.taxId ||
+      vendor?.businessDetails?.taxNumber ||
+      vendor?.gst ||
+      "",
+    commissionRate:
+      vendor?.commissionRate !== undefined && vendor?.commissionRate !== null
+        ? String(vendor.commissionRate)
+        : "10",
     shopDescription:
       vendor?.shopDescription ||
       vendor?.description ||
@@ -31,23 +55,17 @@ const createFormData = (vendor) => {
   };
 };
 
-/* -------------------- Helpers -------------------- */
-
 const getValue = (value, fallback = "N/A") => {
   if (value === null || value === undefined || value === "") {
     return fallback;
   }
-
   return value;
 };
 
 const formatDate = (date) => {
   if (!date) return "N/A";
-
   const parsedDate = new Date(date);
-
   if (Number.isNaN(parsedDate.getTime())) return "N/A";
-
   return parsedDate.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -55,35 +73,32 @@ const formatDate = (date) => {
   });
 };
 
-const getStatusVariant = (status) => {
+const getStatusVariant = (status, isActive) => {
+  if (!isActive && String(status || "").toLowerCase() === "approved") {
+    return "danger";
+  }
   switch (String(status || "").toLowerCase()) {
     case "active":
     case "approved":
       return "success";
-
     case "pending":
     case "under_review":
       return "warning";
-
     case "suspended":
     case "blocked":
     case "rejected":
     case "inactive":
       return "danger";
-
     default:
       return "default";
   }
 };
-
-/* -------------------- Read Only Field -------------------- */
 
 const ReadOnlyField = ({ label, value }) => (
   <div>
     <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
       {label}
     </span>
-
     <p className="break-words text-sm font-medium text-foreground">
       {getValue(value)}
     </p>
@@ -108,8 +123,20 @@ const VendorDetailsContent = ({
   const [isEditing, setIsEditing] = useState(() => initialEdit);
   const [formData, setFormData] = useState(() => createFormData(vendor));
   const [formError, setFormError] = useState("");
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectReason, setRejectReason] = useState(
+    vendor?.rejectionReason || "Application did not meet verification requirements.",
+  );
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const isBusy = loading || saving;
+  useEffect(() => {
+    if (!isEditing) {
+      setFormData(createFormData(vendor));
+    }
+  }, [vendor, isEditing]);
+
+  const userObj =
+    vendor?.user || (typeof vendor?.userId === "object" ? vendor.userId : null);
 
   const vendorName =
     vendor.shopName ||
@@ -120,35 +147,47 @@ const VendorDetailsContent = ({
 
   const ownerName =
     vendor.ownerName ||
-    vendor.user?.fullName ||
-    vendor.user?.name ||
+    userObj?.fullName ||
+    userObj?.name ||
     "N/A";
 
   const vendorId = vendor._id || vendor.id || "N/A";
-
-  const status =
+  const isActive = vendor.isActive !== false;
+  const rawStatus =
+    vendor.displayStatus ||
     vendor.status ||
     (vendor.isApproved
-      ? "Approved"
-      : vendor.isActive
-        ? "Active"
-        : "Inactive");
-
-  const logo = vendor.logo?.url || vendor.logo;
+      ? "approved"
+      : isActive
+        ? "active"
+        : "inactive");
 
   const image =
-    (typeof logo === "string" ? logo : "") ||
-    vendor.storeLogo?.url ||
-    vendor.storeLogo ||
-    vendor.avatar ||
-    vendor.user?.avatar ||
-    "";
+    extractImageUrl(vendor.logo) ||
+    extractImageUrl(vendor.storeLogo) ||
+    extractImageUrl(vendor.avatar) ||
+    extractImageUrl(userObj?.avatar);
 
-  /* -------------------- Input Handlers -------------------- */
+  const bankAccount =
+    vendor.bankAccount || vendor.businessDetails?.bankAccount || {};
+  const hasBankDetails = Boolean(
+    bankAccount?.accountNumber ||
+      bankAccount?.bankName ||
+      bankAccount?.accountHolderName ||
+      bankAccount?.ifscCode,
+  );
+
+  const recentProducts = Array.isArray(vendor.recentProducts)
+    ? vendor.recentProducts
+    : [];
+  const recentOrders = Array.isArray(vendor.recentOrders)
+    ? vendor.recentOrders
+    : [];
+
+  /* -------------------- Handlers -------------------- */
 
   const handleFieldChange = (event) => {
     const { name, value } = event.target;
-
     setFormData((previous) => ({
       ...previous,
       [name]: value,
@@ -157,7 +196,6 @@ const VendorDetailsContent = ({
 
   const handleAddressChange = (event) => {
     const { name, value } = event.target;
-
     setFormData((previous) => ({
       ...previous,
       address: {
@@ -173,22 +211,16 @@ const VendorDetailsContent = ({
     setIsEditing(false);
   };
 
-  /* -------------------- Save Vendor -------------------- */
-
   const handleSave = async (event) => {
     event.preventDefault();
-
-    if (isBusy) return;
+    if (saving) return;
 
     if (typeof onUpdate !== "function") {
-      setFormError(
-        "Vendor update handler is not connected in Vendors.jsx.",
-      );
+      setFormError("Vendor update handler is not connected in Vendors.jsx.");
       return;
     }
 
     const actualVendorId = vendor._id || vendor.id;
-
     if (!actualVendorId) {
       setFormError("Vendor ID is missing.");
       return;
@@ -207,16 +239,32 @@ const VendorDetailsContent = ({
       return;
     }
 
+    const parsedCommission =
+      formData.commissionRate === "" ? undefined : Number(formData.commissionRate);
+    if (
+      parsedCommission !== undefined &&
+      (Number.isNaN(parsedCommission) || parsedCommission < 0 || parsedCommission > 100)
+    ) {
+      setFormError("Commission rate must be between 0 and 100.");
+      return;
+    }
+
     const vendorData = {
+      storeName: formData.shopName.trim(),
       shopName: formData.shopName.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       website: formData.website.trim(),
+      businessType: formData.businessType.trim(),
+      gstNumber: formData.gstNumber.trim(),
+      ...(parsedCommission !== undefined ? { commissionRate: parsedCommission } : {}),
+      description: formData.shopDescription.trim(),
       shopDescription: formData.shopDescription.trim(),
       address: {
         street: formData.address.street.trim(),
         city: formData.address.city.trim(),
         state: formData.address.state.trim(),
+        postalCode: formData.address.pincode.trim(),
         pincode: formData.address.pincode.trim(),
         country: formData.address.country.trim(),
       },
@@ -226,7 +274,6 @@ const VendorDetailsContent = ({
 
     try {
       const result = await onUpdate(actualVendorId, vendorData);
-
       if (result === true) {
         setIsEditing(false);
       } else {
@@ -242,8 +289,6 @@ const VendorDetailsContent = ({
       );
     }
   };
-
-  /* -------------------- Editable Field -------------------- */
 
   const renderField = (
     label,
@@ -265,40 +310,42 @@ const VendorDetailsContent = ({
             onChange={onChange}
             rows={options.rows || 3}
             required={options.required}
-            disabled={isBusy}
+            disabled={saving}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         ) : (
           <input
             type={options.type || "text"}
             name={name}
+            min={options.min}
+            max={options.max}
+            step={options.step}
             value={value}
             onChange={onChange}
             required={options.required}
-            disabled={isBusy}
+            disabled={saving}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         )
       ) : (
         <p className="break-words text-sm font-medium text-foreground">
-          {getValue(value)}
+          {options.suffix && value !== "" && value !== undefined
+            ? `${value}${options.suffix}`
+            : getValue(value)}
         </p>
       )}
     </label>
   );
 
-  /* -------------------- Modal -------------------- */
-
   return (
     <Modal
       isOpen={open}
-      onClose={isBusy ? () => {} : onClose}
+      onClose={saving ? () => {} : onClose}
       title={isEditing ? "Edit Vendor" : "Vendor Details"}
       size="lg"
     >
       <form onSubmit={handleSave} className="space-y-6">
         {/* Vendor Header */}
-
         <div className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/20 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             {image ? (
@@ -313,32 +360,43 @@ const VendorDetailsContent = ({
               </div>
             )}
 
-            <div>
+            <div className="min-w-0">
               <h3 className="text-lg font-semibold text-foreground">
-                {isEditing
-                  ? formData.shopName || vendorName
-                  : vendorName}
+                {isEditing ? formData.shopName || vendorName : vendorName}
               </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Vendor ID: {vendorId}
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                ID: {vendorId}
+                {vendor.slug ? ` · /${vendor.slug}` : ""}
               </p>
             </div>
           </div>
 
-          <Badge variant={getStatusVariant(status)}>
-            {String(status).replaceAll("_", " ")}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={getStatusVariant(rawStatus, isActive)}>
+              <span className="capitalize">
+                {String(rawStatus).replaceAll("_", " ")}
+              </span>
+            </Badge>
+            <Badge variant={isActive ? "success" : "danger"}>
+              {isActive ? "Active" : "Inactive"}
+            </Badge>
+          </div>
         </div>
 
         {loading && (
-          <p className="text-sm text-muted-foreground">
-            Loading vendor details...
+          <p className="text-xs font-medium text-muted-foreground">
+            Refreshing latest vendor analytics & details...
           </p>
         )}
 
-        {/* Vendor Information */}
+        {vendor.rejectionReason && (
+          <div className="rounded-xl border border-[#f3cbd0] bg-[#fff0f1] px-4 py-3 text-xs text-[#bd3345]">
+            <span className="font-bold">Rejection / Suspension Note:</span>{" "}
+            {vendor.rejectionReason}
+          </div>
+        )}
 
+        {/* Vendor Information */}
         <section>
           <h4 className="mb-3 text-sm font-semibold text-foreground">
             Vendor Information
@@ -353,10 +411,7 @@ const VendorDetailsContent = ({
               { required: true },
             )}
 
-            <ReadOnlyField
-              label="Owner Name"
-              value={ownerName}
-            />
+            <ReadOnlyField label="Owner Name" value={ownerName} />
 
             {renderField(
               "Email",
@@ -383,25 +438,39 @@ const VendorDetailsContent = ({
 
             <ReadOnlyField
               label="Joined On"
-              value={formatDate(
-                vendor.createdAt || vendor.createdDate,
-              )}
+              value={formatDate(vendor.createdAt || vendor.createdDate)}
             />
 
-            <ReadOnlyField
-              label="Business Type"
-              value={vendor.businessType || vendor.storeType}
-            />
+            {renderField(
+              "Business Type",
+              "businessType",
+              formData.businessType,
+              handleFieldChange,
+            )}
+
+            {renderField(
+              "GST / Tax Number",
+              "gstNumber",
+              formData.gstNumber,
+              handleFieldChange,
+            )}
+
+            {renderField(
+              "Commission Rate (%)",
+              "commissionRate",
+              formData.commissionRate,
+              handleFieldChange,
+              { type: "number", min: 0, max: 100, step: 0.5, suffix: "%" },
+            )}
 
             <ReadOnlyField
-              label="GST Number"
-              value={vendor.gstNumber || vendor.gst}
+              label="Account Email"
+              value={userObj?.email || vendor.email}
             />
           </div>
         </section>
 
         {/* Store Information */}
-
         <section>
           <h4 className="mb-3 text-sm font-semibold text-foreground">
             Store Information
@@ -413,13 +482,12 @@ const VendorDetailsContent = ({
               "shopDescription",
               formData.shopDescription,
               handleFieldChange,
-              { multiline: true, rows: 4 },
+              { multiline: true, rows: 3 },
             )}
           </div>
         </section>
 
         {/* Address */}
-
         <section>
           <h4 className="mb-3 text-sm font-semibold text-foreground">
             Address
@@ -432,28 +500,24 @@ const VendorDetailsContent = ({
               formData.address.street,
               handleAddressChange,
             )}
-
             {renderField(
               "City",
               "city",
               formData.address.city,
               handleAddressChange,
             )}
-
             {renderField(
               "State",
               "state",
               formData.address.state,
               handleAddressChange,
             )}
-
             {renderField(
-              "Pincode",
+              "Pincode / Postal Code",
               "pincode",
               formData.address.pincode,
               handleAddressChange,
             )}
-
             {renderField(
               "Country",
               "country",
@@ -464,10 +528,9 @@ const VendorDetailsContent = ({
         </section>
 
         {/* Statistics */}
-
         <section>
           <h4 className="mb-3 text-sm font-semibold text-foreground">
-            Statistics
+            Performance & Earnings
           </h4>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -482,10 +545,10 @@ const VendorDetailsContent = ({
               },
               {
                 label: "Rating",
-                value: vendor.rating ?? vendor.averageRating ?? "0",
+                value: `${Number(vendor.rating ?? vendor.averageRating ?? 0).toFixed(1)} (${vendor.numReviews ?? 0})`,
               },
               {
-                label: "Revenue",
+                label: "Gross Revenue",
                 value: `₹${Number(
                   vendor.revenue ?? vendor.totalRevenue ?? 0,
                 ).toLocaleString("en-IN")}`,
@@ -495,48 +558,201 @@ const VendorDetailsContent = ({
                 key={item.label}
                 className="rounded-2xl border border-border bg-white p-4"
               >
-                <p className="text-xs text-muted-foreground">
-                  {item.label}
-                </p>
-
-                <p className="mt-1 text-lg font-semibold text-foreground">
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
                   {item.value}
                 </p>
               </div>
             ))}
           </div>
+
+          {(vendor.netEarnings > 0 || vendor.availableBalance > 0) && (
+            <div className="mt-3 grid grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-border bg-white p-4">
+                <p className="text-xs text-muted-foreground">Net Earnings</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  ₹{Number(vendor.netEarnings || 0).toLocaleString("en-IN")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-white p-4">
+                <p className="text-xs text-muted-foreground">Available Balance</p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  ₹{Number(vendor.availableBalance || 0).toLocaleString("en-IN")}
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* Error Message */}
+        {/* Bank Details */}
+        {hasBankDetails && (
+          <section>
+            <h4 className="mb-3 text-sm font-semibold text-foreground">
+              Payout / Bank Details
+            </h4>
+            <div className="grid gap-4 rounded-2xl border border-border p-5 sm:grid-cols-2">
+              <ReadOnlyField
+                label="Account Holder"
+                value={bankAccount.accountHolderName}
+              />
+              <ReadOnlyField label="Bank Name" value={bankAccount.bankName} />
+              <ReadOnlyField
+                label="Account Number"
+                value={bankAccount.accountNumber}
+              />
+              <ReadOnlyField label="IFSC Code" value={bankAccount.ifscCode} />
+            </div>
+          </section>
+        )}
 
+        {/* Recent Products / Orders */}
+        {(recentProducts.length > 0 || recentOrders.length > 0) && (
+          <section className="grid gap-4 sm:grid-cols-2">
+            {recentProducts.length > 0 && (
+              <div className="rounded-2xl border border-border p-4">
+                <h5 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Recent Products
+                </h5>
+                <div className="space-y-2">
+                  {recentProducts.map((p) => (
+                    <div
+                      key={p._id}
+                      className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-1.5 text-xs last:border-b-0 last:pb-0"
+                    >
+                      <span className="truncate font-medium text-foreground">
+                        {p.name}
+                      </span>
+                      <span className="shrink-0 font-semibold text-muted-foreground">
+                        ₹{Number(p.price || 0).toLocaleString("en-IN")} · {p.stock ?? 0} left
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recentOrders.length > 0 && (
+              <div className="rounded-2xl border border-border p-4">
+                <h5 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Recent Orders
+                </h5>
+                <div className="space-y-2">
+                  {recentOrders.map((o) => (
+                    <div
+                      key={o._id}
+                      className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-1.5 text-xs last:border-b-0 last:pb-0"
+                    >
+                      <span className="font-semibold text-foreground">
+                        #{o.orderNumber}
+                      </span>
+                      <span className="capitalize text-muted-foreground">
+                        {String(o.orderStatus || "").replace(/_/g, " ")} · ₹
+                        {Number(o.totalAmount || 0).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Inline Reject Confirmation */}
+        {rejectMode && !isEditing && (
+          <div className="space-y-3 rounded-2xl border border-[#f3cbd0] bg-[#fff0f1] p-4">
+            <label className="block text-xs font-bold text-[#bd3345]">
+              Rejection Reason
+            </label>
+            <textarea
+              rows={2}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              disabled={saving}
+              className="w-full rounded-xl border border-[#f3cbd0] bg-white px-3 py-2 text-sm text-foreground outline-none"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setRejectMode(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                loading={saving}
+                onClick={async () => {
+                  await onReject?.(vendor, rejectReason.trim() || "Rejected by admin");
+                  setRejectMode(false);
+                }}
+              >
+                Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Inline Delete Confirmation */}
+        {confirmDelete && !isEditing && (
+          <div className="flex flex-col gap-3 rounded-2xl border border-[#f3cbd0] bg-[#fff0f1] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-semibold text-[#bd3345]">
+              Delete &ldquo;{vendorName}&rdquo; permanently? This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setConfirmDelete(false)}
+              >
+                Keep
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                loading={saving}
+                onClick={() => onDelete?.(vendor)}
+              >
+                Confirm Delete
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
         {formError && (
           <p
             role="alert"
-            className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+            className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700"
           >
             {formError}
           </p>
         )}
 
         {/* Actions */}
-
-        <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+        <div className="flex flex-wrap flex-col-reverse gap-2.5 border-t border-border pt-5 sm:flex-row sm:justify-end">
           {isEditing ? (
             <>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancelEdit}
-                disabled={isBusy}
+                disabled={saving}
               >
                 Cancel
               </Button>
-
               <Button
                 type="submit"
-                disabled={isBusy || typeof onUpdate !== "function"}
+                loading={saving}
+                disabled={typeof onUpdate !== "function"}
               >
-                {saving ? "Saving..." : "Save Changes"}
+                Save Changes
               </Button>
             </>
           ) : (
@@ -545,54 +761,61 @@ const VendorDetailsContent = ({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={isBusy}
+                disabled={saving}
               >
                 Close
               </Button>
 
-              {onDelete && (
+              {onDelete && !confirmDelete && (
                 <Button
                   type="button"
                   variant="danger"
-                  onClick={() => onDelete(vendor)}
-                  disabled={isBusy}
+                  onClick={() => {
+                    setRejectMode(false);
+                    setConfirmDelete(true);
+                  }}
+                  disabled={saving}
                 >
                   Delete
                 </Button>
               )}
 
               {onApprove &&
-                String(status).toLowerCase() !== "approved" &&
-                String(status).toLowerCase() !== "active" && (
+                String(vendor.status || "").toLowerCase() !== "approved" && (
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="success"
                     onClick={() => onApprove(vendor)}
-                    disabled={isBusy}
+                    disabled={saving}
                   >
                     Approve Vendor
                   </Button>
                 )}
 
-              {onReject && String(status).toLowerCase() !== "rejected" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onReject(vendor)}
-                  disabled={isBusy}
-                >
-                  Reject Vendor
-                </Button>
-              )}
+              {onReject &&
+                !rejectMode &&
+                String(vendor.status || "").toLowerCase() !== "rejected" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setConfirmDelete(false);
+                      setRejectMode(true);
+                    }}
+                    disabled={saving}
+                  >
+                    Reject
+                  </Button>
+                )}
 
               {onStatusChange && (
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => onStatusChange(vendor)}
-                  disabled={isBusy}
+                  disabled={saving}
                 >
-                  Change Status
+                  Manage Status
                 </Button>
               )}
 
@@ -603,7 +826,7 @@ const VendorDetailsContent = ({
                   setFormError("");
                   setIsEditing(true);
                 }}
-                disabled={isBusy}
+                disabled={saving}
               >
                 Edit Vendor
               </Button>
@@ -619,7 +842,6 @@ const VendorDetailsContent = ({
 
 const VendorDetails = (props) => {
   const { vendor = null } = props;
-
   if (!vendor) return null;
 
   return (

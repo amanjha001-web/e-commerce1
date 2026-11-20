@@ -118,14 +118,24 @@ const adminService = {
     return response.data;
   },
 
-  toggleVendorStatus: async (vendorId, isActive) => {
-    const activeBool =
-      typeof isActive === "object" && isActive !== null
-        ? Boolean(isActive.isActive)
-        : Boolean(isActive);
-    const response = await api.patch(`/admin/vendors/${vendorId}/status`, {
-      isActive: activeBool,
-    });
+  toggleVendorStatus: async (vendorId, payloadOrBool) => {
+    const body =
+      typeof payloadOrBool === "object" && payloadOrBool !== null
+        ? {
+            ...(payloadOrBool.isActive !== undefined
+              ? { isActive: Boolean(payloadOrBool.isActive) }
+              : {}),
+            ...(payloadOrBool.status ? { status: payloadOrBool.status } : {}),
+            ...(payloadOrBool.rejectionReason !== undefined
+              ? { rejectionReason: payloadOrBool.rejectionReason }
+              : {}),
+            ...(payloadOrBool.commissionRate !== undefined &&
+            payloadOrBool.commissionRate !== ""
+              ? { commissionRate: Number(payloadOrBool.commissionRate) }
+              : {}),
+          }
+        : { isActive: Boolean(payloadOrBool) };
+    const response = await api.patch(`/admin/vendors/${vendorId}/status`, body);
     return response.data;
   },
 

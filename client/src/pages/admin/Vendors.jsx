@@ -13,149 +13,139 @@ import {
   toggleAdminVendorStatus,
   approveAdminVendor,
   rejectAdminVendor,
+  setAdminVendorsPage,
   setSelectedVendor,
   clearSelectedVendor,
+  clearAdminVendorsError,
 } from "../../store/slices/Admin/adminVendorsSlice";
 
-const DEMO_VENDORS = [
-  {
-    id: "V-101",
-    vendorCode: "V-101",
-    shopName: "Northstar Store",
-    email: "northstar@email.com",
-    productCount: 42,
-    orderCount: 128,
-    statusLabel: "Active",
-    isActive: true,
-    isDemo: true,
-  },
-  {
-    id: "V-102",
-    vendorCode: "V-102",
-    shopName: "Urban Living",
-    email: "urban@email.com",
-    productCount: 28,
-    orderCount: 96,
-    statusLabel: "Active",
-    isActive: true,
-    isDemo: true,
-  },
-  {
-    id: "V-103",
-    vendorCode: "V-103",
-    shopName: "Aura Essentials",
-    email: "aura@email.com",
-    productCount: 0,
-    orderCount: 0,
-    statusLabel: "Pending",
-    isActive: false,
-    isDemo: true,
-  },
-];
+const formatStatusLabel = (value) =>
+  String(value || "Pending")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
 
-const getStatusClass = (s) =>
-  s === "Delivered" || s === "Active" || s === "Resolved" || s === "Published"
-    ? "green"
-    : s === "Pending" || s === "Processing" || s === "Open"
-      ? "amber"
-      : s === "Blocked" || s === "Cancelled" || s === "Rejected"
-        ? "red"
-        : "";
+const getStatusClass = (s) => {
+  const normalized = String(s || "").trim().toLowerCase();
+  if (normalized === "approved" || normalized === "active") return "green";
+  if (normalized === "pending" || normalized === "under review") return "amber";
+  if (
+    normalized === "suspended" ||
+    normalized === "rejected" ||
+    normalized === "inactive" ||
+    normalized === "blocked"
+  ) {
+    return "red";
+  }
+  return "";
+};
 
 const Vendors = () => {
   const dispatch = useDispatch();
 
   const {
     vendors = [],
+    summary = null,
+    pagination = {},
     selectedVendor = null,
+    loading = false,
     detailsLoading = false,
     saving = false,
+    error = null,
   } = useSelector((state) => state.adminVendors || {});
 
+  const { page = 1, limit = 15, total = 0, totalPages = 0 } = pagination;
+
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All status");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [initialEdit, setInitialEdit] = useState(false);
   const [statusVendor, setStatusVendor] = useState(null);
   const [statusOpen, setStatusOpen] = useState(false);
-  const [demoModalVendor, setDemoModalVendor] = useState(null);
+
+  const loadVendors = (overrides = {}) => {
+    const params = {
+      page,
+      limit,
+      ...overrides,
+    };
+    const q = (overrides.search !== undefined ? overrides.search : search).trim();
+    const st = overrides.status !== undefined ? overrides.status : statusFilter;
+
+    if (q) params.search = q;
+    if (st && st !== "all") params.status = st;
+
+    dispatch(fetchAdminVendors(params));
+  };
 
   useEffect(() => {
-    dispatch(fetchAdminVendors());
-  }, [dispatch]);
+    const timer = setTimeout(
+      () => {
+        const params = { page, limit };
+        if (search.trim()) params.search = search.trim();
+        if (statusFilter !== "all") params.status = statusFilter;
+        dispatch(fetchAdminVendors(params));
+      },
+      search ? 300 : 0,
+    );
 
-  const sourceVendors = vendors.length > 0 ? vendors : DEMO_VENDORS;
+    return () => clearTimeout(timer);
+  }, [dispatch, page, limit, search, statusFilter]);
 
   const normalizedVendors = useMemo(() => {
-    return sourceVendors.map((v, i) => {
+    return (Array.isArray(vendors) ? vendors : []).map((v, i) => {
       const code =
         v.vendorCode ||
-        (v._id ? `V-${String(v._id).slice(-3).toUpperCase()}` : `V-${101 + i}`);
+        (v._id ? `V-${String(v._id).slice(-4).toUpperCase()}` : `V-${101 + i}`);
       const shop = v.shopName || v.storeName || v.businessName || "Shop";
-      const email = v.email || v.user?.email || "—";
+      const owner =
+        v.ownerName ||
+        v.user?.fullName ||
+        v.user?.name ||
+        v.userId?.fullName ||
+        v.userId?.name ||
+        "";
+      const email =
+        v.email || v.user?.email || v.userId?.email || "—";
       const products = v.productCount ?? v.productsCount ?? 0;
       const orders = v.orderCount ?? v.ordersCount ?? 0;
-      const statusLabel =
-        v.statusLabel ||
-        (v.status
-          ? String(v.status).charAt(0).toUpperCase() +
-            String(v.status).slice(1).toLowerCase()
-          : v.isActive === false
-            ? "Pending"
-            : "Active");
+      const isActive = v.isActive !== false;
+
+      let rawStatus = v.displayStatus || v.status || (isActive ? "active" : "inactive");
+      if (!isActive && String(v.status).toLowerCase() === "approved") {
+        rawStatus = "suspended";
+      } else if (!isActive && String(v.status).toLowerCase() === "pending") {
+        rawStatus = "inactive";
+      }
 
       return {
         ...v,
         _displayCode: code,
         _displayShop: shop,
+        _displayOwner: owner,
         _displayEmail: email,
         _displayProducts: products,
         _displayOrders: orders,
-        _displayStatus: statusLabel,
+        _displayStatus: formatStatusLabel(rawStatus),
       };
     });
-  }, [sourceVendors]);
-
-  const filteredVendors = useMemo(() => {
-    return normalizedVendors.filter((v) => {
-      if (
-        statusFilter !== "All status" &&
-        v._displayStatus.toLowerCase() !== statusFilter.toLowerCase()
-      ) {
-        return false;
-      }
-
-      if (search.trim()) {
-        const text =
-          `${v._displayCode} ${v._displayShop} ${v._displayEmail} ${v._displayStatus}`.toLowerCase();
-        if (!text.includes(search.trim().toLowerCase())) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [normalizedVendors, search, statusFilter]);
+  }, [vendors]);
 
   const handleViewVendor = async (vendor) => {
-    if (vendor.isDemo || !vendor._id) {
-      setDemoModalVendor(vendor);
-      toast.success("Vendor profile opened");
-      return;
-    }
-
+    if (!vendor?._id) return;
     dispatch(setSelectedVendor(vendor));
     setInitialEdit(false);
     setDetailsOpen(true);
-    dispatch(fetchAdminVendorById(vendor._id));
+
+    try {
+      await dispatch(fetchAdminVendorById(vendor._id)).unwrap();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to load vendor details");
+    }
   };
 
   const handleManageVendor = (vendor) => {
-    if (vendor.isDemo || !vendor._id) {
-      toast.success("Vendor action saved");
-      return;
-    }
-
+    if (!vendor?._id) return;
     setStatusVendor(vendor);
     setStatusOpen(true);
   };
@@ -163,80 +153,120 @@ const Vendors = () => {
   const handleUpdateVendor = async (vendorId, vendorData) => {
     try {
       await dispatch(updateAdminVendor({ vendorId, vendorData })).unwrap();
+      toast.success("Vendor details updated");
       setInitialEdit(false);
+      loadVendors();
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      const msg = typeof err === "string" ? err : "Failed to update vendor";
+      toast.error(msg);
+      return msg;
     }
   };
 
   const handleCloseDetails = () => {
-    if (detailsLoading || saving) return;
+    if (saving) return;
     setDetailsOpen(false);
     setInitialEdit(false);
     dispatch(clearSelectedVendor());
   };
 
   const handleDeleteVendor = async (vendor) => {
-    const vendorId = vendor?._id;
-    if (!vendorId) return;
-    if (!window.confirm(`Delete "${vendor.shopName || "this vendor"}"?`)) return;
-    const result = await dispatch(deleteAdminVendor(vendorId));
-    if (deleteAdminVendor.fulfilled.match(result)) {
+    const vendorId = vendor?._id || vendor?.id;
+    if (!vendorId || saving) return;
+
+    try {
+      await dispatch(deleteAdminVendor(vendorId)).unwrap();
+      toast.success("Vendor deleted");
       handleCloseDetails();
+      loadVendors();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to delete vendor");
     }
   };
 
-  const handleToggleStatus = async (vendor, status) => {
+  const handleToggleStatus = async (vendor, payloadOrBool) => {
     const vendorId = vendor?._id || vendor?.id;
     if (!vendorId || saving) return;
-    const isActive =
-      typeof status === "boolean"
-        ? status
-        : typeof status?.isActive === "boolean"
-          ? status.isActive
-          : !vendor.isActive;
 
-    const result = await dispatch(
-      toggleAdminVendorStatus({ vendorId, isActive }),
-    );
-    if (toggleAdminVendorStatus.fulfilled.match(result)) {
+    const payload =
+      typeof payloadOrBool === "object" && payloadOrBool !== null
+        ? payloadOrBool
+        : { isActive: Boolean(payloadOrBool) };
+
+    try {
+      await dispatch(
+        toggleAdminVendorStatus({
+          vendorId,
+          ...payload,
+        }),
+      ).unwrap();
+      toast.success("Vendor updated successfully");
       setStatusOpen(false);
       setStatusVendor(null);
-      dispatch(fetchAdminVendors());
+      loadVendors();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to update vendor status");
     }
   };
 
   const handleApproveVendor = async (vendor) => {
     const vendorId = vendor?._id || vendor?.id;
     if (!vendorId || saving) return;
-    const result = await dispatch(approveAdminVendor({ vendorId }));
-    if (approveAdminVendor.fulfilled.match(result)) {
-      dispatch(fetchAdminVendors());
+
+    try {
+      await dispatch(approveAdminVendor(vendorId)).unwrap();
+      toast.success("Vendor approved");
+      loadVendors();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to approve vendor");
     }
   };
 
-  const handleRejectVendor = async (vendor) => {
+  const handleRejectVendor = async (vendor, reason) => {
     const vendorId = vendor?._id || vendor?.id;
     if (!vendorId || saving) return;
-    const reason = window.prompt(
-      "Enter rejection reason for vendor:",
-      "Application did not meet verification requirements.",
-    );
-    if (reason === null) return;
-    const result = await dispatch(
-      rejectAdminVendor({
-        vendorId,
-        reason: reason.trim() || "Rejected by admin",
-      }),
-    );
-    if (rejectAdminVendor.fulfilled.match(result)) {
-      dispatch(fetchAdminVendors());
+
+    try {
+      await dispatch(
+        rejectAdminVendor({
+          vendorId,
+          reason:
+            (reason && String(reason).trim()) ||
+            "Application did not meet verification requirements.",
+        }),
+      ).unwrap();
+      toast.success("Vendor application rejected");
+      loadVendors();
+    } catch (err) {
+      toast.error(typeof err === "string" ? err : "Failed to reject vendor");
     }
   };
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    dispatch(setAdminVendorsPage(1));
+  };
+
+  const statTotal = summary?.total ?? total ?? normalizedVendors.length;
+  const statApproved =
+    summary?.approved ??
+    normalizedVendors.filter((v) => v._displayStatus.toLowerCase() === "approved").length;
+  const statPending =
+    summary?.pending ??
+    normalizedVendors.filter((v) =>
+      ["pending", "under review"].includes(v._displayStatus.toLowerCase()),
+    ).length;
+  const statRestricted =
+    summary !== null && summary !== undefined
+      ? (summary.suspended || 0) + (summary.rejected || 0)
+      : normalizedVendors.filter((v) =>
+          ["suspended", "rejected", "inactive"].includes(v._displayStatus.toLowerCase()),
+        ).length;
+
   return (
-    <div>
+    <div className="space-y-6">
       <div className="pagehead">
         <div>
           <div className="eyebrow">ShopSphere administration</div>
@@ -244,30 +274,83 @@ const Vendors = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {[
+          ["Total vendors", statTotal],
+          ["Approved", statApproved],
+          ["Pending review", statPending],
+          ["Suspended / Rejected", statRestricted],
+        ].map(([label, val]) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-xs"
+          >
+            <p className="text-xs font-bold text-[var(--muted)]">{label}</p>
+            <p className="mt-1 text-2xl font-black text-[var(--text)]">{val}</p>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-xl border border-[#f3cbd0] bg-[#fff0f1] px-4 py-3 text-xs font-semibold text-[#bd3345]"
+        >
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => dispatch(clearAdminVendorsError())}
+            className="cursor-pointer text-sm font-bold"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="panel">
         <div className="toolbar">
           <input
             className="field"
-            placeholder="Search vendors..."
+            placeholder="Search store, owner, or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (page !== 1) dispatch(setAdminVendorsPage(1));
+            }}
           />
+
           <select
             className="field"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              if (page !== 1) dispatch(setAdminVendorsPage(1));
+            }}
           >
-            <option>All status</option>
-            <option>Active</option>
-            <option>Pending</option>
+            <option value="all">All status</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="under_review">Under Review</option>
+            <option value="suspended">Suspended</option>
+            <option value="rejected">Rejected</option>
+            <option value="inactive">Inactive</option>
           </select>
+
+          {(search || statusFilter !== "all") && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="outlinebtn"
+            >
+              Reset
+            </button>
+          )}
         </div>
 
         <div id="vendorTable" className="tablewrap">
           <table>
             <thead>
               <tr>
-                <th>Vendor</th>
                 <th>Shop</th>
                 <th>Email</th>
                 <th>Products</th>
@@ -277,84 +360,91 @@ const Vendors = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredVendors.map((v, i) => (
-                <tr key={v._id || v.id || i}>
-                  <td>{v._displayCode}</td>
-                  <td>{v._displayShop}</td>
-                  <td>{v._displayEmail}</td>
-                  <td>{v._displayProducts}</td>
-                  <td>{v._displayOrders}</td>
-                  <td>
-                    <span
-                      className={`status ${getStatusClass(v._displayStatus)}`}
-                    >
-                      {v._displayStatus}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => handleViewVendor(v)}
-                    >
-                      View
-                    </button>{" "}
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => handleManageVendor(v)}
-                    >
-                      Manage
-                    </button>
+              {loading && normalizedVendors.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-[var(--muted)]">
+                    Loading vendors...
                   </td>
                 </tr>
-              ))}
+              ) : normalizedVendors.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-[var(--muted)]">
+                    No vendors match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                normalizedVendors.map((v, i) => (
+                  <tr key={v._id || v.id || i}>
+                    <td>
+                      <div className="font-bold text-[var(--text)]">
+                        {v._displayShop}
+                      </div>
+                      <div className="text-[11px] font-medium text-[var(--muted)]">
+                        {v._displayCode}
+                        {v._displayOwner ? ` · ${v._displayOwner}` : ""}
+                      </div>
+                    </td>
+                    <td>{v._displayEmail}</td>
+                    <td>{v._displayProducts}</td>
+                    <td>{v._displayOrders}</td>
+                    <td>
+                      <span
+                        className={`status ${getStatusClass(v._displayStatus)}`}
+                      >
+                        {v._displayStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btnsm"
+                          onClick={() => handleViewVendor(v)}
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          className="btnsm"
+                          onClick={() => handleManageVendor(v)}
+                        >
+                          Manage
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {demoModalVendor && (
-        <div
-          className="modalback"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDemoModalVendor(null);
-          }}
-        >
-          <div className="modal">
-            <div className="modalhead">
-              <h2>{demoModalVendor._displayShop}</h2>
+        {totalPages > 1 && (
+          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-bold text-[var(--muted)]">
+              Page {page} of {Math.max(totalPages, 1)} · {total} vendors
+            </p>
+            <div className="flex gap-2">
               <button
                 type="button"
-                className="iconbtn"
-                onClick={() => setDemoModalVendor(null)}
+                disabled={page <= 1 || loading}
+                onClick={() => dispatch(setAdminVendorsPage(page - 1))}
+                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
               >
-                ✕
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={loading || page >= totalPages}
+                onClick={() => dispatch(setAdminVendorsPage(page + 1))}
+                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
               </button>
             </div>
-            <p>
-              <b>Vendor ID:</b> {demoModalVendor._displayCode}
-            </p>
-            <p>
-              <b>Email:</b> {demoModalVendor._displayEmail}
-            </p>
-            <p>
-              <b>Products:</b> {demoModalVendor._displayProducts} ·{" "}
-              <b>Orders:</b> {demoModalVendor._displayOrders}
-            </p>
-            <p>
-              <b>Status:</b>{" "}
-              <span
-                className={`status ${getStatusClass(
-                  demoModalVendor._displayStatus,
-                )}`}
-              >
-                {demoModalVendor._displayStatus}
-              </span>
-            </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {detailsOpen && selectedVendor && (
         <VendorDetails

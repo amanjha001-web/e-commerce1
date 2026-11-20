@@ -42,6 +42,16 @@ const vendorSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    website: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    businessType: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     address: {
       street: String,
       city: String,

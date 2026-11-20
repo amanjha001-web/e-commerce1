@@ -1,3 +1,34 @@
+import { useEffect, useState } from "react";
+import Modal from "../../common/Modal";
+import Badge from "../../common/Badge";
+import Button from "../../common/Button";
+
+const STATUS_OPTIONS = [
+  { value: "approved", label: "Approved (Active)" },
+  { value: "pending", label: "Pending Review" },
+  { value: "under_review", label: "Under Review" },
+  { value: "suspended", label: "Suspended / Deactivated" },
+  { value: "rejected", label: "Rejected" },
+];
+
+const getStatusBadgeVariant = (status, isActive) => {
+  if (!isActive && status === "approved") return "danger";
+  switch (String(status || "").toLowerCase()) {
+    case "approved":
+    case "active":
+      return "success";
+    case "pending":
+    case "under_review":
+      return "warning";
+    case "suspended":
+    case "rejected":
+    case "inactive":
+      return "danger";
+    default:
+      return "default";
+  }
+};
+
 const VendorStatusToggle = ({
   vendor = null,
   open = false,
@@ -5,85 +36,211 @@ const VendorStatusToggle = ({
   onClose,
   onConfirm,
 }) => {
+  const initialStatus = String(vendor?.status || "pending")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const initialActive = vendor?.isActive !== false;
+  const initialCommission =
+    vendor?.commissionRate !== undefined && vendor?.commissionRate !== null
+      ? String(vendor.commissionRate)
+      : "10";
+  const initialReason = vendor?.rejectionReason || "";
+
+  const [status, setStatus] = useState(initialStatus);
+  const [isActive, setIsActive] = useState(initialActive);
+  const [commissionRate, setCommissionRate] = useState(initialCommission);
+  const [rejectionReason, setRejectionReason] = useState(initialReason);
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (!open || !vendor) return;
+    setStatus(
+      String(vendor.status || "pending")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_"),
+    );
+    setIsActive(vendor.isActive !== false);
+    setCommissionRate(
+      vendor.commissionRate !== undefined && vendor.commissionRate !== null
+        ? String(vendor.commissionRate)
+        : "10",
+    );
+    setRejectionReason(vendor.rejectionReason || "");
+    setFormError("");
+  }, [open, vendor]);
+
   if (!open || !vendor) return null;
 
   const vendorName =
     vendor.shopName ||
-    vendor.businessName ||
     vendor.storeName ||
+    vendor.businessName ||
     vendor.user?.fullName ||
-    "this vendor";
+    vendor.userId?.name ||
+    "Vendor";
 
-  const isActive = vendor.isActive !== false;
-  const nextStatus = !isActive;
-  const actionLabel = nextStatus ? "Activate" : "Deactivate";
+  const vendorEmail =
+    vendor.email || vendor.user?.email || vendor.userId?.email || "—";
 
-  const handleConfirm = () => {
+  const currentDisplayLabel =
+    !initialActive && initialStatus === "approved"
+      ? "Suspended"
+      : initialStatus.replace(/_/g, " ");
+
+  const handleStatusSelect = (nextStatus) => {
+    setStatus(nextStatus);
+    if (nextStatus === "approved") {
+      setIsActive(true);
+    } else if (nextStatus === "suspended" || nextStatus === "rejected") {
+      setIsActive(false);
+    }
+    setFormError("");
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
     if (loading) return;
 
-    // Pass the target status as a boolean.
-    onConfirm?.(vendor, nextStatus);
+    const rateNum = Number(commissionRate);
+    if (commissionRate !== "" && (Number.isNaN(rateNum) || rateNum < 0 || rateNum > 100)) {
+      setFormError("Commission rate must be between 0% and 100%.");
+      return;
+    }
+
+    onConfirm?.(vendor, {
+      status,
+      isActive,
+      commissionRate: commissionRate === "" ? undefined : rateNum,
+      rejectionReason: rejectionReason.trim(),
+    });
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
-      onClick={() => !loading && onClose?.()}
+    <Modal
+      isOpen={open}
+      onClose={loading ? () => {} : onClose}
+      title="Manage Vendor"
+      size="md"
     >
-      <div
-        className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="vendor-status-title"
-      >
-        <h2
-          id="vendor-status-title"
-          className="text-xl font-semibold text-foreground"
-        >
-          {actionLabel} Vendor?
-        </h2>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[#fcf9fa] p-4">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-bold text-[var(--text)]">
+              {vendorName}
+            </h3>
+            <p className="mt-0.5 truncate text-xs font-medium text-[var(--muted)]">
+              {vendorEmail}
+            </p>
+          </div>
 
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Are you sure you want to {actionLabel.toLowerCase()}{" "}
-          <span className="font-medium text-foreground">{vendorName}</span>?
-        </p>
-
-        <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-sm text-muted-foreground">Current status</p>
-          <p className="mt-1 font-medium">{isActive ? "Active" : "Inactive"}</p>
-
-          <p className="mt-3 text-sm text-muted-foreground">New status</p>
-          <p className="mt-1 font-medium">
-            {nextStatus ? "Active" : "Inactive"}
-          </p>
+          <Badge variant={getStatusBadgeVariant(initialStatus, initialActive)}>
+            <span className="capitalize">{currentDisplayLabel}</span>
+          </Badge>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
+        <div>
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+            Vendor Status
+          </label>
+          <select
+            value={status}
+            onChange={(e) => handleStatusSelect(e.target.value)}
+            disabled={loading}
+            className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--soft)]"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              Commission Rate (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.5"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(e.target.value)}
+              disabled={loading}
+              className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm font-medium text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--soft)]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              Storefront Visibility
+            </label>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => setIsActive((prev) => !prev)}
+              className={`flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                isActive
+                  ? "border-[#c3ebda] bg-[#e7f6ef] text-[#16845b]"
+                  : "border-[#f3cbd0] bg-[#fff0f1] text-[#bd3345]"
+              }`}
+            >
+              <span>{isActive ? "Active in Store" : "Inactive / Hidden"}</span>
+              <span className="text-xs underline">
+                {isActive ? "Turn Off" : "Turn On"}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {(status === "rejected" || status === "suspended" || rejectionReason) && (
+          <div>
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              {status === "rejected"
+                ? "Rejection Reason"
+                : status === "suspended"
+                  ? "Suspension Note"
+                  : "Admin Note"}
+            </label>
+            <textarea
+              rows={3}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              disabled={loading}
+              placeholder="Provide reason visible to vendor..."
+              className="w-full rounded-xl border border-[var(--line)] bg-white px-3.5 py-2.5 text-sm text-[var(--text)] outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--soft)]"
+            />
+          </div>
+        )}
+
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-[#f3cbd0] bg-[#fff0f1] px-3.5 py-2.5 text-xs font-semibold text-[#bd3345]"
+          >
+            {formError}
+          </p>
+        )}
+
+        <div className="flex flex-col-reverse gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:justify-end">
+          <Button
             type="button"
+            variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-60"
           >
             Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={loading}
-            className={`rounded-xl px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 ${
-              isActive
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-green-600 hover:bg-green-700"
-            }`}
-          >
-            {loading ? "Processing..." : actionLabel}
-          </button>
+          </Button>
+          <Button type="submit" loading={loading}>
+            Save Changes
+          </Button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };
 

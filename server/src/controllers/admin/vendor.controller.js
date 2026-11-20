@@ -18,8 +18,8 @@ export const updateVendor = asyncHandler(async (req, res) => {
 });
 
 export const toggleVendorStatus = asyncHandler(async (req, res) => {
-  const vendor = await adminVendorService.toggleVendorStatus(req.params.vendorId, req.body.isActive);
-  return ApiResponse.success(res, vendor, 'Vendor status toggled');
+  const vendor = await adminVendorService.toggleVendorStatus(req.params.vendorId, req.body);
+  return ApiResponse.success(res, vendor, 'Vendor status updated');
 });
 
 export const approveVendor = asyncHandler(async (req, res) => {

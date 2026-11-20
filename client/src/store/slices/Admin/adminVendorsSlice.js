@@ -18,6 +18,7 @@ export const fetchAdminVendors = createAsyncThunk(
           : Array.isArray(response.data)
             ? response.data
             : [],
+        summary: response.data?.summary || null,
         pagination: response.data?.pagination || {},
         message: response.message || "",
       };
@@ -105,15 +106,20 @@ export const deleteAdminVendor = createAsyncThunk(
   },
 );
 
-// Activate / deactivate vendor
+// Activate / deactivate / manage vendor status
 export const toggleAdminVendorStatus = createAsyncThunk(
   "adminVendors/toggleStatus",
-  async ({ vendorId, isActive }, { rejectWithValue }) => {
+  async (arg, { rejectWithValue }) => {
     try {
-      const response = await adminService.toggleVendorStatus(
-        vendorId,
-        isActive,
-      );
+      const vendorId = arg?.vendorId || arg?._id || arg?.id;
+      const { vendorId: _omitId, ...rest } = typeof arg === "object" && arg ? arg : {};
+      const payload =
+        rest.status !== undefined ||
+        rest.commissionRate !== undefined ||
+        rest.rejectionReason !== undefined
+          ? rest
+          : rest.isActive;
+      const response = await adminService.toggleVendorStatus(vendorId, payload);
 
       if (!response?.success) {
         return rejectWithValue(
@@ -138,8 +144,12 @@ export const toggleAdminVendorStatus = createAsyncThunk(
 // Approve vendor
 export const approveAdminVendor = createAsyncThunk(
   "adminVendors/approve",
-  async (vendorId, { rejectWithValue }) => {
+  async (vendorIdOrObj, { rejectWithValue }) => {
     try {
+      const vendorId =
+        typeof vendorIdOrObj === "object" && vendorIdOrObj !== null
+          ? vendorIdOrObj.vendorId || vendorIdOrObj._id || vendorIdOrObj.id
+          : vendorIdOrObj;
       const response = await adminService.approveVendor(vendorId);
 
       if (!response?.success) {
@@ -187,6 +197,7 @@ export const rejectAdminVendor = createAsyncThunk(
 
 const initialState = {
   vendors: [],
+  summary: null,
   selectedVendor: null,
   pagination: {
     total: 0,
@@ -220,6 +231,10 @@ const adminVendorsSlice = createSlice({
       };
     },
 
+    setAdminVendorsPage(state, action) {
+      state.pagination.page = action.payload;
+    },
+
     setSelectedVendor(state, action) {
       state.selectedVendor = action.payload;
     },
@@ -247,6 +262,7 @@ const adminVendorsSlice = createSlice({
       .addCase(fetchAdminVendors.fulfilled, (state, action) => {
         state.loading = false;
         state.vendors = action.payload.vendors;
+        state.summary = action.payload.summary || state.summary;
         state.pagination = action.payload.pagination;
         state.message = action.payload.message;
       })
@@ -391,6 +407,7 @@ const adminVendorsSlice = createSlice({
 
 export const {
   setVendorFilters,
+  setAdminVendorsPage,
   setSelectedVendor,
   clearSelectedVendor,
   clearAdminVendorsError,
