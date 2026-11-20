@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import adminService from "../../services/admin.service";
 import Modal from "../../components/common/Modal";
@@ -14,10 +14,12 @@ const toSlugPreview = (text = "") =>
     .replace(/^-+|-+$/g, "");
 
 const Categories = () => {
+  const fileInputRef = useRef(null);
   const [categories, setCategories] = useState([]);
+  const [isLegacyList, setIsLegacyList] = useState(false);
   const [summary, setSummary] = useState(null);
   const [pagination, setPagination] = useState({
-    total: 0,
+    total: null,
     page: 1,
     limit: 20,
     totalPages: 0,
@@ -43,8 +45,19 @@ const Categories = () => {
   const [catSortOrder, setCatSortOrder] = useState("0");
   const [catImageUrl, setCatImageUrl] = useState("");
   const [catImageFile, setCatImageFile] = useState(null);
+  const [catImagePreview, setCatImagePreview] = useState("");
   const [removeImage, setRemoveImage] = useState(false);
   const [catActive, setCatActive] = useState(true);
+
+  useEffect(() => {
+    if (!catImageFile) {
+      setCatImagePreview("");
+      return undefined;
+    }
+    const objectUrl = URL.createObjectURL(catImageFile);
+    setCatImagePreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [catImageFile]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -56,16 +69,40 @@ const Categories = () => {
 
       const response = await adminService.getCategories(params);
       const data = response?.data ?? response;
+      const arrayPayload = Array.isArray(data);
       const list = Array.isArray(data?.categories)
         ? data.categories
-        : Array.isArray(data)
+        : arrayPayload
           ? data
           : [];
 
+      setIsLegacyList(arrayPayload);
       setCategories(list);
-      if (data?.summary) setSummary(data.summary);
-      if (data?.pagination) {
-        setPagination((prev) => ({ ...prev, ...data.pagination }));
+
+      if (arrayPayload) {
+        const activeCount = list.filter((c) => c.isActive !== false).length;
+        const archivedCount = list.filter((c) => c.isActive === false).length;
+        const productsCount = list.reduce(
+          (sum, c) => sum + Number(c.productCount ?? c.productsCount ?? c.products ?? 0),
+          0,
+        );
+        setSummary({
+          total: list.length,
+          active: activeCount,
+          archived: archivedCount,
+          totalCategorizedProducts: productsCount,
+        });
+        setPagination({
+          total: list.length,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        });
+      } else {
+        setSummary(data?.summary || null);
+        if (data?.pagination) {
+          setPagination((prev) => ({ ...prev, ...data.pagination }));
+        }
       }
     } catch (err) {
       setError(
@@ -86,7 +123,7 @@ const Categories = () => {
     return () => clearTimeout(timer);
   }, [fetchCategories, search]);
 
-  const rows = useMemo(() => {
+  const allMappedRows = useMemo(() => {
     return (Array.isArray(categories) ? categories : []).map((c, i) => {
       const name = c.name || "Category";
       const slug = c.slug || toSlugPreview(name);
@@ -117,6 +154,24 @@ const Categories = () => {
     });
   }, [categories]);
 
+  const rows = useMemo(() => {
+    if (!isLegacyList) return allMappedRows;
+    const q = search.trim().toLowerCase();
+    return allMappedRows.filter((item) => {
+      if (statusFilter === "active" && !item._isActive) return false;
+      if (statusFilter === "archived" && item._isActive) return false;
+      if (
+        q &&
+        !item._name.toLowerCase().includes(q) &&
+        !item._slug.toLowerCase().includes(q) &&
+        !String(item.description || "").toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [allMappedRows, isLegacyList, search, statusFilter]);
+
   const resetModalForm = () => {
     setEditingCat(null);
     setCatName("");
@@ -127,10 +182,12 @@ const Categories = () => {
     setCatSortOrder("0");
     setCatImageUrl("");
     setCatImageFile(null);
+    setCatImagePreview("");
     setRemoveImage(false);
     setCatActive(true);
     setFormError("");
     setConfirmDelete(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleOpenAdd = () => {
@@ -306,20 +363,26 @@ const Categories = () => {
   };
 
   const parentOptions = useMemo(() => {
-    return rows.filter((c) => !editingCat || c._id !== editingCat._id);
-  }, [rows, editingCat]);
+    return allMappedRows.filter((c) => !editingCat || c._id !== editingCat._id);
+  }, [allMappedRows, editingCat]);
 
-  const statTotal = summary?.total ?? pagination.total ?? rows.length;
   const statActive =
     summary?.active ?? rows.filter((r) => r._isActive).length;
   const statArchived =
     summary?.archived ?? rows.filter((r) => !r._isActive).length;
+  const rawStatTotal =
+    summary?.total ??
+    (typeof pagination.total === "number" ? pagination.total : rows.length);
+  const statTotal =
+    rawStatTotal === 0 && (statActive > 0 || statArchived > 0)
+      ? statActive + statArchived
+      : rawStatTotal;
   const statProducts =
     summary?.totalCategorizedProducts ??
     rows.reduce((sum, r) => sum + r._products, 0);
 
   const previewImageSrc = catImageFile
-    ? URL.createObjectURL(catImageFile)
+    ? catImagePreview
     : !removeImage
       ? catImageUrl
       : "";
@@ -670,6 +733,7 @@ const Categories = () => {
                       setCatImageFile(null);
                       setCatImageUrl("");
                       setRemoveImage(true);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
                     className="btnsm cursor-pointer"
                   >
@@ -686,19 +750,35 @@ const Categories = () => {
                   setCatImageUrl(e.target.value);
                   setCatImageFile(null);
                   setRemoveImage(false);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
                 disabled={saving}
               />
 
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) {
-                    setCatImageFile(file);
-                    setRemoveImage(false);
+                  if (!file) return;
+                  if (!file.type.startsWith("image/")) {
+                    const msg = "Please select a valid image file (PNG, JPG, WEBP).";
+                    setFormError(msg);
+                    toast.error(msg);
+                    e.target.value = "";
+                    return;
                   }
+                  if (file.size > 5 * 1024 * 1024) {
+                    const msg = "Category image must be 5MB or smaller.";
+                    setFormError(msg);
+                    toast.error(msg);
+                    e.target.value = "";
+                    return;
+                  }
+                  setFormError("");
+                  setCatImageFile(file);
+                  setRemoveImage(false);
                 }}
                 disabled={saving}
                 className="block w-full text-xs text-[var(--muted)]"

@@ -12,6 +12,15 @@ export const errorHandler = (err, req, res, next) => {
     error = new ApiError(statusCode, message, error?.errors || [], err.stack);
   }
 
+  // Handle Multer upload errors
+  if (err.name === 'MulterError') {
+    const multerMsg =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'Uploaded file is too large. Maximum allowed size is 5MB.'
+        : err.message || 'Invalid file upload request.';
+    error = ApiError.badRequest(multerMsg);
+  }
+
   // Handle Mongoose CastError (bad ObjectId)
   if (err.name === 'CastError') {
     error = ApiError.badRequest(`Invalid resource ID format for '${err.path}'`);

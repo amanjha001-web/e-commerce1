@@ -4,6 +4,7 @@ import app from '../../src/app.js';
 import { User } from '../../src/models/User.model.js';
 import { Category } from '../../src/models/Category.model.js';
 import { Product } from '../../src/models/Product.model.js';
+import { cloudinary } from '../../src/config/cloudinary.js';
 import { generateAccessToken } from '../../src/utils/token.utils.js';
 
 const ADMIN_ID = '65f100000000000000000001';
@@ -314,5 +315,79 @@ describe('Admin Categories API', () => {
     );
     expect(deleteSpy).toHaveBeenCalledWith(CAT_ID_1);
     expect(deleteRes.body.data.deletedCategoryId).toBe(CAT_ID_1);
+  });
+
+  it('uploads category image via multipart FormData and rejects oversized files with 400', async () => {
+    const token = mockAdminAuth();
+
+    vi.spyOn(cloudinary.uploader, 'upload_stream').mockImplementation((_opts, cb) => ({
+      end: () =>
+        cb(null, {
+          secure_url: 'https://res.cloudinary.com/demo/image/upload/categories/sample.png',
+          public_id: 'categories/sample',
+        }),
+    }));
+
+    vi.spyOn(Category, 'findOne').mockReturnValueOnce(createQueryMock(null));
+    const createdDoc = {
+      _id: CAT_ID_1,
+      name: 'Photo Upload',
+      slug: 'photo-upload',
+      description: 'With uploaded image',
+      icon: '',
+      image: {
+        url: 'https://res.cloudinary.com/demo/image/upload/categories/sample.png',
+        publicId: 'categories/sample',
+      },
+      parent: null,
+      isActive: true,
+      sortOrder: 0,
+    };
+    const createSpy = vi.spyOn(Category, 'create').mockImplementationOnce(async (payload) => ({
+      ...createdDoc,
+      image: payload.image,
+    }));
+    vi.spyOn(Category, 'findById').mockReturnValueOnce(createQueryMock(createdDoc));
+    vi.spyOn(Product, 'aggregate').mockResolvedValueOnce([]);
+    vi.spyOn(Category, 'aggregate').mockResolvedValueOnce([]);
+
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    );
+
+    const uploadRes = await request(app)
+      .post('/api/v1/admin/categories')
+      .set('Authorization', `Bearer ${token}`)
+      .field('name', 'Photo Upload')
+      .field('description', 'With uploaded image')
+      .field('parent', '')
+      .field('sortOrder', '0')
+      .field('isActive', 'true')
+      .attach('image', pngBuffer, { filename: 'cat.png', contentType: 'image/png' });
+
+    expect(uploadRes.status).toBe(201);
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Photo Upload',
+        slug: 'photo-upload',
+        parent: null,
+        image: expect.objectContaining({
+          url: expect.stringContaining('https://'),
+          publicId: expect.stringMatching(/^categories\//),
+        }),
+      })
+    );
+    expect(uploadRes.body.data.imageUrl).toContain('https://');
+
+    const oversizedBuffer = Buffer.alloc(6 * 1024 * 1024, 0);
+    const oversizedRes = await request(app)
+      .post('/api/v1/admin/categories')
+      .set('Authorization', `Bearer ${token}`)
+      .field('name', 'Too Large')
+      .attach('image', oversizedBuffer, { filename: 'huge.png', contentType: 'image/png' });
+
+    expect(oversizedRes.status).toBe(400);
+    expect(oversizedRes.body.message).toMatch(/5MB|large/i);
   });
 });

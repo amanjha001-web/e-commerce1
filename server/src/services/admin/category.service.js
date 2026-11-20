@@ -130,7 +130,7 @@ export class AdminCategoryService {
           .skip(skip)
           .limit(limit),
         Category.countDocuments(filter),
-        Category.countDocuments(),
+        Category.countDocuments({}),
         Category.countDocuments({ isActive: { $ne: false } }),
         Category.countDocuments({ isActive: false }),
         Promise.resolve()
@@ -139,13 +139,15 @@ export class AdminCategoryService {
       ]);
 
     const enriched = await enrichCategories(categories);
+    const resolvedTotal =
+      Number(totalAll || 0) || Number(activeCount || 0) + Number(archivedCount || 0);
 
     return {
       categories: enriched,
       summary: {
-        total: totalAll,
-        active: activeCount,
-        archived: archivedCount,
+        total: resolvedTotal,
+        active: Number(activeCount || 0),
+        archived: Number(archivedCount || 0),
         totalCategorizedProducts: Number(distinctProductCount || 0),
       },
       pagination: {
@@ -191,7 +193,10 @@ export class AdminCategoryService {
     }
 
     let parentId = null;
-    if (body.parent && body.parent !== 'null' && body.parent !== '') {
+    if (
+      body.parent &&
+      !['null', 'undefined', ''].includes(String(body.parent).trim())
+    ) {
       ensureValidObjectId(body.parent, 'Parent Category ID');
       const parentExists = await Category.findById(body.parent).select('_id').lean();
       if (!parentExists) throw ApiError.badRequest('Selected parent category does not exist');
@@ -200,8 +205,14 @@ export class AdminCategoryService {
 
     let imageObj = { url: '', publicId: '' };
     if (file?.buffer) {
-      const uploaded = await uploadToCloudinary(file.buffer, 'categories');
-      imageObj = { url: uploaded.url, publicId: uploaded.publicId };
+      try {
+        const uploaded = await uploadToCloudinary(file.buffer, 'categories');
+        imageObj = { url: uploaded.url, publicId: uploaded.publicId };
+      } catch (uploadErr) {
+        throw ApiError.badRequest(
+          uploadErr?.message || 'Failed to upload category image to media storage'
+        );
+      }
     } else if (body.imageUrl !== undefined || typeof body.image === 'string') {
       imageObj = { url: String(body.imageUrl ?? body.image ?? '').trim(), publicId: '' };
     } else if (body.image && typeof body.image === 'object') {
@@ -276,7 +287,10 @@ export class AdminCategoryService {
     }
 
     if (body.parent !== undefined) {
-      if (!body.parent || body.parent === 'null' || body.parent === '') {
+      if (
+        !body.parent ||
+        ['null', 'undefined', ''].includes(String(body.parent).trim())
+      ) {
         category.parent = null;
       } else {
         ensureValidObjectId(body.parent, 'Parent Category ID');
@@ -308,8 +322,14 @@ export class AdminCategoryService {
       if (category.image?.publicId) {
         deleteFromCloudinary(category.image.publicId).catch(() => {});
       }
-      const uploaded = await uploadToCloudinary(file.buffer, 'categories');
-      category.image = { url: uploaded.url, publicId: uploaded.publicId };
+      try {
+        const uploaded = await uploadToCloudinary(file.buffer, 'categories');
+        category.image = { url: uploaded.url, publicId: uploaded.publicId };
+      } catch (uploadErr) {
+        throw ApiError.badRequest(
+          uploadErr?.message || 'Failed to upload category image to media storage'
+        );
+      }
     } else if (body.removeImage === true || String(body.removeImage) === 'true') {
       if (category.image?.publicId) {
         deleteFromCloudinary(category.image.publicId).catch(() => {});
