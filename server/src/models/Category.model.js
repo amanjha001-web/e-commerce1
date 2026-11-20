@@ -23,6 +23,11 @@ const categorySchema = new mongoose.Schema(
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
     },
+    icon: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',

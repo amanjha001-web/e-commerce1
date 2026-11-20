@@ -314,14 +314,23 @@ const adminService = {
   },
 
   createCategory: async (categoryData) => {
-    const response = await api.post("/admin/categories", categoryData);
+    const config =
+      categoryData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : undefined;
+    const response = await api.post("/admin/categories", categoryData, config);
     return response.data;
   },
 
   updateCategory: async (categoryId, categoryData) => {
+    const config =
+      categoryData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : undefined;
     const response = await api.patch(
       `/admin/categories/${categoryId}`,
       categoryData,
+      config,
     );
     return response.data;
   },
