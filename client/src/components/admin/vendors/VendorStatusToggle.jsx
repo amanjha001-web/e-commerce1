@@ -89,6 +89,16 @@ const VendorStatusToggle = ({
       ? "Suspended"
       : initialStatus.replace(/_/g, " ");
 
+  const verificationStatus =
+    vendor.userVerificationStatus ||
+    (!vendor.user && !vendor.userId
+      ? "unlinked"
+      : vendor.user?.isActive === false || vendor.userId?.isActive === false
+        ? "blocked"
+        : (vendor.isUserVerified ?? vendor.user?.isEmailVerified ?? vendor.userId?.isEmailVerified)
+          ? "verified"
+          : "unverified");
+
   const handleStatusSelect = (nextStatus) => {
     setStatus(nextStatus);
     if (nextStatus === "approved") {
@@ -106,6 +116,11 @@ const VendorStatusToggle = ({
     const rateNum = Number(commissionRate);
     if (commissionRate !== "" && (Number.isNaN(rateNum) || rateNum < 0 || rateNum > 100)) {
       setFormError("Commission rate must be between 0% and 100%.");
+      return;
+    }
+
+    if (status === "rejected" && !rejectionReason.trim()) {
+      setFormError("Please enter a rejection reason so the vendor knows why it was rejected.");
       return;
     }
 
@@ -135,9 +150,28 @@ const VendorStatusToggle = ({
             </p>
           </div>
 
-          <Badge variant={getStatusBadgeVariant(initialStatus, initialActive)}>
-            <span className="capitalize">{currentDisplayLabel}</span>
-          </Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant={
+                verificationStatus === "verified"
+                  ? "success"
+                  : verificationStatus === "unverified"
+                    ? "warning"
+                    : "danger"
+              }
+            >
+              {verificationStatus === "verified"
+                ? "Verified User"
+                : verificationStatus === "unverified"
+                  ? "Email Unverified"
+                  : verificationStatus === "blocked"
+                    ? "User Blocked"
+                    : "No User"}
+            </Badge>
+            <Badge variant={getStatusBadgeVariant(initialStatus, initialActive)}>
+              <span className="capitalize">{currentDisplayLabel}</span>
+            </Badge>
+          </div>
         </div>
 
         <div>

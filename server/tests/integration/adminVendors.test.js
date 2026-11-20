@@ -140,7 +140,15 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
     vi.spyOn(Vendor, 'findById').mockReturnValueOnce(
       createQueryMock({
         _id: vendorId,
-        userId: { _id: vendorUserId, name: 'Aman Seller', email: 'aman@vendor.com', phone: '9000011111' },
+        userId: {
+          _id: vendorUserId,
+          name: 'Aman Seller',
+          email: 'aman@vendor.com',
+          phone: '9000011111',
+          isEmailVerified: true,
+          isActive: true,
+          role: ROLES.VENDOR,
+        },
         storeName: 'Aman Electronics',
         status: VENDOR_STATUS.PENDING,
         isActive: true,
@@ -162,6 +170,8 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.ownerName).toBe('Aman Seller');
+    expect(res.body.data.isUserVerified).toBe(true);
+    expect(res.body.data.userVerificationStatus).toBe('verified');
     expect(res.body.data.businessType).toBe('Retailer');
     expect(res.body.data.website).toBe('https://aman.shop');
     expect(res.body.data.gstNumber).toBe('GST123');
@@ -306,5 +316,75 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
     expect(vendorDoc.isActive).toBe(true);
     expect(userUpdateSpy).toHaveBeenCalledWith(vendorUserId, { role: ROLES.VENDOR, vendorId });
     expect(earningsUpsertSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('PATCH /:vendorId/reject sets rejected status/isActive=false and DELETE /:vendorId deactivates products & unsets vendor role', async () => {
+    const adminUser = {
+      _id: adminId,
+      fullName: 'Admin User',
+      email: 'admin@shopsphere.com',
+      role: ROLES.ADMIN,
+      isActive: true,
+    };
+
+    const vendorDoc = {
+      _id: vendorId,
+      userId: vendorUserId,
+      storeName: 'Legacy Store',
+      slug: 'legacy-store',
+      status: VENDOR_STATUS.PENDING,
+      isActive: true,
+      rejectionReason: '',
+      save: vi.fn().mockResolvedValue(true),
+    };
+
+    vi.spyOn(User, 'findById')
+      .mockReturnValueOnce({ populate: vi.fn().mockResolvedValue(adminUser) })
+      .mockResolvedValueOnce(null)
+      .mockReturnValueOnce({ populate: vi.fn().mockResolvedValue(adminUser) });
+
+    vi.spyOn(Vendor, 'findById')
+      .mockResolvedValueOnce(vendorDoc)
+      .mockReturnValueOnce(
+        createQueryMock({
+          ...vendorDoc,
+          status: VENDOR_STATUS.REJECTED,
+          isActive: false,
+          rejectionReason: 'Incomplete KYC',
+        })
+      );
+    vi.spyOn(notificationService, 'createNotification').mockResolvedValue({});
+    vi.spyOn(Product, 'aggregate').mockResolvedValueOnce([]);
+    vi.spyOn(Order, 'aggregate').mockResolvedValueOnce([]);
+    vi.spyOn(VendorEarnings, 'find').mockReturnValueOnce(createQueryMock([]));
+    vi.spyOn(VendorRequest, 'find').mockReturnValueOnce(createQueryMock([]));
+    vi.spyOn(Product, 'find').mockReturnValueOnce(createQueryMock([]));
+    vi.spyOn(Order, 'find').mockReturnValueOnce(createQueryMock([]));
+
+    const rejectRes = await request(app)
+      .patch(`/api/v1/admin/vendors/${vendorId}/reject`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Incomplete KYC' });
+
+    expect(rejectRes.status).toBe(200);
+    expect(vendorDoc.status).toBe(VENDOR_STATUS.REJECTED);
+    expect(vendorDoc.isActive).toBe(false);
+    expect(vendorDoc.rejectionReason).toBe('Incomplete KYC');
+
+    // Delete vendor cleanup
+    vi.spyOn(Vendor, 'findByIdAndDelete').mockResolvedValueOnce(vendorDoc);
+    const productUpdateSpy = vi.spyOn(Product, 'updateMany').mockResolvedValue({ modifiedCount: 2 });
+    const userUpdateOneSpy = vi.spyOn(User, 'updateOne').mockResolvedValue({ modifiedCount: 1 });
+
+    const deleteRes = await request(app)
+      .delete(`/api/v1/admin/vendors/${vendorId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(deleteRes.status).toBe(200);
+    expect(productUpdateSpy).toHaveBeenCalledWith({ vendorId }, { isActive: false });
+    expect(userUpdateOneSpy).toHaveBeenCalledWith(
+      { _id: vendorUserId, role: ROLES.VENDOR },
+      { $set: { role: ROLES.USER }, $unset: { vendorId: 1 } }
+    );
   });
 });

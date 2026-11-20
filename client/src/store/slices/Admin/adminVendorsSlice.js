@@ -319,6 +319,9 @@ const adminVendorsSlice = createSlice({
         state.vendors = state.vendors.filter(
           (vendor) => vendor._id !== action.payload.vendorId,
         );
+        if (state.pagination?.total > 0) {
+          state.pagination.total -= 1;
+        }
 
         if (state.selectedVendor?._id === action.payload.vendorId) {
           state.selectedVendor = null;

@@ -88,11 +88,31 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
     displayStatus = 'inactive';
   }
 
+  const hasUserAccount = Boolean(populatedUser?._id || raw.userId);
+  const isUserVerified = Boolean(populatedUser?.isEmailVerified);
+  const isUserActive = populatedUser ? populatedUser.isActive !== false : null;
+  let userVerificationStatus = 'unlinked';
+  if (populatedUser) {
+    if (populatedUser.isActive === false) {
+      userVerificationStatus = 'blocked';
+    } else if (populatedUser.isEmailVerified) {
+      userVerificationStatus = 'verified';
+    } else {
+      userVerificationStatus = 'unverified';
+    }
+  } else if (raw.userId) {
+    userVerificationStatus = 'linked';
+  }
+
   return {
     ...raw,
     shopName: raw.storeName || raw.shopName || '',
     shopDescription: raw.description ?? raw.shopDescription ?? '',
     ownerName,
+    hasUserAccount,
+    isUserVerified,
+    isUserActive,
+    userVerificationStatus,
     user: populatedUser
       ? {
           _id: populatedUser._id,
@@ -103,6 +123,10 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
           avatar: populatedUser.avatar || '',
           role: populatedUser.role,
           isActive: populatedUser.isActive !== false,
+          isEmailVerified: Boolean(populatedUser.isEmailVerified),
+          isVerified: Boolean(populatedUser.isEmailVerified),
+          lastLogin: populatedUser.lastLogin || null,
+          authProvider: populatedUser.googleId ? 'google' : 'email',
         }
       : undefined,
     email,
@@ -339,7 +363,10 @@ export class AdminVendorService {
       inactiveCount,
     ] = await Promise.all([
       Vendor.find(filter)
-        .populate('userId', 'name fullName email phone avatar role isActive')
+        .populate(
+          'userId',
+          'name fullName email phone avatar role isActive isEmailVerified googleId lastLogin vendorId'
+        )
         .sort(sort)
         .skip(skip)
         .limit(limit),
@@ -383,7 +410,7 @@ export class AdminVendorService {
 
     const vendor = await Vendor.findById(vendorId).populate(
       'userId',
-      'name fullName email phone avatar role isActive'
+      'name fullName email phone avatar role isActive isEmailVerified googleId lastLogin vendorId'
     );
     if (!vendor) throw ApiError.notFound('Vendor not found');
 
@@ -435,7 +462,11 @@ export class AdminVendorService {
     }
 
     if (updateData.email !== undefined) {
-      vendor.email = String(updateData.email).trim().toLowerCase();
+      const trimmedEmail = String(updateData.email).trim().toLowerCase();
+      if (trimmedEmail && !/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+        throw ApiError.badRequest('Please provide a valid email address');
+      }
+      vendor.email = trimmedEmail;
     }
     if (updateData.phone !== undefined) {
       vendor.phone = String(updateData.phone).trim();
@@ -498,6 +529,9 @@ export class AdminVendorService {
         vendor.isActive = Boolean(updateData.isActive);
       } else if (nextStatus === VENDOR_STATUS.APPROVED) {
         vendor.isActive = true;
+        if (updateData.rejectionReason === undefined) {
+          vendor.rejectionReason = '';
+        }
       } else if ([VENDOR_STATUS.REJECTED, VENDOR_STATUS.SUSPENDED].includes(nextStatus)) {
         vendor.isActive = false;
       }
@@ -510,6 +544,32 @@ export class AdminVendorService {
 
     if (vendor.status === VENDOR_STATUS.APPROVED && previousStatus !== VENDOR_STATUS.APPROVED) {
       await elevateApprovedVendorAccount(vendor);
+    }
+
+    if (vendor.userId && vendor.status !== previousStatus) {
+      if (vendor.status === VENDOR_STATUS.APPROVED) {
+        notificationService
+          .createNotification({
+            userId: vendor.userId,
+            title: 'Vendor Store Approved',
+            message: `Your store "${vendor.storeName}" has been approved and is now active.`,
+            type: 'vendor',
+            link: '/vendor',
+            data: { vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
+          })
+          .catch(() => {});
+      } else if ([VENDOR_STATUS.REJECTED, VENDOR_STATUS.SUSPENDED].includes(vendor.status)) {
+        notificationService
+          .createNotification({
+            userId: vendor.userId,
+            title: `Vendor Store ${vendor.status === VENDOR_STATUS.REJECTED ? 'Rejected' : 'Suspended'}`,
+            message: `Your store "${vendor.storeName}" was ${vendor.status}.${vendor.rejectionReason ? ` Reason: ${vendor.rejectionReason}` : ''}`,
+            type: 'vendor',
+            link: '/vendor',
+            data: { vendorId: vendor._id, status: vendor.status },
+          })
+          .catch(() => {});
+      }
     }
 
     return this.getVendorById(vendor._id);
@@ -685,7 +745,19 @@ export class AdminVendorService {
     const vendor = await Vendor.findByIdAndDelete(vendorId);
     if (!vendor) throw ApiError.notFound('Vendor not found');
 
+    await Promise.resolve()
+      .then(() => Product.updateMany({ vendorId: vendor._id }, { isActive: false }))
+      .catch(() => {});
+
     if (vendor.userId) {
+      await Promise.resolve()
+        .then(() =>
+          User.updateOne(
+            { _id: vendor.userId, role: ROLES.VENDOR },
+            { $set: { role: ROLES.USER }, $unset: { vendorId: 1 } }
+          )
+        )
+        .catch(() => {});
       await Promise.resolve()
         .then(() =>
           User.updateOne(
@@ -694,9 +766,23 @@ export class AdminVendorService {
           )
         )
         .catch(() => {});
+
+      notificationService
+        .createNotification({
+          userId: vendor.userId,
+          title: 'Vendor Store Removed',
+          message: `Your vendor store "${vendor.storeName || 'Store'}" has been removed by an administrator.`,
+          type: 'vendor',
+          link: '/',
+          data: { deletedVendorId: vendor._id },
+        })
+        .catch(() => {});
     }
 
-    return { message: 'Vendor deleted successfully' };
+    return {
+      message: 'Vendor deleted successfully',
+      deletedVendorId: vendor._id,
+    };
   }
 }
 

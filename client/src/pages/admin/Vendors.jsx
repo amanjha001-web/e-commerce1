@@ -51,6 +51,7 @@ const Vendors = () => {
     loading = false,
     detailsLoading = false,
     saving = false,
+    deleting = false,
     error = null,
   } = useSelector((state) => state.adminVendors || {});
 
@@ -118,6 +119,16 @@ const Vendors = () => {
         rawStatus = "inactive";
       }
 
+      const verification =
+        v.userVerificationStatus ||
+        (!v.user && !v.userId
+          ? "unlinked"
+          : v.user?.isActive === false || v.userId?.isActive === false
+            ? "blocked"
+            : (v.isUserVerified ?? v.user?.isEmailVerified ?? v.userId?.isEmailVerified)
+              ? "verified"
+              : "unverified");
+
       return {
         ...v,
         _displayCode: code,
@@ -127,6 +138,7 @@ const Vendors = () => {
         _displayProducts: products,
         _displayOrders: orders,
         _displayStatus: formatStatusLabel(rawStatus),
+        _verificationStatus: verification,
       };
     });
   }, [vendors]);
@@ -164,8 +176,10 @@ const Vendors = () => {
     }
   };
 
+  const isMutating = saving || deleting;
+
   const handleCloseDetails = () => {
-    if (saving) return;
+    if (isMutating) return;
     setDetailsOpen(false);
     setInitialEdit(false);
     dispatch(clearSelectedVendor());
@@ -173,13 +187,23 @@ const Vendors = () => {
 
   const handleDeleteVendor = async (vendor) => {
     const vendorId = vendor?._id || vendor?.id;
-    if (!vendorId || saving) return;
+    if (!vendorId || isMutating) return;
 
     try {
       await dispatch(deleteAdminVendor(vendorId)).unwrap();
-      toast.success("Vendor deleted");
-      handleCloseDetails();
-      loadVendors();
+      toast.success("Vendor store deleted");
+      setDetailsOpen(false);
+      setInitialEdit(false);
+      dispatch(clearSelectedVendor());
+      if (statusVendor?._id === vendorId || statusVendor?.id === vendorId) {
+        setStatusOpen(false);
+        setStatusVendor(null);
+      }
+      if (page > 1 && normalizedVendors.length <= 1) {
+        dispatch(setAdminVendorsPage(page - 1));
+      } else {
+        loadVendors();
+      }
     } catch (err) {
       toast.error(typeof err === "string" ? err : "Failed to delete vendor");
     }
@@ -379,9 +403,28 @@ const Vendors = () => {
                       <div className="font-bold text-[var(--text)]">
                         {v._displayShop}
                       </div>
-                      <div className="text-[11px] font-medium text-[var(--muted)]">
-                        {v._displayCode}
-                        {v._displayOwner ? ` · ${v._displayOwner}` : ""}
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-[var(--muted)]">
+                        <span>
+                          {v._displayCode}
+                          {v._displayOwner ? ` · ${v._displayOwner}` : ""}
+                        </span>
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            v._verificationStatus === "verified"
+                              ? "bg-[#e7f6ef] text-[#16845b]"
+                              : v._verificationStatus === "unverified"
+                                ? "bg-[#fff4df] text-[#9b6814]"
+                                : "bg-[#ffeaec] text-[#bd3345]"
+                          }`}
+                        >
+                          {v._verificationStatus === "verified"
+                            ? "✓ Verified"
+                            : v._verificationStatus === "unverified"
+                              ? "Unverified"
+                              : v._verificationStatus === "blocked"
+                                ? "Blocked User"
+                                : "No User"}
+                        </span>
                       </div>
                     </td>
                     <td>{v._displayEmail}</td>
@@ -453,12 +496,20 @@ const Vendors = () => {
           open={detailsOpen}
           loading={detailsLoading}
           saving={saving}
+          deleting={deleting}
           initialEdit={initialEdit}
           onClose={handleCloseDetails}
           onUpdate={handleUpdateVendor}
           onDelete={handleDeleteVendor}
           onApprove={handleApproveVendor}
           onReject={handleRejectVendor}
+          onReopen={(v) =>
+            handleToggleStatus(v, {
+              status: "pending",
+              isActive: false,
+              rejectionReason: "",
+            })
+          }
           onStatusChange={(v) => {
             setStatusVendor(v);
             setStatusOpen(true);

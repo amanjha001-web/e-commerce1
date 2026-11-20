@@ -112,11 +112,13 @@ const VendorDetailsContent = ({
   open,
   loading = false,
   saving = false,
+  deleting = false,
   initialEdit = false,
   onClose,
   onStatusChange,
   onApprove,
   onReject,
+  onReopen,
   onDelete,
   onUpdate,
 }) => {
@@ -128,6 +130,8 @@ const VendorDetailsContent = ({
     vendor?.rejectionReason || "Application did not meet verification requirements.",
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isBusy = saving || deleting;
 
   useEffect(() => {
     if (!isEditing) {
@@ -153,6 +157,10 @@ const VendorDetailsContent = ({
 
   const vendorId = vendor._id || vendor.id || "N/A";
   const isActive = vendor.isActive !== false;
+  const canonicalStatus = String(vendor.status || "pending")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
   const rawStatus =
     vendor.displayStatus ||
     vendor.status ||
@@ -161,6 +169,24 @@ const VendorDetailsContent = ({
       : isActive
         ? "active"
         : "inactive");
+
+  const verificationStatus =
+    vendor.userVerificationStatus ||
+    (!userObj && !vendor.userId
+      ? "unlinked"
+      : userObj?.isActive === false
+        ? "blocked"
+        : (vendor.isUserVerified ?? userObj?.isEmailVerified)
+          ? "verified"
+          : "unverified");
+
+  const verificationBadgeMeta = {
+    verified: { label: "Verified User", variant: "success" },
+    unverified: { label: "Email Unverified", variant: "warning" },
+    blocked: { label: "User Blocked", variant: "danger" },
+    unlinked: { label: "No User Linked", variant: "danger" },
+    linked: { label: "User Linked", variant: "info" },
+  }[verificationStatus] || { label: "Unknown", variant: "default" };
 
   const image =
     extractImageUrl(vendor.logo) ||
@@ -310,7 +336,7 @@ const VendorDetailsContent = ({
             onChange={onChange}
             rows={options.rows || 3}
             required={options.required}
-            disabled={saving}
+            disabled={isBusy}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         ) : (
@@ -323,7 +349,7 @@ const VendorDetailsContent = ({
             value={value}
             onChange={onChange}
             required={options.required}
-            disabled={saving}
+            disabled={isBusy}
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
           />
         )
@@ -340,7 +366,7 @@ const VendorDetailsContent = ({
   return (
     <Modal
       isOpen={open}
-      onClose={saving ? () => {} : onClose}
+      onClose={isBusy ? () => {} : onClose}
       title={isEditing ? "Edit Vendor" : "Vendor Details"}
       size="lg"
     >
@@ -380,6 +406,9 @@ const VendorDetailsContent = ({
             <Badge variant={isActive ? "success" : "danger"}>
               {isActive ? "Active" : "Inactive"}
             </Badge>
+            <Badge variant={verificationBadgeMeta.variant} dot>
+              {verificationBadgeMeta.label}
+            </Badge>
           </div>
         </div>
 
@@ -389,10 +418,38 @@ const VendorDetailsContent = ({
           </p>
         )}
 
-        {vendor.rejectionReason && (
+        {(verificationStatus === "unverified" ||
+          verificationStatus === "unlinked" ||
+          verificationStatus === "blocked") && (
+          <div className="rounded-xl border border-[#f0dfb9] bg-[#fff8e9] px-4 py-3 text-xs text-[#76571d]">
+            <span className="font-bold">Account Verification Check:</span>{" "}
+            {verificationStatus === "unlinked"
+              ? "No user account is linked to this vendor yet."
+              : verificationStatus === "blocked"
+                ? "The linked user account is currently blocked."
+                : "The linked user has not verified their email address yet."}
+          </div>
+        )}
+
+        {(canonicalStatus === "rejected" || vendor.rejectionReason) && (
           <div className="rounded-xl border border-[#f3cbd0] bg-[#fff0f1] px-4 py-3 text-xs text-[#bd3345]">
-            <span className="font-bold">Rejection / Suspension Note:</span>{" "}
-            {vendor.rejectionReason}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold">
+                {canonicalStatus === "rejected"
+                  ? "Vendor Application Rejected"
+                  : canonicalStatus === "suspended"
+                    ? "Vendor Store Suspended"
+                    : "Admin Note"}
+              </span>
+              {vendor.updatedAt && (
+                <span className="text-[11px] font-medium">
+                  Updated: {formatDate(vendor.updatedAt)}
+                </span>
+              )}
+            </div>
+            <p className="mt-1">
+              {vendor.rejectionReason || "Rejected by administrator."}
+            </p>
           </div>
         )}
 
@@ -466,6 +523,22 @@ const VendorDetailsContent = ({
             <ReadOnlyField
               label="Account Email"
               value={userObj?.email || vendor.email}
+            />
+
+            <ReadOnlyField
+              label="Account Verification"
+              value={
+                verificationStatus === "verified"
+                  ? `Verified (${userObj?.authProvider === "google" ? "Google" : "Email"})`
+                  : verificationBadgeMeta.label
+              }
+            />
+
+            <ReadOnlyField
+              label="User Role / Last Login"
+              value={`${userObj?.role ? String(userObj.role).toUpperCase() : "N/A"} · ${
+                userObj?.lastLogin ? formatDate(userObj.lastLogin) : "Never"
+              }`}
             />
           </div>
         </section>
@@ -663,11 +736,27 @@ const VendorDetailsContent = ({
             <label className="block text-xs font-bold text-[#bd3345]">
               Rejection Reason
             </label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Incomplete KYC / verification documents",
+                "Invalid GST / tax details",
+                "Unverified owner email account",
+              ].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setRejectReason(preset)}
+                  className="cursor-pointer rounded-full border border-[#f3cbd0] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#bd3345] hover:bg-[#ffe3e6]"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
             <textarea
               rows={2}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              disabled={saving}
+              disabled={isBusy}
               className="w-full rounded-xl border border-[#f3cbd0] bg-white px-3 py-2 text-sm text-foreground outline-none"
             />
             <div className="flex justify-end gap-2">
@@ -675,7 +764,7 @@ const VendorDetailsContent = ({
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={saving}
+                disabled={isBusy}
                 onClick={() => setRejectMode(false)}
               >
                 Cancel
@@ -685,6 +774,7 @@ const VendorDetailsContent = ({
                 size="sm"
                 variant="danger"
                 loading={saving}
+                disabled={isBusy}
                 onClick={async () => {
                   await onReject?.(vendor, rejectReason.trim() || "Rejected by admin");
                   setRejectMode(false);
@@ -700,14 +790,14 @@ const VendorDetailsContent = ({
         {confirmDelete && !isEditing && (
           <div className="flex flex-col gap-3 rounded-2xl border border-[#f3cbd0] bg-[#fff0f1] p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-[#bd3345]">
-              Delete &ldquo;{vendorName}&rdquo; permanently? This cannot be undone.
+              Delete &ldquo;{vendorName}&rdquo; permanently? Its products will be deactivated and linked user role reset.
             </p>
             <div className="flex gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={saving}
+                disabled={isBusy}
                 onClick={() => setConfirmDelete(false)}
               >
                 Keep
@@ -716,7 +806,8 @@ const VendorDetailsContent = ({
                 type="button"
                 size="sm"
                 variant="danger"
-                loading={saving}
+                loading={deleting}
+                disabled={isBusy}
                 onClick={() => onDelete?.(vendor)}
               >
                 Confirm Delete
@@ -743,14 +834,14 @@ const VendorDetailsContent = ({
                 type="button"
                 variant="outline"
                 onClick={handleCancelEdit}
-                disabled={saving}
+                disabled={isBusy}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 loading={saving}
-                disabled={typeof onUpdate !== "function"}
+                disabled={isBusy || typeof onUpdate !== "function"}
               >
                 Save Changes
               </Button>
@@ -761,7 +852,7 @@ const VendorDetailsContent = ({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={saving}
+                disabled={isBusy}
               >
                 Close
               </Button>
@@ -774,27 +865,42 @@ const VendorDetailsContent = ({
                     setRejectMode(false);
                     setConfirmDelete(true);
                   }}
-                  disabled={saving}
+                  disabled={isBusy}
                 >
                   Delete
                 </Button>
               )}
 
+              {onReopen && canonicalStatus === "rejected" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onReopen(vendor)}
+                  disabled={isBusy}
+                >
+                  Reopen Pending
+                </Button>
+              )}
+
               {onApprove &&
-                String(vendor.status || "").toLowerCase() !== "approved" && (
+                (canonicalStatus !== "approved" || !isActive) && (
                   <Button
                     type="button"
                     variant="success"
                     onClick={() => onApprove(vendor)}
-                    disabled={saving}
+                    disabled={isBusy}
                   >
-                    Approve Vendor
+                    {canonicalStatus === "rejected"
+                      ? "Re-approve Vendor"
+                      : canonicalStatus === "suspended" || !isActive
+                        ? "Reactivate Store"
+                        : "Approve Vendor"}
                   </Button>
                 )}
 
               {onReject &&
                 !rejectMode &&
-                String(vendor.status || "").toLowerCase() !== "rejected" && (
+                (canonicalStatus === "pending" || canonicalStatus === "under_review") && (
                   <Button
                     type="button"
                     variant="outline"
@@ -802,7 +908,7 @@ const VendorDetailsContent = ({
                       setConfirmDelete(false);
                       setRejectMode(true);
                     }}
-                    disabled={saving}
+                    disabled={isBusy}
                   >
                     Reject
                   </Button>
@@ -813,7 +919,7 @@ const VendorDetailsContent = ({
                   type="button"
                   variant="secondary"
                   onClick={() => onStatusChange(vendor)}
-                  disabled={saving}
+                  disabled={isBusy}
                 >
                   Manage Status
                 </Button>
@@ -826,7 +932,7 @@ const VendorDetailsContent = ({
                   setFormError("");
                   setIsEditing(true);
                 }}
-                disabled={saving}
+                disabled={isBusy}
               >
                 Edit Vendor
               </Button>
