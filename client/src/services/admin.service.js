@@ -41,6 +41,20 @@ const adminService = {
     return response.data;
   },
 
+  getRecentUsers: async (params = {}) => {
+    const response = await api.get("/admin/dashboard/recent-users", {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  getTopProducts: async (params = {}) => {
+    const response = await api.get("/admin/dashboard/top-products", {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
   // ==================== 2. User Management (/api/v1/admin/users*) ====================
   getUsers: async (params = {}) => {
     const response = await api.get("/admin/users", {

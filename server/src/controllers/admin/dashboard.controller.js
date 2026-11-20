@@ -8,7 +8,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
 });
 
 export const getDashboardAnalytics = asyncHandler(async (req, res) => {
-  const data = await adminDashboardService.getDashboardAnalytics();
+  const data = await adminDashboardService.getDashboardAnalytics(req.query.period);
   return ApiResponse.success(res, data, 'Dashboard analytics');
 });
 
@@ -17,7 +17,20 @@ export const getRecentOrders = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, orders, 'Recent orders');
 });
 
+export const getRecentUsers = asyncHandler(async (req, res) => {
+  const users = await adminDashboardService.getRecentUsers(req.query.limit);
+  return ApiResponse.success(res, users, 'Recent users');
+});
+
+export const getTopProducts = asyncHandler(async (req, res) => {
+  const products = await adminDashboardService.getTopProducts(req.query.limit);
+  return ApiResponse.success(res, products, 'Top selling products');
+});
+
 export const getLowStockProducts = asyncHandler(async (req, res) => {
-  const products = await adminDashboardService.getLowStockProducts(req.query.threshold);
+  const products = await adminDashboardService.getLowStockProducts(
+    req.query.threshold,
+    req.query.limit
+  );
   return ApiResponse.success(res, products, 'Low stock products');
 });

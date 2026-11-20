@@ -26,6 +26,20 @@ const TopProducts = ({
     );
   };
 
+  const getCategoryLabel = (product) => {
+    if (product?.category && typeof product.category === "object") {
+      return product.category.name || "Collection";
+    }
+    if (
+      typeof product?.category === "string" &&
+      product.category.trim() &&
+      !/^[a-f\d]{24}$/i.test(product.category.trim())
+    ) {
+      return product.category;
+    }
+    return "Collection";
+  };
+
   if (loading) {
     return (
       <div className="rounded-2xl border border-[var(--line)] bg-white p-6 shadow-xs dark:bg-card">
@@ -84,7 +98,7 @@ const TopProducts = ({
                         {getProductName(p)}
                       </div>
                       <div className="text-[11px] text-[var(--muted)]">
-                        {p.category?.name || p.category || "Collection"}
+                        {getCategoryLabel(p)}
                       </div>
                     </td>
 
@@ -92,8 +106,23 @@ const TopProducts = ({
                       ₹{getPrice(p).toLocaleString("en-IN")}
                     </td>
 
-                    <td className="px-5 py-3.5 text-xs font-bold text-[var(--text)] dark:text-foreground">
-                      {sales} sold
+                    <td className="px-5 py-3.5">
+                      <div className="text-xs font-bold text-[var(--text)] dark:text-foreground">
+                        {sales > 0
+                          ? `${sales} sold`
+                          : p.stock !== undefined
+                            ? `${Number(p.stock)} in stock`
+                            : "0 sold"}
+                      </div>
+                      {Number(p.totalRevenue) > 0 ? (
+                        <div className="text-[11px] text-[var(--muted)]">
+                          ₹{Number(p.totalRevenue).toLocaleString("en-IN")} earned
+                        </div>
+                      ) : sales === 0 ? (
+                        <div className="text-[11px] text-[var(--muted)]">
+                          Catalog item
+                        </div>
+                      ) : null}
                     </td>
 
                     <td className="px-5 py-3.5 text-right">

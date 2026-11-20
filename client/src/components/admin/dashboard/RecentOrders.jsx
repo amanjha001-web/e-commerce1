@@ -104,13 +104,25 @@ const RecentOrders = ({
                   order.orderId ||
                   order._id ||
                   `#${index + 1}`;
+                const displayOrderId = String(orderId).startsWith("ORD-")
+                  ? `#${orderId}`
+                  : `#${String(orderId).slice(-6)}`;
+
+                const customerObj =
+                  (typeof order.userId === "object" && order.userId) ||
+                  (typeof order.customer === "object" && order.customer) ||
+                  (typeof order.user === "object" && order.user) ||
+                  {};
 
                 const customerName =
-                  order.customer?.fullName ||
-                  order.user?.fullName ||
-                  order.user?.name ||
+                  customerObj.fullName ||
+                  customerObj.name ||
+                  customerObj.username ||
                   order.customerName ||
+                  order.shippingAddress?.fullName ||
                   "Customer";
+
+                const customerEmail = customerObj.email || "";
 
                 const amount =
                   order.totalAmount ?? order.total ?? order.amount ?? 0;
@@ -123,11 +135,18 @@ const RecentOrders = ({
                     className="border-b border-[#f0e8eb] transition hover:bg-[var(--soft)]/30 dark:border-line"
                   >
                     <td className="px-5 py-3.5 text-xs font-bold text-[var(--text)] dark:text-foreground">
-                      #{String(orderId).slice(-6)}
+                      {displayOrderId}
                     </td>
 
-                    <td className="px-5 py-3.5 text-xs font-medium text-[var(--text)] dark:text-foreground">
-                      {customerName}
+                    <td className="px-5 py-3.5">
+                      <div className="text-xs font-medium text-[var(--text)] dark:text-foreground">
+                        {customerName}
+                      </div>
+                      {customerEmail && (
+                        <div className="text-[11px] text-[var(--muted)]">
+                          {customerEmail}
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-5 py-3.5 text-xs text-[var(--muted)]">

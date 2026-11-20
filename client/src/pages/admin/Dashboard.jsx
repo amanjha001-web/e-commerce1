@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -10,7 +10,7 @@ import {
 } from "../../store/slices/Admin/adminDashboardSlice";
 import { fetchAdminUsers } from "../../store/slices/Admin/adminUsersSlice";
 import { fetchAdminOrders } from "../../store/slices/Admin/adminOrdersSlice";
-import { fetchProducts } from "../../store/slices/productThunk";
+import adminService from "../../services/admin.service";
 
 import DashboardStats from "../../components/admin/dashboard/DashboardStats";
 import SalesChart from "../../components/admin/dashboard/SalesChart";
@@ -18,6 +18,7 @@ import RevenueChart from "../../components/admin/dashboard/RevenueChart";
 import RecentUsers from "../../components/admin/dashboard/RecentUsers";
 import RecentOrders from "../../components/admin/dashboard/RecentOrders";
 import TopProducts from "../../components/admin/dashboard/TopProducts";
+import LowStockProducts from "../../components/admin/dashboard/LowStockProducts";
 
 const PERIODS = [
   { label: "7 Days", value: "7d" },
@@ -35,7 +36,6 @@ const ADMIN_ROUTES = {
   coupons: "/admin/coupons",
   categories: "/admin/categories",
   brands: "/admin/brands",
-  reviews: "/admin/reviews",
   reports: "/admin/reports",
   support: "/admin/support",
   settings: "/admin/settings",
@@ -52,74 +52,65 @@ const AdminDashboard = () => {
     error,
     salesData,
     revenueData,
+    summary = {},
     recentOrders: dashboardRecentOrders = [],
+    recentUsers: dashboardRecentUsers = [],
+    topProducts: dashboardTopProducts = [],
     lowStockProducts = [],
-    period,
     analyticsLoading,
-  } = useSelector((state) => state.adminDashboard);
+  } = useSelector((state) => state.adminDashboard || {});
 
-  const { users: allUsers = [], loading: usersLoading } = useSelector(
+  const { users: storeUsers = [], loading: usersLoading } = useSelector(
     (state) => state.adminUsers || {},
   );
-  const recentUsers = allUsers.slice(0, 5);
-
-  const { orders = [], loading: ordersLoading } = useSelector(
+  const { orders: storeOrders = [], loading: ordersLoading } = useSelector(
     (state) => state.adminOrders || {},
   );
-  const recentOrders = useMemo(() => {
-    const source =
-      dashboardRecentOrders.length > 0 ? dashboardRecentOrders : orders;
-    return source.slice(0, 5);
-  }, [dashboardRecentOrders, orders]);
 
-  const { products: allProducts = [], loading: productsLoading } = useSelector(
-    (state) => state.product || {},
-  );
-  const topProducts = useMemo(() => {
-    if (allProducts && allProducts.length > 0) {
-      return [...allProducts]
-        .sort(
-          (a, b) =>
-            Number(b.totalSales ?? b.sales ?? b.sold ?? 0) -
-            Number(a.totalSales ?? a.sales ?? a.sold ?? 0),
-        )
-        .slice(0, 5);
-    }
-    return lowStockProducts.slice(0, 5);
-  }, [allProducts, lowStockProducts]);
-
-  const [localPeriod, setLocalPeriod] = useState("7d");
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const isAnalyticsLoading = loading || analyticsLoading;
 
-  useEffect(() => {
-    dispatch(fetchAdminDashboard());
-    dispatch(fetchAdminRecentOrders({ limit: 5 }));
-    dispatch(fetchAdminLowStockProducts({ threshold: 10, limit: 5 }));
-    dispatch(fetchAdminUsers({ limit: 5, sortBy: "newest" }));
-    dispatch(fetchAdminOrders({ limit: 5 }));
-    dispatch(fetchProducts({ limit: 10, sortBy: "sales", sortOrder: "desc" }));
-  }, [dispatch]);
+  const refreshDashboard = useCallback(
+    (activePeriod) => {
+      dispatch(fetchAdminDashboard());
+      dispatch(fetchAdminDashboardAnalytics(activePeriod));
+      dispatch(fetchAdminRecentOrders({ limit: 5 }));
+      dispatch(fetchAdminLowStockProducts({ threshold: 10, limit: 5 }));
+      dispatch(fetchAdminUsers({ limit: 5, sortBy: "latest" }));
+      dispatch(fetchAdminOrders({ limit: 5 }));
+
+      setCatalogLoading(true);
+      adminService
+        .getProducts({ limit: 15, sortBy: "latest" })
+        .then((res) => {
+          const data = res?.data ?? res;
+          const list = Array.isArray(data?.products)
+            ? data.products
+            : Array.isArray(data)
+              ? data
+              : [];
+          setCatalogProducts(list);
+        })
+        .catch(() => {})
+        .finally(() => setCatalogLoading(false));
+    },
+    [dispatch],
+  );
 
   useEffect(() => {
-    dispatch(fetchAdminDashboardAnalytics(localPeriod));
-  }, [dispatch, localPeriod]);
-
-  useEffect(() => {
-    if (period && period !== localPeriod) {
-      setLocalPeriod(period);
-    }
-  }, [period, localPeriod]);
+    refreshDashboard("7d");
+  }, [refreshDashboard]);
 
   const handlePeriodChange = (newPeriod) => {
-    setLocalPeriod(newPeriod);
+    if (newPeriod === selectedPeriod && !analyticsLoading) return;
+    setSelectedPeriod(newPeriod);
     dispatch(fetchAdminDashboardAnalytics(newPeriod));
   };
 
   const handleRetry = () => {
-    dispatch(fetchAdminDashboard());
-    dispatch(fetchAdminDashboardAnalytics(localPeriod));
-    dispatch(fetchAdminRecentOrders({ limit: 5 }));
-    dispatch(fetchAdminLowStockProducts({ threshold: 10, limit: 5 }));
+    refreshDashboard(selectedPeriod);
   };
 
   const handleNavigate = (key) => {
@@ -129,7 +120,34 @@ const AdminDashboard = () => {
     }
   };
 
-  const currentPeriod = period || localPeriod;
+  const topOrdersList = useMemo(() => {
+    const source =
+      dashboardRecentOrders.length > 0 ? dashboardRecentOrders : storeOrders;
+    return source.slice(0, 5);
+  }, [dashboardRecentOrders, storeOrders]);
+
+  const topUsersList = useMemo(() => {
+    const source =
+      dashboardRecentUsers.length > 0 ? dashboardRecentUsers : storeUsers;
+    return source.slice(0, 5);
+  }, [dashboardRecentUsers, storeUsers]);
+
+  const topProductsList = useMemo(() => {
+    const source =
+      dashboardTopProducts.length > 0 ? dashboardTopProducts : catalogProducts;
+    return [...source]
+      .sort(
+        (a, b) =>
+          Number(b.totalSales ?? b.sales ?? b.sold ?? 0) -
+          Number(a.totalSales ?? a.sales ?? a.sold ?? 0),
+      )
+      .slice(0, 5);
+  }, [dashboardTopProducts, catalogProducts]);
+
+  const resolvedLowStock = useMemo(() => {
+    if (lowStockProducts.length > 0) return lowStockProducts;
+    return catalogProducts.filter((p) => Number(p.stock ?? 0) <= 10);
+  }, [lowStockProducts, catalogProducts]);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -141,21 +159,32 @@ const AdminDashboard = () => {
           </h1>
         </div>
 
-        <div className="flex gap-1.5 rounded-xl border border-[var(--line)] bg-white p-1 shadow-xs dark:bg-card dark:border-line">
-          {PERIODS.map(({ label, value }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => handlePeriodChange(value)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                currentPeriod === value
-                  ? "bg-[var(--primary)] text-white shadow-xs"
-                  : "text-[var(--muted)] hover:text-[var(--primary)]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 rounded-xl border border-[var(--line)] bg-white p-1 shadow-xs dark:bg-card dark:border-line">
+            {PERIODS.map(({ label, value }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handlePeriodChange(value)}
+                className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                  selectedPeriod === value
+                    ? "bg-[var(--primary)] text-white shadow-xs"
+                    : "text-[var(--muted)] hover:text-[var(--primary)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            disabled={isAnalyticsLoading}
+            onClick={handleRetry}
+            className="outlinebtn cursor-pointer !py-1.5 !px-3 !text-xs disabled:opacity-50"
+          >
+            {isAnalyticsLoading ? "Refreshing..." : "↻ Refresh"}
+          </button>
         </div>
       </div>
 
@@ -177,33 +206,40 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        <DashboardStats stats={stats} loading={loading} />
+        <DashboardStats
+          stats={stats}
+          loading={loading && !stats?.totalOrders && !stats?.totalUsers}
+          onNavigate={handleNavigate}
+        />
 
         <div className="grid gap-6 xl:grid-cols-2">
           <SalesChart
             data={salesData || []}
-            period={currentPeriod}
-            loading={isAnalyticsLoading}
+            period={selectedPeriod}
+            loading={isAnalyticsLoading && !(salesData || []).length}
+            growth={summary.ordersGrowth}
           />
           <RevenueChart
             data={revenueData || []}
-            period={currentPeriod}
-            loading={isAnalyticsLoading}
+            period={selectedPeriod}
+            loading={isAnalyticsLoading && !(revenueData || []).length}
+            growth={summary.revenueGrowth}
+            averageOrderValue={summary.averageOrderValue}
           />
         </div>
 
-        {/* Store Activity — 1 per row (Recent Orders, then Recent Users, then Top Performing Products) */}
+        {/* Store Activity */}
         <div className="space-y-6">
           <RecentOrders
-            orders={recentOrders}
-            loading={loading || ordersLoading}
+            orders={topOrdersList}
+            loading={(loading || ordersLoading) && !topOrdersList.length}
             onViewOrder={() => handleNavigate("orders")}
             onViewAll={() => handleNavigate("orders")}
           />
 
           <RecentUsers
-            users={recentUsers}
-            loading={loading || usersLoading}
+            users={topUsersList}
+            loading={(loading || usersLoading) && !topUsersList.length}
             onViewUser={(user) =>
               user?._id
                 ? navigate(`/admin/users/${user._id}`)
@@ -213,8 +249,20 @@ const AdminDashboard = () => {
           />
 
           <TopProducts
-            products={topProducts}
-            loading={loading || productsLoading}
+            products={topProductsList}
+            loading={(loading || catalogLoading) && !topProductsList.length}
+            onViewProduct={() => handleNavigate("products")}
+            onViewAll={() => handleNavigate("products")}
+          />
+
+          <LowStockProducts
+            products={resolvedLowStock}
+            fallbackProducts={catalogProducts}
+            loading={
+              (loading || catalogLoading) &&
+              !resolvedLowStock.length &&
+              !catalogProducts.length
+            }
             onViewProduct={() => handleNavigate("products")}
             onViewAll={() => handleNavigate("products")}
           />

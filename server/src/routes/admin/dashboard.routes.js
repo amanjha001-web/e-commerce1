@@ -10,6 +10,8 @@ router.use(authenticate, requireAdmin);
 router.get('/', dashboardController.getDashboard);
 router.get('/analytics', dashboardController.getDashboardAnalytics);
 router.get('/recent-orders', dashboardController.getRecentOrders);
+router.get('/recent-users', dashboardController.getRecentUsers);
+router.get('/top-products', dashboardController.getTopProducts);
 router.get('/low-stock', dashboardController.getLowStockProducts);
 
 export default router;
