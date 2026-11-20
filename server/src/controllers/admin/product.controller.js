@@ -18,22 +18,34 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 
 export const approveProduct = asyncHandler(async (req, res) => {
-  const product = await adminProductService.approveProduct(req.params.productId);
+  const product = await adminProductService.approveProduct(req.params.productId, req.user?._id);
   return ApiResponse.success(res, product, 'Product approved and published');
 });
 
 export const rejectProduct = asyncHandler(async (req, res) => {
-  const product = await adminProductService.rejectProduct(req.params.productId, req.body.reason);
+  const product = await adminProductService.rejectProduct(
+    req.params.productId,
+    req.body.reason,
+    req.user?._id
+  );
   return ApiResponse.success(res, product, 'Product rejected');
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
-  const product = await adminProductService.updateProduct(req.params.productId, req.body);
+  const product = await adminProductService.updateProduct(
+    req.params.productId,
+    req.body,
+    req.user?._id
+  );
   return ApiResponse.success(res, product, 'Product updated');
 });
 
 export const updateProductStatus = asyncHandler(async (req, res) => {
-  const product = await adminProductService.updateProductStatus(req.params.productId, req.body.isActive);
+  const payload =
+    req.body && (req.body.status !== undefined || req.body.rejectionReason !== undefined)
+      ? req.body
+      : req.body?.isActive;
+  const product = await adminProductService.updateProductStatus(req.params.productId, payload);
   return ApiResponse.success(res, product, 'Product status updated');
 });
 

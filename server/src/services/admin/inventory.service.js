@@ -1,8 +1,15 @@
+import mongoose from 'mongoose';
 import { Inventory } from '../../models/Inventory.model.js';
 import { Product } from '../../models/Product.model.js';
 import { StockMovement } from '../../models/StockMovement.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
+
+const ensureValidObjectId = (id, label = 'Product ID') => {
+  if (!id || !mongoose.isValidObjectId(id)) {
+    throw ApiError.badRequest(`Invalid ${label}`);
+  }
+};
 
 export class AdminInventoryService {
   async getInventory(params = {}) {
@@ -41,45 +48,96 @@ export class AdminInventoryService {
   }
 
   async getInventoryByProductId(productId) {
+    ensureValidObjectId(productId, 'Product ID');
+
     const inv = await Inventory.findOne({ productId })
-      .populate('productId')
+      .populate('productId', 'name slug images price stock')
       .populate('vendorId', 'storeName slug');
-    if (!inv) throw ApiError.notFound('Inventory record not found');
-    return inv;
+
+    if (inv) {
+      const obj = inv.toObject ? inv.toObject() : { ...inv };
+      return {
+        ...obj,
+        stock: obj.quantity ?? obj.productId?.stock ?? 0,
+      };
+    }
+
+    // Fallback for products created before Inventory record initialization
+    const product = await Product.findById(productId).select('name slug price stock vendorId');
+    if (!product) throw ApiError.notFound('Inventory record not found');
+
+    const currentStock = Number(product.stock ?? 0);
+    return {
+      productId: product._id,
+      vendorId: product.vendorId,
+      quantity: currentStock,
+      stock: currentStock,
+      isOutOfStock: currentStock <= 0,
+      lowStockThreshold: 10,
+    };
   }
 
-  async adjustInventoryStock(productId, payload, adminId) {
+  async adjustInventoryStock(productId, payload = {}, adminId) {
+    ensureValidObjectId(productId, 'Product ID');
+
     const product = await Product.findById(productId);
     if (!product) throw ApiError.notFound('Product not found');
 
-    const adjustment = payload.stock !== undefined ? payload.stock : payload.quantity;
-    const prevStock = product.stock;
-    const newStock = Number(adjustment);
+    const rawAdjustment = payload.stock !== undefined ? payload.stock : payload.quantity;
+    if (rawAdjustment === undefined || rawAdjustment === '' || Number.isNaN(Number(rawAdjustment))) {
+      throw ApiError.badRequest('A numeric stock quantity is required');
+    }
+
+    const prevStock = Number(product.stock || 0);
+    const numericAdjustment = Number(rawAdjustment);
+    const mode = payload.mode === 'delta' ? 'delta' : 'set';
+    const newStock = mode === 'delta' ? prevStock + numericAdjustment : numericAdjustment;
+
+    if (newStock < 0) {
+      throw ApiError.badRequest(
+        `Resulting stock cannot be negative (current stock: ${prevStock}, adjustment: ${numericAdjustment})`
+      );
+    }
 
     product.stock = newStock;
-    await product.save();
+    await product.save({ validateModifiedOnly: true });
 
     const inv = await Inventory.findOneAndUpdate(
-      { productId },
-      { quantity: newStock, isOutOfStock: newStock === 0 },
+      { productId: product._id },
+      {
+        $set: {
+          vendorId: product.vendorId,
+          quantity: newStock,
+          isOutOfStock: newStock <= 0,
+        },
+      },
       { upsert: true, new: true }
     );
 
     await StockMovement.create({
-      productId,
+      productId: product._id,
       vendorId: product.vendorId,
       type: 'ADJUSTMENT',
       quantity: newStock - prevStock,
       previousStock: prevStock,
       newStock,
-      reason: payload.reason || 'Admin manual adjustment',
+      reason: String(payload.reason || '').trim() || 'Admin manual adjustment',
       performedBy: adminId,
     });
 
-    return inv;
+    const obj = inv?.toObject ? inv.toObject() : { ...(inv || {}) };
+    return {
+      ...obj,
+      quantity: newStock,
+      stock: newStock,
+      previousStock: prevStock,
+      isOutOfStock: newStock <= 0,
+    };
   }
 
   async getInventoryMovements(productId, params = {}) {
+    ensureValidObjectId(productId, 'Product ID');
+
     return StockMovement.find({ productId })
       .populate('performedBy', 'name email role')
       .sort({ createdAt: -1 })
