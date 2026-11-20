@@ -6,7 +6,7 @@ import { Order } from '../../models/Order.model.js';
 import { VendorEarnings } from '../../models/VendorEarnings.model.js';
 import { VendorRequest } from '../../models/VendorRequest.model.js';
 import { ApiError } from '../../utils/apiError.js';
-import { parsePagination } from '../../utils/helpers.js';
+import { parsePagination, slugify } from '../../utils/helpers.js';
 import { VENDOR_STATUS, VENDOR_STATUS_LIST } from '../../constants/vendorStatus.constant.js';
 import { ROLES } from '../../constants/roles.constant.js';
 import { sendVendorStatusEmail } from '../../integrations/email/email.client.js';
@@ -222,6 +222,38 @@ const enrichAdminVendors = async (vendorDocs = []) => {
   return vendorDocs.map((v) =>
     buildAdminVendorPayload(v, { productCounts, orderStats, earningsMap, requestMap })
   );
+};
+
+const ensureVendorRequiredDefaults = async (vendor) => {
+  if (!vendor) return;
+
+  if (!vendor.slug) {
+    const baseSlug = slugify(vendor.storeName || vendor.shopName || 'vendor') || 'vendor';
+    let candidate = baseSlug;
+    let counter = 1;
+    // Check uniqueness safely so legacy records missing slug never collide
+    while (
+      await Promise.resolve()
+        .then(() => Vendor.findOne({ slug: candidate, _id: { $ne: vendor._id } }).select('_id').lean())
+        .catch(() => null)
+    ) {
+      candidate = `${baseSlug}-${counter++}`;
+    }
+    vendor.slug = candidate;
+  }
+
+  if (!vendor.userId && vendor.email) {
+    const matchedUser = await Promise.resolve()
+      .then(() =>
+        User.findOne({ email: String(vendor.email).trim().toLowerCase() })
+          .select('_id')
+          .lean()
+      )
+      .catch(() => null);
+    if (matchedUser?._id) {
+      vendor.userId = matchedUser._id;
+    }
+  }
 };
 
 const elevateApprovedVendorAccount = async (vendor) => {
@@ -473,7 +505,8 @@ export class AdminVendorService {
       vendor.isActive = Boolean(updateData.isActive);
     }
 
-    await vendor.save();
+    await ensureVendorRequiredDefaults(vendor);
+    await vendor.save({ validateModifiedOnly: true });
 
     if (vendor.status === VENDOR_STATUS.APPROVED && previousStatus !== VENDOR_STATUS.APPROVED) {
       await elevateApprovedVendorAccount(vendor);
@@ -528,7 +561,8 @@ export class AdminVendorService {
       vendor.rejectionReason = String(payload.rejectionReason).trim();
     }
 
-    await vendor.save();
+    await ensureVendorRequiredDefaults(vendor);
+    await vendor.save({ validateModifiedOnly: true });
 
     if (vendor.status === VENDOR_STATUS.APPROVED) {
       await elevateApprovedVendorAccount(vendor);
@@ -537,16 +571,18 @@ export class AdminVendorService {
         if (user) {
           sendVendorStatusEmail(user.email, vendor.storeName, 'approved').catch(() => {});
         }
-        notificationService
-          .createNotification({
-            userId: vendor.userId,
-            title: 'Vendor Store Approved',
-            message: `Your store "${vendor.storeName}" has been approved and is now active.`,
-            type: 'vendor',
-            link: '/vendor',
-            data: { vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
-          })
-          .catch(() => {});
+        if (vendor.userId) {
+          notificationService
+            .createNotification({
+              userId: vendor.userId,
+              title: 'Vendor Store Approved',
+              message: `Your store "${vendor.storeName}" has been approved and is now active.`,
+              type: 'vendor',
+              link: '/vendor',
+              data: { vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
+            })
+            .catch(() => {});
+        }
       }
     } else if (
       vendor.status !== previousStatus &&
@@ -557,16 +593,18 @@ export class AdminVendorService {
       if (user) {
         sendVendorStatusEmail(user.email, vendor.storeName, vendor.status, reasonText).catch(() => {});
       }
-      notificationService
-        .createNotification({
-          userId: vendor.userId,
-          title: `Vendor Store ${vendor.status === VENDOR_STATUS.REJECTED ? 'Rejected' : 'Suspended'}`,
-          message: `Your store "${vendor.storeName}" was ${vendor.status}.${vendor.rejectionReason ? ` Reason: ${vendor.rejectionReason}` : ''}`,
-          type: 'vendor',
-          link: '/vendor',
-          data: { vendorId: vendor._id, status: vendor.status },
-        })
-        .catch(() => {});
+      if (vendor.userId) {
+        notificationService
+          .createNotification({
+            userId: vendor.userId,
+            title: `Vendor Store ${vendor.status === VENDOR_STATUS.REJECTED ? 'Rejected' : 'Suspended'}`,
+            message: `Your store "${vendor.storeName}" was ${vendor.status}.${vendor.rejectionReason ? ` Reason: ${vendor.rejectionReason}` : ''}`,
+            type: 'vendor',
+            link: '/vendor',
+            data: { vendorId: vendor._id, status: vendor.status },
+          })
+          .catch(() => {});
+      }
     }
 
     return this.getVendorById(vendor._id);
@@ -581,7 +619,8 @@ export class AdminVendorService {
     vendor.status = VENDOR_STATUS.APPROVED;
     vendor.isActive = true;
     vendor.rejectionReason = '';
-    await vendor.save();
+    await ensureVendorRequiredDefaults(vendor);
+    await vendor.save({ validateModifiedOnly: true });
 
     await elevateApprovedVendorAccount(vendor);
 
@@ -590,16 +629,18 @@ export class AdminVendorService {
       sendVendorStatusEmail(user.email, vendor.storeName, 'approved').catch(() => {});
     }
 
-    notificationService
-      .createNotification({
-        userId: vendor.userId,
-        title: 'Vendor Store Approved',
-        message: `Congratulations! Your store "${vendor.storeName}" has been approved.`,
-        type: 'vendor',
-        link: '/vendor',
-        data: { vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
-      })
-      .catch(() => {});
+    if (vendor.userId) {
+      notificationService
+        .createNotification({
+          userId: vendor.userId,
+          title: 'Vendor Store Approved',
+          message: `Congratulations! Your store "${vendor.storeName}" has been approved.`,
+          type: 'vendor',
+          link: '/vendor',
+          data: { vendorId: vendor._id, status: VENDOR_STATUS.APPROVED },
+        })
+        .catch(() => {});
+    }
 
     return this.getVendorById(vendor._id);
   }
@@ -614,23 +655,26 @@ export class AdminVendorService {
     vendor.status = VENDOR_STATUS.REJECTED;
     vendor.isActive = false;
     vendor.rejectionReason = finalReason;
-    await vendor.save();
+    await ensureVendorRequiredDefaults(vendor);
+    await vendor.save({ validateModifiedOnly: true });
 
     const user = vendor.userId ? await User.findById(vendor.userId) : null;
     if (user) {
       sendVendorStatusEmail(user.email, vendor.storeName, 'rejected', finalReason).catch(() => {});
     }
 
-    notificationService
-      .createNotification({
-        userId: vendor.userId,
-        title: 'Vendor Application Rejected',
-        message: `Your store "${vendor.storeName}" application was rejected. Reason: ${finalReason}`,
-        type: 'vendor',
-        link: '/vendor',
-        data: { vendorId: vendor._id, status: VENDOR_STATUS.REJECTED },
-      })
-      .catch(() => {});
+    if (vendor.userId) {
+      notificationService
+        .createNotification({
+          userId: vendor.userId,
+          title: 'Vendor Application Rejected',
+          message: `Your store "${vendor.storeName}" application was rejected. Reason: ${finalReason}`,
+          type: 'vendor',
+          link: '/vendor',
+          data: { vendorId: vendor._id, status: VENDOR_STATUS.REJECTED },
+        })
+        .catch(() => {});
+    }
 
     return this.getVendorById(vendor._id);
   }

@@ -193,6 +193,7 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
         createQueryMock({
           ...editableVendor,
           storeName: 'Updated Store',
+          slug: 'updated-store',
           description: 'Updated description',
           website: 'https://updated.in',
           businessType: 'LLP',
@@ -201,6 +202,7 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
           businessDetails: { taxNumber: '27AAAAA0000A1Z5' },
         })
       );
+    vi.spyOn(Vendor, 'findOne').mockReturnValueOnce(createQueryMock(null));
     vi.spyOn(Product, 'aggregate').mockResolvedValueOnce([]);
     vi.spyOn(Order, 'aggregate').mockResolvedValueOnce([]);
     vi.spyOn(VendorEarnings, 'find').mockReturnValueOnce(createQueryMock([]));
@@ -223,11 +225,12 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
 
     expect(res.status).toBe(200);
     expect(editableVendor.storeName).toBe('Updated Store');
+    expect(editableVendor.slug).toBe('updated-store');
     expect(editableVendor.description).toBe('Updated description');
     expect(editableVendor.address.postalCode).toBe('400001');
     expect(editableVendor.businessDetails.taxNumber).toBe('27AAAAA0000A1Z5');
     expect(editableVendor.commissionRate).toBe(12);
-    expect(editableVendor.save).toHaveBeenCalledTimes(1);
+    expect(editableVendor.save).toHaveBeenCalledWith({ validateModifiedOnly: true });
   });
 
   it('PATCH /api/v1/admin/vendors/:vendorId/status syncs status/isActive/commission and approve/reject work cleanly', async () => {
@@ -243,6 +246,7 @@ describe('Admin Vendors Management Service & Routes Integration Tests', () => {
       _id: vendorId,
       userId: vendorUserId,
       storeName: 'TechHub Official',
+      slug: 'techhub-official',
       status: VENDOR_STATUS.APPROVED,
       isActive: true,
       commissionRate: 10,
