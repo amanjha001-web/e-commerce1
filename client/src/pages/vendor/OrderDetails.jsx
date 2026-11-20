@@ -87,9 +87,22 @@ const OrderDetails = ({
     try {
       setActionLoading(true);
       const targetId = order._id || paramOrderId;
-      await orderService.updateOrderStatus(targetId, status);
+      const res = await orderService.updateOrderStatus(targetId, status);
+      const updatedOrder = res?.data?.order || res?.data || res;
       toast.success(`Order status updated to ${status}`);
-      setOrder((prev) => (prev ? { ...prev, status } : prev));
+      setOrder((prev) =>
+        updatedOrder &&
+        typeof updatedOrder === "object" &&
+        (updatedOrder._id || updatedOrder.orderStatus)
+          ? {
+              ...(prev || {}),
+              ...updatedOrder,
+              status: updatedOrder.orderStatus || status,
+            }
+          : prev
+            ? { ...prev, status, orderStatus: status }
+            : prev
+      );
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to update order status");
     } finally {
@@ -182,6 +195,7 @@ const OrderDetails = ({
 
   const status =
     order?.status ||
+    order?.orderStatus ||
     "pending";
 
   return (
@@ -281,27 +295,35 @@ const OrderDetails = ({
                   "pending",
                   "confirmed",
                   "processing",
+                  "packed",
                   "shipped",
+                  "out_for_delivery",
                   "delivered",
                   "cancelled",
-                ].map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    disabled={actionLoading}
-                    onClick={() =>
-                      handleStatusChange(item)
-                    }
-                    className={[
-                      "rounded-xl border px-3.5 py-1.5 text-xs font-bold capitalize transition cursor-pointer",
-                      status === item
-                        ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-xs"
-                        : "border-[var(--line)] bg-white text-[var(--text)] hover:bg-[var(--soft)]",
-                    ].join(" ")}
-                  >
-                    {item}
-                  </button>
-                ))}
+                ].map((item) => {
+                  const normalizedCurrent = String(status)
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[\s-]+/g, "_");
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() =>
+                        handleStatusChange(item)
+                      }
+                      className={[
+                        "rounded-xl border px-3.5 py-1.5 text-xs font-bold capitalize transition cursor-pointer",
+                        normalizedCurrent === item
+                          ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-xs"
+                          : "border-[var(--line)] bg-white text-[var(--text)] hover:bg-[var(--soft)]",
+                      ].join(" ")}
+                    >
+                      {item.replace(/_/g, " ")}
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
@@ -394,6 +416,12 @@ const OrderDetails = ({
                     <OrderTimeline
                       order={order}
                       status={status}
+                      events={
+                        order?.timeline ||
+                        order?.statusHistory ||
+                        order?.history ||
+                        []
+                      }
                     />
                   </div>
                 </section>

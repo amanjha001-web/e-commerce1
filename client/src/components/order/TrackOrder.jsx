@@ -1,29 +1,37 @@
 import { Link } from "react-router-dom";
 import OrderStatus from "./OrderStatus";
 
-const TrackOrder = ({ order, trackingNumber, carrier, trackingUrl }) => {
+const TrackOrder = ({ order, tracking, trackingNumber, carrier, trackingUrl }) => {
   if (!order) {
     return null;
   }
 
   const orderId = order._id || order.id;
+  const trackingInfo = tracking || order.tracking || order.trackingInfo || order.shipment || {};
 
   const trackingId =
     trackingNumber ||
+    trackingInfo.trackingNumber ||
     order.trackingNumber ||
-    order.trackingId ||
-    order.shipment?.trackingNumber;
+    order.trackingId;
 
   const shippingCarrier =
     carrier ||
+    trackingInfo.carrier ||
+    trackingInfo.courierPartner ||
     order.carrier ||
-    order.shippingCarrier ||
-    order.shipment?.carrier;
+    order.shippingCarrier;
 
-  const shipmentStatus = order.shipment?.status || order.status || "pending";
+  const shipmentStatus =
+    trackingInfo.status || order.orderStatus || order.status || "pending";
 
   const externalTrackingUrl =
-    trackingUrl || order.trackingUrl || order.shipment?.trackingUrl;
+    trackingUrl || trackingInfo.trackingUrl || order.trackingUrl;
+
+  const estimatedDelivery =
+    trackingInfo.estimatedDeliveryDate ||
+    trackingInfo.expectedDeliveryDate ||
+    order.estimatedDeliveryDate;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
@@ -62,6 +70,23 @@ const TrackOrder = ({ order, trackingNumber, carrier, trackingUrl }) => {
           </p>
         </div>
       </div>
+
+      {estimatedDelivery && (
+        <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Estimated Delivery
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+            {Number.isNaN(new Date(estimatedDelivery).getTime())
+              ? String(estimatedDelivery)
+              : new Date(estimatedDelivery).toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+          </p>
+        </div>
+      )}
 
       {!trackingId && (
         <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900/50 dark:bg-yellow-950/20">

@@ -65,6 +65,12 @@ const formatDate = (date) => {
   });
 };
 
+const formatOrderStatusLabel = (value) =>
+  String(value || "Processing")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
 const Orders = () => {
   const [apiOrders, setApiOrders] = useState([]);
   const [demoOrders, setDemoOrders] = useState(INITIAL_DEMO_ORDERS);
@@ -114,6 +120,8 @@ const Orders = () => {
           : `#SS-${10482 - idx}`);
       const customer =
         o.customer?.fullName ||
+        o.customer?.name ||
+        o.userId?.name ||
         o.user?.fullName ||
         o.user?.name ||
         o.customerName ||
@@ -121,9 +129,7 @@ const Orders = () => {
       const date = o.date || formatDate(o.createdAt);
       const amount = o.totalAmount ?? o.total ?? o.amount ?? 0;
       const rawStatus = o.status || o.orderStatus || "Processing";
-      const status =
-        String(rawStatus).charAt(0).toUpperCase() +
-        String(rawStatus).slice(1);
+      const status = formatOrderStatusLabel(rawStatus);
 
       return {
         ...o,
@@ -159,12 +165,12 @@ const Orders = () => {
   const handleOpenDetails = async (order) => {
     setViewingOrder(order);
     setOrderHistory(order.statusHistory || []);
+    const initialEta =
+      order.tracking?.estimatedDeliveryDate || order.expectedDeliveryDate || order.estimatedDeliveryDate;
     setShippingForm({
-      trackingNumber: order.trackingNumber || "",
-      courierPartner: order.courierPartner || "",
-      expectedDeliveryDate: order.expectedDeliveryDate
-        ? String(order.expectedDeliveryDate).slice(0, 10)
-        : "",
+      trackingNumber: order.tracking?.trackingNumber || order.trackingNumber || "",
+      courierPartner: order.tracking?.carrier || order.courierPartner || order.carrier || "",
+      expectedDeliveryDate: initialEta ? String(initialEta).slice(0, 10) : "",
     });
     setCancelReason("");
     setRefundForm({
@@ -181,20 +187,38 @@ const Orders = () => {
         if (detailRes.status === "fulfilled") {
           const detail = detailRes.value?.data ?? detailRes.value;
           if (detail && typeof detail === "object") {
-            setViewingOrder((prev) => (prev ? { ...prev, ...detail } : prev));
+            setViewingOrder((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    ...detail,
+                    _status: formatOrderStatusLabel(detail.orderStatus || detail.status || prev._status),
+                  }
+                : prev
+            );
+            const detailEta =
+              detail.tracking?.estimatedDeliveryDate ||
+              detail.expectedDeliveryDate ||
+              detail.estimatedDeliveryDate;
             setShippingForm({
-              trackingNumber: detail.trackingNumber || "",
-              courierPartner: detail.courierPartner || "",
-              expectedDeliveryDate: detail.expectedDeliveryDate
-                ? String(detail.expectedDeliveryDate).slice(0, 10)
-                : "",
+              trackingNumber: detail.tracking?.trackingNumber || detail.trackingNumber || "",
+              courierPartner: detail.tracking?.carrier || detail.courierPartner || detail.carrier || "",
+              expectedDeliveryDate: detailEta ? String(detailEta).slice(0, 10) : "",
             });
+            if (Array.isArray(detail.statusHistory)) {
+              setOrderHistory(detail.statusHistory);
+            }
           }
         }
         if (historyRes.status === "fulfilled") {
           const hist = historyRes.value?.data ?? historyRes.value;
-          if (Array.isArray(hist)) {
-            setOrderHistory(hist);
+          const resolvedHistory = Array.isArray(hist)
+            ? hist
+            : Array.isArray(hist?.statusHistory)
+              ? hist.statusHistory
+              : null;
+          if (resolvedHistory) {
+            setOrderHistory(resolvedHistory);
           }
         }
       } catch {
@@ -220,11 +244,22 @@ const Orders = () => {
 
     try {
       setSaving(true);
-      await adminService.updateOrderStatus(
+      const res = await adminService.updateOrderStatus(
         updatingOrder._id,
         newStatus,
         statusNote,
       );
+      const updated = res?.data ?? res;
+      if (viewingOrder?._id && viewingOrder._id === updatingOrder._id && updated && typeof updated === "object") {
+        setViewingOrder((prev) => ({
+          ...prev,
+          ...updated,
+          _status: formatOrderStatusLabel(updated.orderStatus || updated.status || newStatus),
+        }));
+        if (Array.isArray(updated.statusHistory)) {
+          setOrderHistory(updated.statusHistory);
+        }
+      }
       toast.success("Order updated");
       setUpdatingOrder(null);
       setStatusNote("");
@@ -255,7 +290,22 @@ const Orders = () => {
       if (shippingForm.expectedDeliveryDate) {
         payload.expectedDeliveryDate = shippingForm.expectedDeliveryDate;
       }
-      await adminService.updateOrderShipping(viewingOrder._id, payload);
+      const res = await adminService.updateOrderShipping(viewingOrder._id, payload);
+      const updated = res?.data ?? res;
+      if (updated && typeof updated === "object") {
+        setViewingOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...updated,
+                _status: formatOrderStatusLabel(updated.orderStatus || updated.status || "Shipped"),
+              }
+            : prev
+        );
+        if (Array.isArray(updated.statusHistory)) {
+          setOrderHistory(updated.statusHistory);
+        }
+      }
       toast.success("Shipping details updated");
       fetchOrders();
     } catch (err) {
@@ -362,11 +412,13 @@ const Orders = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option>All statuses</option>
-            <option>Processing</option>
-            <option>Confirmed</option>
-            <option>Shipped</option>
-            <option>Delivered</option>
             <option>Pending</option>
+            <option>Confirmed</option>
+            <option>Processing</option>
+            <option>Packed</option>
+            <option>Shipped</option>
+            <option>Out For Delivery</option>
+            <option>Delivered</option>
             <option>Cancelled</option>
           </select>
           <button
@@ -465,7 +517,7 @@ const Orders = () => {
             <div className="notice">
               {orderHistory.length > 0
                 ? `Status timeline: ${orderHistory
-                    .map((h) => h.status)
+                    .map((h) => formatOrderStatusLabel(h.status))
                     .join(" → ")}`
                 : "Demo tracking timeline: Order placed → Confirmed → Packed → Shipped → Delivered."}
             </div>
@@ -589,6 +641,7 @@ const Orders = () => {
               <option>Pending</option>
               <option>Confirmed</option>
               <option>Processing</option>
+              <option>Packed</option>
               <option>Shipped</option>
               <option>Out For Delivery</option>
               <option>Delivered</option>

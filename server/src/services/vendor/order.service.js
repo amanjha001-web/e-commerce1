@@ -3,7 +3,7 @@ import { Vendor } from '../../models/Vendor.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
 import { notificationService } from '../common/notification.service.js';
-import { settleCodOrderOnDelivery } from '../../utils/orderPayment.utils.js';
+import { applyOrderStatusTransition } from '../../utils/orderStatus.utils.js';
 
 export class VendorOrderService {
   async getVendorId(userId) {
@@ -65,19 +65,12 @@ export class VendorOrderService {
     const order = await Order.findOne({ _id: orderId, 'items.vendorId': vendorId });
     if (!order) throw ApiError.notFound('Order not found');
 
-    order.orderStatus = status;
-    order.statusHistory.push({
+    const normalizedStatus = await applyOrderStatusTransition(order, {
       status,
-      note: note || `Updated by vendor to ${status}`,
+      note,
       updatedBy: userId,
-      timestamp: new Date(),
+      actorLabel: 'vendor',
     });
-
-    if (status === 'delivered') {
-      order.isDelivered = true;
-      order.deliveredAt = new Date();
-      await settleCodOrderOnDelivery(order);
-    }
 
     await order.save();
 
@@ -86,10 +79,10 @@ export class VendorOrderService {
       .createNotification({
         userId: order.userId,
         title: 'Order Status Update',
-        message: `Your order #${order.orderNumber} is now ${status}.`,
+        message: `Your order #${order.orderNumber} is now ${String(normalizedStatus).replace(/_/g, ' ')}.`,
         type: 'order',
         link: `/orders/${order._id}`,
-        data: { orderId: order._id, status },
+        data: { orderId: order._id, status: normalizedStatus },
       })
       .catch(() => {});
 

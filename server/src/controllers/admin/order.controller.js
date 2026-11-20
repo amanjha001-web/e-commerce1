@@ -30,7 +30,7 @@ export const processRefund = asyncHandler(async (req, res) => {
 });
 
 export const updateOrderShipping = asyncHandler(async (req, res) => {
-  const order = await adminOrderService.updateOrderShipping(req.params.orderId, req.body);
+  const order = await adminOrderService.updateOrderShipping(req.params.orderId, req.body, req.user._id);
   return ApiResponse.success(res, order, 'Shipping info updated');
 });
 

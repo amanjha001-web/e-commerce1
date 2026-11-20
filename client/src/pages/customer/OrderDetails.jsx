@@ -244,13 +244,15 @@ const OrderDetails = ({
           </section>
 
           {/* Timeline */}
-          {(order?.timeline || order?.statusHistory || order?.history) && (
+          {order && (
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <h2 className="font-semibold text-foreground">Order Timeline</h2>
 
               <div className="mt-5">
                 <OrderTimeline
-                  timeline={
+                  order={order}
+                  status={status}
+                  events={
                     order?.timeline ||
                     order?.statusHistory ||
                     order?.history ||

@@ -10,7 +10,7 @@ import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
 import { notificationService } from '../common/notification.service.js';
-import { settleCodOrderOnDelivery } from '../../utils/orderPayment.utils.js';
+import { applyOrderStatusTransition } from '../../utils/orderStatus.utils.js';
 
 export class AdminOrderService {
   async getOrders(params = {}) {
@@ -59,19 +59,12 @@ export class AdminOrderService {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
 
-    order.orderStatus = status;
-    order.statusHistory.push({
+    const normalizedStatus = await applyOrderStatusTransition(order, {
       status,
-      note: note || `Updated by admin to ${status}`,
+      note,
       updatedBy: adminId,
-      timestamp: new Date(),
+      actorLabel: 'admin',
     });
-
-    if (status === 'delivered') {
-      order.isDelivered = true;
-      order.deliveredAt = new Date();
-      await settleCodOrderOnDelivery(order);
-    }
 
     await order.save();
 
@@ -79,10 +72,10 @@ export class AdminOrderService {
       .createNotification({
         userId: order.userId,
         title: 'Order Status Updated',
-        message: `Your order #${order.orderNumber} status is now ${String(status).replace(/_/g, ' ')}.`,
+        message: `Your order #${order.orderNumber} status is now ${String(normalizedStatus).replace(/_/g, ' ')}.`,
         type: 'order',
         link: `/orders/${order._id}`,
-        data: { orderId: order._id, orderNumber: order.orderNumber, status },
+        data: { orderId: order._id, orderNumber: order.orderNumber, status: normalizedStatus },
       })
       .catch(() => {});
 
@@ -204,24 +197,53 @@ export class AdminOrderService {
     return { order, refund };
   }
 
-  async updateOrderShipping(orderId, { carrier, trackingNumber, trackingUrl, estimatedDeliveryDate }) {
+  async updateOrderShipping(orderId, payload = {}, adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
 
+    const {
+      carrier,
+      courierPartner,
+      trackingNumber,
+      trackingUrl,
+      estimatedDeliveryDate,
+      expectedDeliveryDate,
+      note,
+    } = payload || {};
+
+    const resolvedCarrier = carrier || courierPartner || order.tracking?.carrier;
+    const resolvedTrackingNumber = trackingNumber || order.tracking?.trackingNumber;
+    const resolvedTrackingUrl = trackingUrl || order.tracking?.trackingUrl;
+    const resolvedEstimatedDate =
+      estimatedDeliveryDate || expectedDeliveryDate || order.tracking?.estimatedDeliveryDate;
+
     order.tracking = {
-      carrier: carrier || order.tracking?.carrier,
-      trackingNumber: trackingNumber || order.tracking?.trackingNumber,
-      trackingUrl: trackingUrl || order.tracking?.trackingUrl,
-      estimatedDeliveryDate: estimatedDeliveryDate || order.tracking?.estimatedDeliveryDate,
+      carrier: resolvedCarrier,
+      trackingNumber: resolvedTrackingNumber,
+      trackingUrl: resolvedTrackingUrl,
+      estimatedDeliveryDate: resolvedEstimatedDate,
     };
-    order.orderStatus = ORDER_STATUS.SHIPPED;
+
+    const shippingNote =
+      note ||
+      `Order shipped${resolvedCarrier ? ` via ${resolvedCarrier}` : ''}${
+        resolvedTrackingNumber ? ` (Tracking: ${resolvedTrackingNumber})` : ''
+      }`;
+
+    await applyOrderStatusTransition(order, {
+      status: ORDER_STATUS.SHIPPED,
+      note: shippingNote,
+      updatedBy: adminId,
+      actorLabel: 'admin',
+    });
+
     await order.save();
 
     notificationService
       .createNotification({
         userId: order.userId,
         title: 'Order Shipped',
-        message: `Your order #${order.orderNumber} has been shipped${carrier ? ` via ${carrier}` : ''}${trackingNumber ? ` (Tracking: ${trackingNumber})` : ''}.`,
+        message: `Your order #${order.orderNumber} has been shipped${resolvedCarrier ? ` via ${resolvedCarrier}` : ''}${resolvedTrackingNumber ? ` (Tracking: ${resolvedTrackingNumber})` : ''}.`,
         type: 'order',
         link: `/orders/${order._id}`,
         data: { orderId: order._id, orderNumber: order.orderNumber, status: ORDER_STATUS.SHIPPED },

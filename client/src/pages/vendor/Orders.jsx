@@ -11,12 +11,29 @@ const INITIAL_DEMO_ORDERS = [
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
+const formatStatusLabel = (s) =>
+  String(s || "Processing")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
+const formatOrderDate = (date) => {
+  if (!date) return "11 Nov 2026";
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return String(date);
+  return parsed.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 const statusClass = (s) =>
   s === "Delivered" || s === "Active" || s === "Resolved" || s === "Published"
     ? "green"
-    : s === "Pending" || s === "Processing" || s === "Open"
+    : s === "Pending" || s === "Processing" || s === "Confirmed" || s === "Packed" || s === "Open"
       ? "amber"
-      : s === "Blocked" || s === "Cancelled" || s === "Rejected"
+      : s === "Blocked" || s === "Cancelled" || s === "Rejected" || s === "Refunded"
         ? "red"
         : "";
 
@@ -28,6 +45,7 @@ const Orders = ({ orders: propOrders = [] }) => {
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [updatingOrder, setUpdatingOrder] = useState(null);
   const [newStatus, setNewStatus] = useState("Processing");
+  const [saving, setSaving] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -61,17 +79,22 @@ const Orders = ({ orders: propOrders = [] }) => {
         (o._id ? `#SS-${String(o._id).slice(-5).toUpperCase()}` : `#SS-${10482 - i}`),
       customer:
         o.customer?.fullName ||
+        o.customer?.name ||
+        o.userId?.name ||
         o.user?.fullName ||
         (typeof o.customer === "string" ? o.customer : "Customer"),
-      date: o.date || "11 Nov 2026",
+      date: o.date || formatOrderDate(o.createdAt),
       amount: o.amount ?? o.totalAmount ?? 0,
-      status: o.status || o.orderStatus || "Processing",
+      status: formatStatusLabel(o.status || o.orderStatus || "Processing"),
     }));
-  }, [propOrders, demoOrders]);
+  }, [propOrders, apiOrders, demoOrders]);
 
   const filtered = useMemo(() => {
     return rows.filter((o) => {
-      if (statusFilter !== "All statuses" && o.status !== statusFilter) {
+      if (
+        statusFilter !== "All statuses" &&
+        o.status.toLowerCase() !== statusFilter.toLowerCase()
+      ) {
         return false;
       }
       if (search.trim()) {
@@ -105,9 +128,14 @@ const Orders = ({ orders: propOrders = [] }) => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option>All statuses</option>
+            <option>Pending</option>
+            <option>Confirmed</option>
             <option>Processing</option>
+            <option>Packed</option>
             <option>Shipped</option>
+            <option>Out For Delivery</option>
             <option>Delivered</option>
+            <option>Cancelled</option>
           </select>
         </div>
 
@@ -179,8 +207,12 @@ const Orders = ({ orders: propOrders = [] }) => {
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
             >
+              <option>Pending</option>
+              <option>Confirmed</option>
               <option>Processing</option>
+              <option>Packed</option>
               <option>Shipped</option>
+              <option>Out For Delivery</option>
               <option>Delivered</option>
               <option>Cancelled</option>
             </select>
@@ -188,7 +220,23 @@ const Orders = ({ orders: propOrders = [] }) => {
               type="button"
               className="primarybtn"
               style={{ marginTop: "12px" }}
-              onClick={() => {
+              disabled={saving}
+              onClick={async () => {
+                if (updatingOrder?._raw?._id) {
+                  try {
+                    setSaving(true);
+                    await orderService.updateOrderStatus(updatingOrder._raw._id, newStatus);
+                    toast.success("Order updated");
+                    setUpdatingOrder(null);
+                    await fetchOrders();
+                  } catch (err) {
+                    toast.error(err?.response?.data?.message || "Failed to update order");
+                  } finally {
+                    setSaving(false);
+                  }
+                  return;
+                }
+
                 setDemoOrders((prev) =>
                   prev.map((x) =>
                     x.id === updatingOrder.id ? { ...x, status: newStatus } : x,
@@ -198,7 +246,7 @@ const Orders = ({ orders: propOrders = [] }) => {
                 toast.success("Order updated");
               }}
             >
-              Save status
+              {saving ? "Saving..." : "Save status"}
             </button>
           </div>
         </div>
