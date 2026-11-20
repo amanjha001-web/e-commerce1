@@ -3,6 +3,7 @@ import { Vendor } from '../../models/Vendor.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
 import { notificationService } from '../common/notification.service.js';
+import { settleCodOrderOnDelivery } from '../../utils/orderPayment.utils.js';
 
 export class VendorOrderService {
   async getVendorId(userId) {
@@ -75,6 +76,7 @@ export class VendorOrderService {
     if (status === 'delivered') {
       order.isDelivered = true;
       order.deliveredAt = new Date();
+      await settleCodOrderOnDelivery(order);
     }
 
     await order.save();

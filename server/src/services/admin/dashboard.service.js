@@ -2,6 +2,7 @@ import { User } from '../../models/User.model.js';
 import { Product } from '../../models/Product.model.js';
 import { Inventory } from '../../models/Inventory.model.js';
 import { Order } from '../../models/Order.model.js';
+import { Payment } from '../../models/Payment.model.js';
 import { Vendor } from '../../models/Vendor.model.js';
 import { VendorRequest } from '../../models/VendorRequest.model.js';
 import { SupportTicket } from '../../models/SupportTicket.model.js';
@@ -67,8 +68,25 @@ const getMonthBoundaries = () => {
 };
 
 const sumRevenue = async (extraMatch = {}) => {
+  const [orderAgg, paymentAgg] = await Promise.all([
+    Order.aggregate([
+      { $match: { ...REVENUE_MATCH, ...extraMatch } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ]),
+    Payment.aggregate([
+      { $match: { status: PAYMENT_STATUS.SUCCESS, ...extraMatch } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+  ]);
+  return Math.max(
+    Number(orderAgg?.[0]?.total || 0),
+    Number(paymentAgg?.[0]?.total || 0)
+  );
+};
+
+const sumGrossOrderValue = async (extraMatch = {}) => {
   const result = await Order.aggregate([
-    { $match: { ...REVENUE_MATCH, ...extraMatch } },
+    { $match: { orderStatus: { $nin: NON_REVENUE_STATUSES }, ...extraMatch } },
     { $group: { _id: null, total: { $sum: '$totalAmount' } } },
   ]);
   return Number(result?.[0]?.total || 0);
@@ -94,7 +112,6 @@ export class AdminDashboardService {
       totalProducts,
       publishedProducts,
       pendingProducts,
-      lowStockCount,
       totalOrders,
       ordersThisMonth,
       ordersLastMonth,
@@ -102,10 +119,11 @@ export class AdminDashboardService {
       totalRevenue,
       revenueThisMonth,
       revenueLastMonth,
+      grossSales,
       openTickets,
       recentOrders,
       recentUsers,
-      lowStockProducts,
+      lowStockList,
       topProducts,
     ] = await Promise.all([
       User.countDocuments(customerFilter),
@@ -122,8 +140,9 @@ export class AdminDashboardService {
       }),
       Product.countDocuments(),
       Product.countDocuments({ status: PRODUCT_STATUS.PUBLISHED }),
-      Product.countDocuments({ status: PRODUCT_STATUS.PENDING_APPROVAL }),
-      Product.countDocuments({ stock: { $lte: 10 } }),
+      Product.countDocuments({
+        status: { $in: [PRODUCT_STATUS.PENDING_APPROVAL, 'pending'] },
+      }),
       Order.countDocuments(),
       Order.countDocuments({ createdAt: { $gte: thisMonthStart } }),
       Order.countDocuments({ createdAt: { $gte: lastMonthStart, $lt: thisMonthStart } }),
@@ -131,14 +150,18 @@ export class AdminDashboardService {
       sumRevenue(),
       sumRevenue({ createdAt: { $gte: thisMonthStart } }),
       sumRevenue({ createdAt: { $gte: lastMonthStart, $lt: thisMonthStart } }),
+      sumGrossOrderValue(),
       SupportTicket.countDocuments({ status: { $in: OPEN_TICKET_STATUSES } }),
       this.getRecentOrders(5),
       this.getRecentUsers(5),
-      this.getLowStockProducts(10, 5),
+      this.getLowStockProducts(10, 50),
       this.getTopProducts(5),
     ]);
 
     const pendingVendors = Math.max(pendingVendorAccounts, pendingVendorRequests);
+    const lowStockCount = lowStockList.length;
+    const lowStockProducts = lowStockList.slice(0, 5);
+    const pendingRevenue = Math.max(0, Math.round((grossSales - totalRevenue) * 100) / 100);
 
     const metrics = {
       totalUsers,
@@ -158,6 +181,8 @@ export class AdminDashboardService {
       totalRevenue,
       revenueThisMonth,
       revenueGrowth: growthPercent(revenueThisMonth, revenueLastMonth),
+      grossSales,
+      pendingRevenue,
       openTickets,
     };
 
@@ -181,7 +206,17 @@ export class AdminDashboardService {
     const [ordersByDay, revenueByDay, previousOrders, previousRevenue] = await Promise.all([
       Order.aggregate([
         { $match: { createdAt: { $gte: rangeStart } } },
-        { $group: { _id: dateExpr, orders: { $sum: 1 } } },
+        {
+          $group: {
+            _id: dateExpr,
+            orders: { $sum: 1 },
+            orderValue: {
+              $sum: {
+                $cond: [{ $in: ['$orderStatus', NON_REVENUE_STATUSES] }, 0, '$totalAmount'],
+              },
+            },
+          },
+        },
       ]),
       Order.aggregate([
         { $match: { ...REVENUE_MATCH, createdAt: { $gte: rangeStart } } },
@@ -192,6 +227,9 @@ export class AdminDashboardService {
     ]);
 
     const ordersMap = new Map((ordersByDay || []).map((d) => [d._id, Number(d.orders) || 0]));
+    const orderValueMap = new Map(
+      (ordersByDay || []).map((d) => [d._id, Number(d.orderValue) || 0])
+    );
     const revenueMap = new Map((revenueByDay || []).map((d) => [d._id, Number(d.revenue) || 0]));
 
     // Fill every day in range so charts never have gaps
@@ -201,17 +239,20 @@ export class AdminDashboardService {
       const key = toDateKey(day);
       const orders = ordersMap.get(key) || 0;
       const revenue = revenueMap.get(key) || 0;
+      const orderValue = orderValueMap.get(key) || 0;
       salesTrend.push({
         date: key,
         label: day.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
         orders,
         sales: orders,
         revenue,
+        orderValue,
       });
     }
 
     const totalOrders = salesTrend.reduce((sum, d) => sum + d.orders, 0);
     const totalRevenue = salesTrend.reduce((sum, d) => sum + d.revenue, 0);
+    const grossSales = salesTrend.reduce((sum, d) => sum + d.orderValue, 0);
 
     return {
       period: safePeriod,
@@ -219,6 +260,8 @@ export class AdminDashboardService {
       summary: {
         totalOrders,
         totalRevenue,
+        grossSales,
+        pendingRevenue: Math.max(0, Math.round((grossSales - totalRevenue) * 100) / 100),
         averageOrderValue: totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0,
         ordersGrowth: growthPercent(totalOrders, previousOrders),
         revenueGrowth: growthPercent(totalRevenue, previousRevenue),

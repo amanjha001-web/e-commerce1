@@ -225,6 +225,7 @@ const AdminDashboard = () => {
             loading={isAnalyticsLoading && !(revenueData || []).length}
             growth={summary.revenueGrowth}
             averageOrderValue={summary.averageOrderValue}
+            grossSales={summary.grossSales}
           />
         </div>
 

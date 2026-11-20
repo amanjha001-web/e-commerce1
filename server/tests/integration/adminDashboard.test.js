@@ -4,6 +4,9 @@ import app from '../../src/app.js';
 import { User } from '../../src/models/User.model.js';
 import { Product } from '../../src/models/Product.model.js';
 import { Inventory } from '../../src/models/Inventory.model.js';
+import { Payment } from '../../src/models/Payment.model.js';
+import { VendorEarnings } from '../../src/models/VendorEarnings.model.js';
+import { settleCodOrderOnDelivery } from '../../src/utils/orderPayment.utils.js';
 import { Order } from '../../src/models/Order.model.js';
 import { Vendor } from '../../src/models/Vendor.model.js';
 import { VendorRequest } from '../../src/models/VendorRequest.model.js';
@@ -74,8 +77,7 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
     vi.spyOn(Product, 'countDocuments')
       .mockResolvedValueOnce(20) // totalProducts
       .mockResolvedValueOnce(15) // publishedProducts
-      .mockResolvedValueOnce(4) // pendingProducts
-      .mockResolvedValueOnce(2); // lowStockCount
+      .mockResolvedValueOnce(4); // pendingProducts
     vi.spyOn(Order, 'countDocuments')
       .mockResolvedValueOnce(10) // totalOrders
       .mockResolvedValueOnce(5) // ordersThisMonth
@@ -83,10 +85,12 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
       .mockResolvedValueOnce(3); // pendingOrders
     vi.spyOn(SupportTicket, 'countDocuments').mockResolvedValueOnce(2);
 
+    vi.spyOn(Payment, 'aggregate').mockResolvedValue([]);
     vi.spyOn(Order, 'aggregate')
       .mockResolvedValueOnce([{ total: 15000 }]) // totalRevenue
       .mockResolvedValueOnce([{ total: 9000 }]) // revenueThisMonth
       .mockResolvedValueOnce([{ total: 6000 }]) // revenueLastMonth
+      .mockResolvedValueOnce([{ total: 18500 }]) // grossSales
       .mockResolvedValueOnce([
         {
           _id: '507f1f77bcf86cd799439099',
@@ -159,10 +163,12 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
     expect(metrics.totalProducts).toBe(20);
     expect(metrics.publishedProducts).toBe(15);
     expect(metrics.pendingProducts).toBe(4);
-    expect(metrics.lowStockCount).toBe(2);
+    expect(metrics.lowStockCount).toBe(1);
     expect(metrics.totalOrders).toBe(10);
     expect(metrics.pendingOrders).toBe(3);
     expect(metrics.totalRevenue).toBe(15000);
+    expect(metrics.grossSales).toBe(18500);
+    expect(metrics.pendingRevenue).toBe(3500);
     expect(metrics.openTickets).toBe(2);
     expect(metrics.usersGrowth).toBe(50);
     expect(metrics.ordersGrowth).toBe(150);
@@ -187,8 +193,9 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
       '0'
     )}-${String(today.getDate()).padStart(2, '0')}`;
 
+    vi.spyOn(Payment, 'aggregate').mockResolvedValue([]);
     vi.spyOn(Order, 'aggregate')
-      .mockResolvedValueOnce([{ _id: todayKey, orders: 4 }]) // ordersByDay
+      .mockResolvedValueOnce([{ _id: todayKey, orders: 4, orderValue: 5500 }]) // ordersByDay
       .mockResolvedValueOnce([{ _id: todayKey, revenue: 4000 }]) // revenueByDay
       .mockResolvedValueOnce([{ total: 2000 }]); // previousRevenue
     vi.spyOn(Order, 'countDocuments').mockResolvedValueOnce(2); // previousOrders
@@ -202,6 +209,8 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
     expect(res.body.data.salesTrend).toHaveLength(30);
     expect(res.body.data.summary.totalOrders).toBe(4);
     expect(res.body.data.summary.totalRevenue).toBe(4000);
+    expect(res.body.data.summary.grossSales).toBe(5500);
+    expect(res.body.data.summary.pendingRevenue).toBe(1500);
     expect(res.body.data.summary.averageOrderValue).toBe(1000);
     expect(res.body.data.summary.ordersGrowth).toBe(100);
     expect(res.body.data.summary.revenueGrowth).toBe(100);
@@ -263,5 +272,35 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
       .set('Authorization', `Bearer ${adminToken}`);
     expect(resLow.status).toBe(200);
     expect(resLow.body.data).toHaveLength(2);
+  });
+
+  it('settleCodOrderOnDelivery should mark COD order paid, record Payment, and accrue VendorEarnings once', async () => {
+    const codOrder = {
+      _id: '507f1f77bcf86cd799439088',
+      userId: customerId,
+      paymentMethod: 'cod',
+      paymentStatus: 'pending',
+      isPaid: false,
+      totalAmount: 1000,
+      items: [{ vendorId: '507f1f77bcf86cd799439099', total: 1000 }],
+    };
+
+    vi.spyOn(Payment, 'findOne').mockResolvedValueOnce(null);
+    const paymentCreateSpy = vi.spyOn(Payment, 'create').mockResolvedValueOnce({});
+    const earningsSpy = vi.spyOn(VendorEarnings, 'findOneAndUpdate').mockResolvedValueOnce({});
+
+    const settled = await settleCodOrderOnDelivery(codOrder);
+    expect(settled).toBe(true);
+    expect(codOrder.isPaid).toBe(true);
+    expect(codOrder.paymentStatus).toBe('success');
+    expect(paymentCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'cod', status: 'success', amount: 1000 })
+    );
+    expect(earningsSpy).toHaveBeenCalledTimes(1);
+
+    // Calling again on already-paid order is a safe no-op
+    const secondCall = await settleCodOrderOnDelivery(codOrder);
+    expect(secondCall).toBe(false);
+    expect(earningsSpy).toHaveBeenCalledTimes(1);
   });
 });

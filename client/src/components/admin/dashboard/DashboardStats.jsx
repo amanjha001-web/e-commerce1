@@ -21,10 +21,24 @@ const DashboardStats = ({ stats: propStats, loading: propLoading, onNavigate }) 
   const stats = propStats || storeStats;
   const loading = propLoading !== undefined ? propLoading : storeLoading;
 
-  const revenueTrend = formatGrowthTrend(
-    stats.revenueGrowth,
-    `₹${Number(stats.revenueThisMonth ?? 0).toLocaleString("en-IN")} this month`,
+  const collectedRevenue = Number(stats.totalRevenue ?? 0);
+  const grossSales = Number(stats.grossSales ?? 0);
+  const pendingRevenue = Number(
+    stats.pendingRevenue ?? Math.max(0, grossSales - collectedRevenue),
   );
+
+  const revenueTrend =
+    collectedRevenue === 0 && grossSales > 0
+      ? {
+          text: `₹${grossSales.toLocaleString("en-IN")} pending COD / capture`,
+          tone: "alert",
+        }
+      : formatGrowthTrend(
+          stats.revenueGrowth,
+          pendingRevenue > 0
+            ? `₹${pendingRevenue.toLocaleString("en-IN")} pending collection`
+            : `₹${Number(stats.revenueThisMonth ?? 0).toLocaleString("en-IN")} this month`,
+        );
   const ordersTrend = formatGrowthTrend(
     stats.ordersGrowth,
     `${stats.pendingOrders ?? 0} pending orders`,

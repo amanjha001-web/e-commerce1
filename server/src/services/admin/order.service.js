@@ -10,6 +10,7 @@ import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
 import { notificationService } from '../common/notification.service.js';
+import { settleCodOrderOnDelivery } from '../../utils/orderPayment.utils.js';
 
 export class AdminOrderService {
   async getOrders(params = {}) {
@@ -69,6 +70,7 @@ export class AdminOrderService {
     if (status === 'delivered') {
       order.isDelivered = true;
       order.deliveredAt = new Date();
+      await settleCodOrderOnDelivery(order);
     }
 
     await order.save();

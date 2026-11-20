@@ -9,6 +9,7 @@ import { createRazorpayOrder, createRazorpayRefund } from '../../integrations/ra
 import { verifyPaymentSignature } from '../../integrations/razorpay/razorpay.utils.js';
 import { env } from '../../config/env.js';
 import { notificationService } from '../common/notification.service.js';
+import { accrueVendorEarningsForOrder } from '../../utils/orderPayment.utils.js';
 
 export class CustomerPaymentService {
   async createPaymentOrder(userId, orderId) {
@@ -105,26 +106,7 @@ export class CustomerPaymentService {
       await order.save();
 
       // Accrue vendor earnings
-      for (const item of order.items) {
-        if (item.vendorId) {
-          const itemRevenue = item.total;
-          const commission = Math.round(itemRevenue * 0.1 * 100) / 100; // 10% platform fee
-          const net = itemRevenue - commission;
-
-          await VendorEarnings.findOneAndUpdate(
-            { vendorId: item.vendorId },
-            {
-              $inc: {
-                totalRevenue: itemRevenue,
-                totalCommission: commission,
-                netEarnings: net,
-                availableBalance: net,
-              },
-            },
-            { upsert: true, new: true }
-          );
-        }
-      }
+      await accrueVendorEarningsForOrder(order);
     }
 
     notificationService

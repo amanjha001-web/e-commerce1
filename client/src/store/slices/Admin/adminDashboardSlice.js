@@ -51,6 +51,7 @@ export const fetchAdminDashboardAnalytics = createAsyncThunk(
         label: item?.label || item?.date || item?._id || getDayLabel(index),
         date: item?.date || item?._id,
         value: Number(item?.revenue ?? 0) || 0,
+        grossValue: Number(item?.orderValue ?? 0) || 0,
       }));
 
       return {
@@ -179,6 +180,8 @@ const initialState = {
     pendingOrders: 0,
     totalRevenue: 0,
     revenueThisMonth: 0,
+    grossSales: 0,
+    pendingRevenue: 0,
     usersGrowth: 0,
     ordersGrowth: 0,
     revenueGrowth: 0,
