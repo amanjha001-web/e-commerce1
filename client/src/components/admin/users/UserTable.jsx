@@ -9,10 +9,16 @@ const getInitials = (name = "") =>
     .map((part) => part[0]?.toUpperCase())
     .join("") || "U";
 
-const getRoleLabel = (role) =>
-  (role || "customer")
+const getRoleLabel = (role) => {
+  const raw = String(role || "customer").toLowerCase();
+  if (raw === "user" || raw === "customer") return "Customer";
+  return raw
     .replaceAll("_", " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const isUserBlocked = (user) =>
+  Boolean(user?.isBlocked ?? user?.isActive === false);
 
 const getUserIdLabel = (user, index) => {
   if (user?.userCode || user?.code) return user.userCode || user.code;
@@ -81,14 +87,14 @@ const UserTable = ({
 
   // Actions in table row: ONLY Block/Unblock and View (Edit & Delete are inside View modal)
   const renderActions = (user) => {
-    const isBlocked = Boolean(user?.isBlocked);
+    const isBlocked = isUserBlocked(user);
 
     return (
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => onToggleStatus?.(user)}
-          className="btnsm"
+          className="btnsm cursor-pointer"
         >
           {isBlocked ? "Unblock" : "Block"}
         </button>
@@ -96,7 +102,7 @@ const UserTable = ({
         <button
           type="button"
           onClick={() => onViewUser?.(user)}
-          className="btnsm"
+          className="btnsm cursor-pointer"
         >
           View
         </button>
@@ -141,10 +147,10 @@ const UserTable = ({
                 <td>
                   <span
                     className={`status ${
-                      user?.isBlocked ? "red" : "green"
+                      isUserBlocked(user) ? "red" : "green"
                     }`}
                   >
-                    {user?.isBlocked ? "Blocked" : "Active"}
+                    {isUserBlocked(user) ? "Blocked" : "Active"}
                   </span>
                 </td>
 

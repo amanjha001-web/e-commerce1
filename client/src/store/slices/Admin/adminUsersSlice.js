@@ -106,7 +106,8 @@ const toggleAdminUserStatus = createAsyncThunk(
         );
       }
 
-      return userId;
+      const data = response?.data ?? response;
+      return data?.user ?? data;
     } catch (error) {
       return rejectWithValue(getErrorMessage(error));
     }
@@ -116,6 +117,14 @@ const toggleAdminUserStatus = createAsyncThunk(
 const initialState = {
   users: [],
   selectedUser: null,
+  summary: {
+    totalUsers: 0,
+    customersCount: 0,
+    vendorsCount: 0,
+    adminsCount: 0,
+    blockedCount: 0,
+    activeCount: 0,
+  },
   pagination: {
     total: 0,
     page: 1,
@@ -151,6 +160,12 @@ const adminUsersSlice = createSlice({
       .addCase(fetchAdminUsers.fulfilled, (state, action) => {
         state.loading = false;
         state.users = action.payload?.users ?? [];
+        if (action.payload?.summary) {
+          state.summary = {
+            ...state.summary,
+            ...action.payload.summary,
+          };
+        }
         state.pagination = {
           ...state.pagination,
           ...(action.payload?.pagination ?? {}),
@@ -237,8 +252,18 @@ const adminUsersSlice = createSlice({
         state.saving = true;
         state.error = null;
       })
-      .addCase(toggleAdminUserStatus.fulfilled, (state) => {
+      .addCase(toggleAdminUserStatus.fulfilled, (state, action) => {
         state.saving = false;
+        const updatedUser = action.payload;
+        if (!updatedUser || typeof updatedUser !== "object" || !updatedUser._id) {
+          return;
+        }
+        state.users = state.users.map((user) =>
+          user._id === updatedUser._id ? { ...user, ...updatedUser } : user,
+        );
+        if (state.selectedUser?._id === updatedUser._id) {
+          state.selectedUser = { ...state.selectedUser, ...updatedUser };
+        }
       })
       .addCase(toggleAdminUserStatus.rejected, (state, action) => {
         state.saving = false;

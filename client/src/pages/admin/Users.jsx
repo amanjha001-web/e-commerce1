@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 
 import UserFilters from "../../components/admin/users/UserFilters";
 import UserTable from "../../components/admin/users/UserTable";
@@ -24,12 +25,15 @@ const initialFilters = {
   sortBy: "newest",
 };
 
+const isUserBlocked = (u) => Boolean(u?.isBlocked ?? u?.isActive === false);
+
 const Users = () => {
   const dispatch = useDispatch();
 
   const {
     users,
     selectedUser,
+    summary,
     pagination,
     loading,
     detailsLoading,
@@ -47,31 +51,36 @@ const Users = () => {
 
   const { page = 1, limit = 10, total = 0, totalPages = 0 } = pagination;
 
+  const buildQueryParams = (overrides = {}) => {
+    const params = {
+      page,
+      limit,
+      ...overrides,
+    };
+
+    if (filters.search.trim()) {
+      params.search = filters.search.trim();
+    }
+
+    if (filters.role !== "all") {
+      params.role = filters.role;
+    }
+
+    if (filters.status !== "all") {
+      params.status = filters.status;
+    }
+
+    if (filters.sortBy !== "newest") {
+      params.sortBy = filters.sortBy;
+    }
+
+    return params;
+  };
+
   useEffect(() => {
     const timer = setTimeout(
       () => {
-        const params = {
-          page,
-          limit,
-        };
-
-        if (filters.search.trim()) {
-          params.search = filters.search.trim();
-        }
-
-        if (filters.role !== "all") {
-          params.role = filters.role;
-        }
-
-        if (filters.status !== "all") {
-          params.status = filters.status;
-        }
-
-        if (filters.sortBy !== "newest") {
-          params.sortBy = filters.sortBy;
-        }
-
-        dispatch(fetchAdminUsers(params));
+        dispatch(fetchAdminUsers(buildQueryParams()));
       },
       filters.search ? 350 : 0,
     );
@@ -100,12 +109,15 @@ const Users = () => {
   };
 
   const openUserDetails = async (user, shouldEdit = false) => {
+    if (!user?._id) return;
     setActionError("");
     setEditMode(shouldEdit);
+    setViewingUser(user);
     setDetailsOpen(true);
 
     try {
-      await dispatch(fetchAdminUserById(user._id)).unwrap();
+      const fresh = await dispatch(fetchAdminUserById(user._id)).unwrap();
+      if (fresh) setViewingUser(fresh);
     } catch (errorMessage) {
       setActionError(
         typeof errorMessage === "string"
@@ -116,25 +128,7 @@ const Users = () => {
   };
 
   const handleViewUser = (user) => {
-    setActionError("");
-    setEditMode(false);
-    setViewingUser(user);
-    setDetailsOpen(true);
-
-    dispatch(fetchAdminUserById(user._id))
-      .unwrap()
-      .then((freshUser) => {
-        if (freshUser) {
-          setViewingUser(freshUser);
-        }
-      })
-      .catch((errorMessage) => {
-        setActionError(
-          typeof errorMessage === "string"
-            ? errorMessage
-            : "Unable to load user details.",
-        );
-      });
+    openUserDetails(user, false);
   };
 
   const handleEditUser = (user) => {
@@ -148,61 +142,43 @@ const Users = () => {
     dispatch(clearSelectedUser());
   };
 
-  const getCurrentParams = () => {
-    const params = { page, limit };
-
-    if (filters.search.trim()) {
-      params.search = filters.search.trim();
-    }
-
-    if (filters.role !== "all") {
-      params.role = filters.role;
-    }
-
-    if (filters.status !== "all") {
-      params.status = filters.status;
-    }
-
-    if (filters.sortBy !== "newest") {
-      params.sortBy = filters.sortBy;
-    }
-
-    return params;
-  };
-
   const handleSaveUser = async (user, userData) => {
     if (!user?._id) return;
 
     setActionError("");
 
     try {
-      await dispatch(
+      const updated = await dispatch(
         updateAdminUser({
           userId: user._id,
           userData,
         }),
       ).unwrap();
 
-      await dispatch(fetchAdminUsers(getCurrentParams())).unwrap();
-      const updated = await dispatch(fetchAdminUserById(user._id)).unwrap();
+      toast.success("User updated successfully");
+      await dispatch(fetchAdminUsers(buildQueryParams())).unwrap();
+
       if (updated) {
         setViewingUser(updated);
+      } else {
+        const refreshed = await dispatch(fetchAdminUserById(user._id)).unwrap();
+        if (refreshed) setViewingUser(refreshed);
       }
 
       setEditMode(false);
     } catch (errorMessage) {
-      setActionError(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : "Unable to update user.",
-      );
+      const msg =
+        typeof errorMessage === "string" ? errorMessage : "Unable to update user.";
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
   const handleDeleteUser = async (user) => {
     if (!user?._id || saving) return;
 
-    const name = user.fullName || user.username || user.email || "this user";
+    const name =
+      user.fullName || user.name || user.username || user.email || "this user";
 
     const confirmed = window.confirm(
       `Are you sure you want to delete ${name}?`,
@@ -214,6 +190,7 @@ const Users = () => {
 
     try {
       await dispatch(deleteAdminUser(user._id)).unwrap();
+      toast.success("User deleted successfully");
 
       if (detailsOpen) {
         handleCloseDetails();
@@ -224,18 +201,18 @@ const Users = () => {
       if (nextPage !== page) {
         dispatch(setAdminUsersPage(nextPage));
       } else {
-        await dispatch(fetchAdminUsers(getCurrentParams())).unwrap();
+        await dispatch(fetchAdminUsers(buildQueryParams())).unwrap();
       }
     } catch (errorMessage) {
-      setActionError(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : "Unable to delete user.",
-      );
+      const msg =
+        typeof errorMessage === "string" ? errorMessage : "Unable to delete user.";
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
   const handleStatusClick = (user) => {
+    if (!user?._id) return;
     setStatusUser(user);
     setStatusOpen(true);
   };
@@ -251,34 +228,46 @@ const Users = () => {
     setActionError("");
 
     try {
-      await dispatch(toggleAdminUserStatus(user._id)).unwrap();
+      const updatedUser = await dispatch(toggleAdminUserStatus(user._id)).unwrap();
+      const nowBlocked = isUserBlocked(updatedUser);
+      toast.success(nowBlocked ? "User blocked" : "User unblocked");
 
       handleCloseStatus();
 
-      await dispatch(fetchAdminUsers(getCurrentParams())).unwrap();
-
       if (selectedUser?._id === user._id || viewingUser?._id === user._id) {
+        setViewingUser((prev) =>
+          prev ? { ...prev, ...updatedUser } : updatedUser,
+        );
+      }
+
+      await dispatch(fetchAdminUsers(buildQueryParams())).unwrap();
+
+      if (detailsOpen && viewingUser?._id === user._id) {
         const refreshed = await dispatch(fetchAdminUserById(user._id)).unwrap();
-        if (refreshed) {
-          setViewingUser(refreshed);
-        }
+        if (refreshed) setViewingUser(refreshed);
       }
     } catch (errorMessage) {
-      setActionError(
+      const msg =
         typeof errorMessage === "string"
           ? errorMessage
-          : "Unable to update user status.",
-      );
+          : "Unable to update user status.";
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
-  const customersCount = users.filter(
-    (u) => !u.role || String(u.role).toLowerCase() === "customer",
-  ).length;
-  const vendorsCount = users.filter(
-    (u) => String(u.role || "").toLowerCase() === "vendor",
-  ).length;
-  const blockedCount = users.filter((u) => Boolean(u.isBlocked)).length;
+  const allUsersCount = summary?.totalUsers || total || users.length;
+  const customersCount =
+    summary?.customersCount ??
+    users.filter((u) => {
+      const r = String(u.role || "customer").toLowerCase();
+      return r === "customer" || r === "user";
+    }).length;
+  const vendorsCount =
+    summary?.vendorsCount ??
+    users.filter((u) => String(u.role || "").toLowerCase() === "vendor").length;
+  const blockedCount =
+    summary?.blockedCount ?? users.filter(isUserBlocked).length;
 
   return (
     <div>
@@ -291,7 +280,7 @@ const Users = () => {
 
       <div className="stats">
         {[
-          ["All users", total || users.length],
+          ["All users", allUsersCount],
           ["Customers", customersCount],
           ["Vendors", vendorsCount],
           ["Blocked", blockedCount],
@@ -351,7 +340,7 @@ const Users = () => {
                 type="button"
                 disabled={page <= 1 || loading}
                 onClick={() => dispatch(setAdminUsersPage(page - 1))}
-                className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
+                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
@@ -364,7 +353,7 @@ const Users = () => {
                   totalPages === 0
                 }
                 onClick={() => dispatch(setAdminUsersPage(page + 1))}
-                className="btnsm disabled:cursor-not-allowed disabled:opacity-40"
+                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>
@@ -376,7 +365,7 @@ const Users = () => {
       <UserDetails
         user={viewingUser || selectedUser}
         open={detailsOpen}
-        loading={detailsLoading}
+        loading={detailsLoading && !viewingUser}
         saving={saving}
         editMode={editMode}
         onClose={handleCloseDetails}

@@ -24,8 +24,7 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
 });
 
 export const toggleUserStatus = asyncHandler(async (req, res) => {
-  const user = await adminUserService.getUserById(req.params.userId);
-  const updated = await adminUserService.updateUserStatus(req.params.userId, !user.isActive, req.user);
+  const updated = await adminUserService.toggleUserStatus(req.params.userId, req.user);
   return ApiResponse.success(res, updated, 'User status toggled');
 });
 
