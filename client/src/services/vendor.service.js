@@ -118,8 +118,18 @@ const vendorService = {
   // Payouts
 
   getPayouts: async (params = {}) => {
+    const cleaned = Object.fromEntries(
+      Object.entries(params || {}).filter(
+        ([, v]) =>
+          v !== undefined &&
+          v !== null &&
+          v !== "" &&
+          String(v).toLowerCase() !== "all" &&
+          String(v).toLowerCase() !== "all payouts",
+      ),
+    );
     const response = await api.get("/vendor/payouts", {
-      params,
+      params: cleaned,
     });
 
     return response.data;
@@ -127,6 +137,12 @@ const vendorService = {
 
   getPayoutById: async (payoutId) => {
     const response = await api.get(`/vendor/payouts/${payoutId}`);
+
+    return response.data;
+  },
+
+  requestPayout: async (data) => {
+    const response = await api.post("/vendor/payouts", data);
 
     return response.data;
   },

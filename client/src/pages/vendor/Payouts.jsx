@@ -49,9 +49,9 @@ const Payouts = ({
       if (earnRes) {
         const eData = earnRes?.data || earnRes || {};
         setInternalBalance({
-          availableBalance: eData?.availablePayout ?? 12450,
-          pendingBalance: eData?.pendingPayout ?? 4200,
-          totalPaid: eData?.totalPaidOut ?? 45050,
+          availableBalance: Number(eData?.availableBalance ?? eData?.availablePayout ?? 0),
+          pendingBalance: Number(eData?.pendingBalance ?? eData?.pendingPayout ?? 0),
+          totalPaid: Number(eData?.totalWithdrawn ?? eData?.totalPaidOut ?? 0),
         });
       }
     } finally {
@@ -76,6 +76,7 @@ const Payouts = ({
     }
     try {
       setInternalSubmitting(true);
+      await vendorService.requestPayout({ amount: Number(amount) });
       toast.success("Payout request submitted successfully");
       setModalOpen(false);
       setAmount("");
@@ -136,29 +137,6 @@ const Payouts = ({
         total + Number(payout?.amount || 0),
       0
     );
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const payoutAmount = Number(amount);
-
-    if (
-      !Number.isFinite(payoutAmount) ||
-      payoutAmount <= 0 ||
-      payoutAmount > availableBalance
-    ) {
-      return;
-    }
-
-    try {
-      await onRequestPayout?.(payoutAmount);
-      setAmount("");
-      setModalOpen(false);
-    } catch (error) {
-      console.log(error);
-      // Keep the modal open if the request fails.
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
