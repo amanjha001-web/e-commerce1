@@ -33,6 +33,6 @@ export const getStats = asyncHandler(async (req, res) => {
 });
 
 export const getSalesReport = asyncHandler(async (req, res) => {
-  const sales = await vendorStoreService.getSalesReport(req.user._id);
+  const sales = await vendorStoreService.getSalesReport(req.user._id, req.query.period);
   return ApiResponse.success(res, sales, 'Sales report');
 });
