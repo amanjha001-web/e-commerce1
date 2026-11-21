@@ -18,12 +18,73 @@ const ensureValidObjectId = (id, label = 'Request ID') => {
 
 const toPlain = (doc) => (doc?.toObject ? doc.toObject() : { ...(doc || {}) });
 
-const formatVendorRequest = (doc) => {
+const extractRequestUserId = (raw = {}) => {
+  const candidate = raw.userId?._id || raw.userId || raw.user?._id || raw.user;
+  return candidate && mongoose.isValidObjectId(candidate) ? String(candidate) : '';
+};
+
+const isPopulatedUser = (obj) =>
+  Boolean(obj && typeof obj === 'object' && (obj.email || obj.fullName || obj.name));
+
+const resolveLegacyRequestUsers = async (docs = []) => {
+  if (mongoose.connection.readyState !== 1 || !Array.isArray(docs) || docs.length === 0) {
+    return new Map();
+  }
+
+  const userIds = [];
+  const emails = [];
+  for (const doc of docs) {
+    const raw = toPlain(doc);
+    if (isPopulatedUser(raw.userId) || isPopulatedUser(raw.user)) continue;
+    const uid = extractRequestUserId(raw);
+    if (uid) userIds.push(uid);
+    const email = String(raw.email || '').trim().toLowerCase();
+    if (email) emails.push(email);
+  }
+
+  if (userIds.length === 0 && emails.length === 0) {
+    return new Map();
+  }
+
+  const orConditions = [];
+  if (userIds.length > 0) orConditions.push({ _id: { $in: userIds } });
+  if (emails.length > 0) orConditions.push({ email: { $in: emails } });
+
+  const users = await Promise.resolve()
+    .then(() =>
+      User.find({ $or: orConditions })
+        .select('name fullName email phone avatar role isActive isEmailVerified googleId lastLogin')
+        .lean()
+    )
+    .catch(() => []);
+
+  const lookup = new Map();
+  for (const u of users || []) {
+    if (u?._id) lookup.set(`id:${String(u._id)}`, u);
+    if (u?.email) lookup.set(`email:${String(u.email).trim().toLowerCase()}`, u);
+  }
+  return lookup;
+};
+
+const formatVendorRequest = (doc, userLookup = null) => {
   if (!doc) return null;
   const raw = toPlain(doc);
 
-  const populatedUser =
-    raw.userId && typeof raw.userId === 'object' ? toPlain(raw.userId) : null;
+  let populatedUser = isPopulatedUser(raw.userId)
+    ? toPlain(raw.userId)
+    : isPopulatedUser(raw.user)
+      ? toPlain(raw.user)
+      : null;
+
+  if (!populatedUser && userLookup instanceof Map) {
+    const uid = extractRequestUserId(raw);
+    const email = String(raw.email || '').trim().toLowerCase();
+    populatedUser =
+      (uid ? userLookup.get(`id:${uid}`) : null) ||
+      (email ? userLookup.get(`email:${email}`) : null) ||
+      null;
+  }
+
   const reviewer =
     raw.reviewedBy && typeof raw.reviewedBy === 'object' ? toPlain(raw.reviewedBy) : null;
 
@@ -32,6 +93,7 @@ const formatVendorRequest = (doc) => {
     populatedUser?.name ||
     raw.applicant ||
     raw.ownerName ||
+    raw.fullName ||
     (raw.email ? String(raw.email).split('@')[0] : '') ||
     '';
 
@@ -50,14 +112,26 @@ const formatVendorRequest = (doc) => {
     country: rawAddress.country || bizAddress.country || '',
   };
 
+  const normalizedStatus = String(
+    raw.status ||
+      (raw.isApproved === true
+        ? VENDOR_STATUS.APPROVED
+        : raw.rejectionReason
+          ? VENDOR_STATUS.REJECTED
+          : VENDOR_STATUS.PENDING)
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
   const hasTax = Boolean(String(gstNumber).trim());
   const hasBank = Boolean(
     raw.bankDetails?.accountNumber && raw.bankDetails?.ifscCode
   );
   let documentStatus = 'Pending';
-  if (raw.status === VENDOR_STATUS.APPROVED) {
+  if (normalizedStatus === VENDOR_STATUS.APPROVED) {
     documentStatus = 'Verified';
-  } else if (raw.status === VENDOR_STATUS.REJECTED) {
+  } else if (normalizedStatus === VENDOR_STATUS.REJECTED) {
     documentStatus = 'Rejected';
   } else if (hasTax || hasBank) {
     documentStatus = 'Submitted';
@@ -65,7 +139,8 @@ const formatVendorRequest = (doc) => {
     documentStatus = 'Under review';
   }
 
-  const hasUserAccount = Boolean(populatedUser?._id || raw.userId);
+  const resolvedUserRef = extractRequestUserId(raw) || (populatedUser?._id ? String(populatedUser._id) : '');
+  const hasUserAccount = Boolean(populatedUser?._id || resolvedUserRef);
   const isUserVerified = Boolean(populatedUser?.isEmailVerified);
   const isUserActive = populatedUser ? populatedUser.isActive !== false : null;
   let userVerificationStatus = 'unlinked';
@@ -77,12 +152,14 @@ const formatVendorRequest = (doc) => {
     } else {
       userVerificationStatus = 'unverified';
     }
-  } else if (raw.userId) {
+  } else if (resolvedUserRef) {
     userVerificationStatus = 'linked';
   }
 
   return {
     ...raw,
+    status: normalizedStatus,
+    storeName: raw.storeName || business,
     applicant,
     ownerName: applicant,
     business,
@@ -128,10 +205,29 @@ const formatVendorRequest = (doc) => {
   };
 };
 
+const syncLegacyRequestFields = (request) => {
+  if (!request) return;
+  const legacyUser = request.get?.('user') || request.user;
+  if (!request.userId && legacyUser) {
+    request.userId = legacyUser?._id || legacyUser;
+  }
+  const fallbackStore =
+    request.storeName ||
+    request.get?.('shopName') ||
+    request.shopName ||
+    request.get?.('businessName') ||
+    request.businessName;
+  if (!request.storeName && fallbackStore) {
+    request.storeName = fallbackStore;
+  }
+};
+
 export class AdminVendorRequestService {
   async getRequests(params = {}) {
     const { page, limit, skip, sort } = parsePagination(params);
-    const filter = { isDeleted: false };
+    const activeFilter = { isDeleted: { $ne: true } };
+    const filter = { ...activeFilter };
+    const isConnected = mongoose.connection.readyState === 1;
 
     if (params.status && String(params.status).toLowerCase() !== 'all') {
       const normalized = String(params.status)
@@ -139,7 +235,37 @@ export class AdminVendorRequestService {
         .toLowerCase()
         .replace(/[\s-]+/g, '_');
       if (VENDOR_STATUS_LIST.includes(normalized)) {
-        filter.status = normalized;
+        if (isConnected) {
+          const statusRegex = new RegExp(`^${normalized.replace(/_/g, '[\\s_-]*')}$`, 'i');
+          if (normalized === VENDOR_STATUS.APPROVED) {
+            filter.$and = [
+              {
+                $or: [
+                  { status: statusRegex },
+                  { status: { $exists: false }, isApproved: true },
+                ],
+              },
+            ];
+          } else if (normalized === VENDOR_STATUS.PENDING) {
+            filter.$and = [
+              {
+                $or: [
+                  { status: statusRegex },
+                  { status: /^submitted$/i },
+                  {
+                    status: { $exists: false },
+                    isApproved: { $ne: true },
+                    rejectionReason: { $in: [null, ''] },
+                  },
+                ],
+              },
+            ];
+          } else {
+            filter.status = statusRegex;
+          }
+        } else {
+          filter.status = normalized;
+        }
       }
     }
 
@@ -160,15 +286,28 @@ export class AdminVendorRequestService {
         { storeName: regex },
         { shopName: regex },
         { businessName: regex },
+        { applicant: regex },
+        { ownerName: regex },
         { email: regex },
         { phone: regex },
         { taxId: regex },
+        { gstNumber: regex },
       ];
       if (matchedUserIds.length > 0) {
-        searchClauses.push({ userId: { $in: matchedUserIds } });
+        searchClauses.push(
+          { userId: { $in: matchedUserIds } },
+          { user: { $in: matchedUserIds } }
+        );
       }
-      filter.$or = searchClauses;
+      if (filter.$and) {
+        filter.$and.push({ $or: searchClauses });
+      } else {
+        filter.$or = searchClauses;
+      }
     }
+
+    const statusMatch = (val) =>
+      isConnected ? new RegExp(`^${String(val).replace(/_/g, '[\\s_-]*')}$`, 'i') : val;
 
     const [requests, total, totalAll, pendingCount, underReviewCount, approvedCount, rejectedCount] =
       await Promise.all([
@@ -182,15 +321,29 @@ export class AdminVendorRequestService {
           .skip(skip)
           .limit(limit),
         VendorRequest.countDocuments(filter),
-        VendorRequest.countDocuments({ isDeleted: false }),
-        VendorRequest.countDocuments({ isDeleted: false, status: VENDOR_STATUS.PENDING }),
-        VendorRequest.countDocuments({ isDeleted: false, status: VENDOR_STATUS.UNDER_REVIEW }),
-        VendorRequest.countDocuments({ isDeleted: false, status: VENDOR_STATUS.APPROVED }),
-        VendorRequest.countDocuments({ isDeleted: false, status: VENDOR_STATUS.REJECTED }),
+        VendorRequest.countDocuments(activeFilter),
+        VendorRequest.countDocuments({
+          ...activeFilter,
+          status: isConnected ? /^(pending|submitted)$/i : VENDOR_STATUS.PENDING,
+        }),
+        VendorRequest.countDocuments({
+          ...activeFilter,
+          status: statusMatch(VENDOR_STATUS.UNDER_REVIEW),
+        }),
+        VendorRequest.countDocuments({
+          ...activeFilter,
+          status: statusMatch(VENDOR_STATUS.APPROVED),
+        }),
+        VendorRequest.countDocuments({
+          ...activeFilter,
+          status: statusMatch(VENDOR_STATUS.REJECTED),
+        }),
       ]);
 
+    const userLookup = await resolveLegacyRequestUsers(requests);
+
     return {
-      requests: requests.map(formatVendorRequest),
+      requests: requests.map((doc) => formatVendorRequest(doc, userLookup)),
       summary: {
         total: totalAll,
         pending: pendingCount,
@@ -218,7 +371,8 @@ export class AdminVendorRequestService {
       .populate('reviewedBy', 'name fullName email');
 
     if (!request) throw ApiError.notFound('Vendor request not found');
-    return formatVendorRequest(request);
+    const userLookup = await resolveLegacyRequestUsers([request]);
+    return formatVendorRequest(request, userLookup);
   }
 
   async approveRequest(requestId, adminId) {
@@ -227,11 +381,12 @@ export class AdminVendorRequestService {
     const request = await VendorRequest.findById(requestId);
     if (!request) throw ApiError.notFound('Vendor request not found');
 
+    syncLegacyRequestFields(request);
     request.status = VENDOR_STATUS.APPROVED;
     request.rejectionReason = '';
     request.reviewedBy = adminId;
     request.reviewedAt = new Date();
-    await request.save();
+    await request.save({ validateModifiedOnly: true });
 
     // Build store address safely from either businessAddress or address
     const reqAddr = request.businessAddress || {};
@@ -251,7 +406,11 @@ export class AdminVendorRequestService {
       slug = `${baseSlug}-${counter++}`;
     }
 
-    let vendor = await Vendor.findOne({ userId: request.userId });
+    const vendorQuery =
+      mongoose.connection.readyState === 1
+        ? { $or: [{ userId: request.userId }, { user: request.userId }] }
+        : { userId: request.userId };
+    let vendor = await Vendor.findOne(vendorQuery);
     if (!vendor) {
       vendor = await Vendor.create({
         userId: request.userId,
@@ -279,6 +438,8 @@ export class AdminVendorRequestService {
         rejectionReason: '',
       });
     } else {
+      vendor.userId = vendor.userId || request.userId;
+      vendor.storeName = vendor.storeName || request.storeName || request.shopName || request.businessName;
       vendor.status = VENDOR_STATUS.APPROVED;
       vendor.isActive = true;
       vendor.rejectionReason = '';
@@ -332,18 +493,23 @@ export class AdminVendorRequestService {
     const request = await VendorRequest.findById(requestId);
     if (!request) throw ApiError.notFound('Vendor request not found');
 
+    syncLegacyRequestFields(request);
     const finalReason = String(reason || '').trim() || 'Application rejected by admin';
     request.status = VENDOR_STATUS.REJECTED;
     request.rejectionReason = finalReason;
     request.reviewedBy = adminId;
     request.reviewedAt = new Date();
-    await request.save();
+    await request.save({ validateModifiedOnly: true });
 
     if (request.userId) {
+      const vendorFilter =
+        mongoose.connection.readyState === 1
+          ? { $or: [{ userId: request.userId }, { user: request.userId }] }
+          : { userId: request.userId };
       await Promise.resolve()
         .then(() =>
           Vendor.updateOne(
-            { userId: request.userId },
+            vendorFilter,
             { status: VENDOR_STATUS.REJECTED, isActive: false, rejectionReason: finalReason }
           )
         )
@@ -380,13 +546,14 @@ export class AdminVendorRequestService {
     const request = await VendorRequest.findById(requestId);
     if (!request) throw ApiError.notFound('Vendor request not found');
 
+    syncLegacyRequestFields(request);
     request.status = VENDOR_STATUS.UNDER_REVIEW;
     if (reviewData.notes !== undefined) {
       request.reviewNotes = String(reviewData.notes).trim();
     }
     request.reviewedBy = adminId;
     request.reviewedAt = new Date();
-    await request.save();
+    await request.save({ validateModifiedOnly: true });
 
     notificationService
       .createNotification({

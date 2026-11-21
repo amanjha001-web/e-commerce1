@@ -13,17 +13,36 @@ const ensureValidObjectId = (id, label = 'Category ID') => {
 
 const toPlain = (doc) => (doc?.toObject ? doc.toObject() : { ...(doc || {}) });
 
-const buildCategoryPayload = (doc, countMap = new Map(), childCountMap = new Map()) => {
+const buildCategoryPayload = (
+  doc,
+  countMap = new Map(),
+  childCountMap = new Map(),
+  parentLookup = new Map()
+) => {
   const raw = toPlain(doc);
   const idKey = String(raw._id || '');
   const counts = countMap.get(idKey) || { productCount: 0, publishedProductCount: 0 };
-  const parentObj =
-    raw.parent && typeof raw.parent === 'object' ? toPlain(raw.parent) : null;
+  const rawParentRef = raw.parent || raw.parentCategory || null;
+  let parentObj =
+    rawParentRef && typeof rawParentRef === 'object' && rawParentRef.name
+      ? toPlain(rawParentRef)
+      : null;
+
+  if (!parentObj && rawParentRef) {
+    const pid = String(rawParentRef?._id || rawParentRef);
+    if (parentLookup.has(pid)) {
+      parentObj = parentLookup.get(pid);
+    }
+  }
+
   const imageUrl =
-    (typeof raw.image === 'string' ? raw.image : raw.image?.url) || '';
+    (typeof raw.image === 'string' ? raw.image : raw.image?.url) ||
+    raw.imageUrl ||
+    '';
 
   return {
     ...raw,
+    parent: parentObj || rawParentRef || null,
     imageUrl,
     parentName: parentObj?.name || '',
     isActive: raw.isActive !== false,
@@ -38,20 +57,41 @@ const enrichCategories = async (docs = []) => {
   if (!docs || docs.length === 0) return [];
   const categoryIds = docs.map((c) => c._id).filter(Boolean);
 
-  const [productAggRes, childAggRes] = await Promise.allSettled([
+  const unresolvedParentIds = [];
+  if (mongoose.connection.readyState === 1) {
+    for (const c of docs) {
+      const raw = toPlain(c);
+      const ref = raw.parent || raw.parentCategory;
+      if (ref && !(typeof ref === 'object' && ref.name)) {
+        const pid = String(ref?._id || ref);
+        if (mongoose.isValidObjectId(pid)) unresolvedParentIds.push(pid);
+      }
+    }
+  }
+
+  const [productAggRes, childAggRes, parentDocsRes] = await Promise.allSettled([
     Promise.resolve().then(() =>
       Product.aggregate([
-        { $match: { category: { $in: categoryIds } } },
+        {
+          $match: {
+            $or: [{ category: { $in: categoryIds } }, { categoryId: { $in: categoryIds } }],
+          },
+        },
         {
           $group: {
-            _id: '$category',
+            _id: { $ifNull: ['$category', '$categoryId'] },
             productCount: { $sum: 1 },
             publishedProductCount: {
               $sum: {
                 $cond: [
                   {
                     $and: [
-                      { $eq: ['$status', 'published'] },
+                      {
+                        $in: [
+                          { $toLower: { $ifNull: ['$status', ''] } },
+                          ['published', 'active', 'approved'],
+                        ],
+                      },
                       { $ne: ['$isActive', false] },
                     ],
                   },
@@ -66,10 +106,24 @@ const enrichCategories = async (docs = []) => {
     ),
     Promise.resolve().then(() =>
       Category.aggregate([
-        { $match: { parent: { $in: categoryIds } } },
-        { $group: { _id: '$parent', count: { $sum: 1 } } },
+        {
+          $match: {
+            $or: [
+              { parent: { $in: categoryIds } },
+              { parentCategory: { $in: categoryIds } },
+            ],
+          },
+        },
+        { $group: { _id: { $ifNull: ['$parent', '$parentCategory'] }, count: { $sum: 1 } } },
       ])
     ),
+    unresolvedParentIds.length > 0
+      ? Promise.resolve().then(() =>
+          Category.find({ _id: { $in: [...new Set(unresolvedParentIds)] } })
+            .select('name slug')
+            .lean()
+        )
+      : Promise.resolve([]),
   ]);
 
   const countMap = new Map();
@@ -91,13 +145,21 @@ const enrichCategories = async (docs = []) => {
     }
   }
 
-  return docs.map((doc) => buildCategoryPayload(doc, countMap, childCountMap));
+  const parentLookup = new Map();
+  if (parentDocsRes.status === 'fulfilled' && Array.isArray(parentDocsRes.value)) {
+    for (const p of parentDocsRes.value) {
+      if (p?._id) parentLookup.set(String(p._id), p);
+    }
+  }
+
+  return docs.map((doc) => buildCategoryPayload(doc, countMap, childCountMap, parentLookup));
 };
 
 export class AdminCategoryService {
   async getCategories(params = {}) {
     const { page, limit, skip } = parsePagination({ ...params, limit: params.limit || 50 });
     const filter = {};
+    const isConnected = mongoose.connection.readyState === 1;
 
     if (params.status && String(params.status).toLowerCase() !== 'all') {
       const normalized = String(params.status).trim().toLowerCase();
@@ -110,16 +172,38 @@ export class AdminCategoryService {
 
     if (params.parent !== undefined && params.parent !== '') {
       if (params.parent === 'null' || params.parent === 'root') {
-        filter.parent = null;
+        if (isConnected) {
+          filter.$and = [
+            {
+              $or: [
+                { parent: null, parentCategory: null },
+                { parent: null, parentCategory: { $exists: false } },
+              ],
+            },
+          ];
+        } else {
+          filter.parent = null;
+        }
       } else {
         ensureValidObjectId(params.parent, 'Parent Category ID');
-        filter.parent = params.parent;
+        if (isConnected) {
+          filter.$and = [
+            { $or: [{ parent: params.parent }, { parentCategory: params.parent }] },
+          ];
+        } else {
+          filter.parent = params.parent;
+        }
       }
     }
 
     if (params.search && String(params.search).trim()) {
       const regex = { $regex: String(params.search).trim(), $options: 'i' };
-      filter.$or = [{ name: regex }, { slug: regex }, { description: regex }];
+      const searchOr = [{ name: regex }, { slug: regex }, { description: regex }];
+      if (filter.$and) {
+        filter.$and.push({ $or: searchOr });
+      } else {
+        filter.$or = searchOr;
+      }
     }
 
     const [categories, total, totalAll, activeCount, archivedCount, distinctProductCount] =
@@ -134,7 +218,13 @@ export class AdminCategoryService {
         Category.countDocuments({ isActive: { $ne: false } }),
         Category.countDocuments({ isActive: false }),
         Promise.resolve()
-          .then(() => Product.countDocuments({ category: { $ne: null } }))
+          .then(() =>
+            Product.countDocuments(
+              isConnected
+                ? { $or: [{ category: { $ne: null } }, { categoryId: { $ne: null } }] }
+                : { category: { $ne: null } }
+            )
+          )
           .catch(() => 0),
       ]);
 
@@ -368,8 +458,15 @@ export class AdminCategoryService {
     const category = await Category.findById(categoryId);
     if (!category) throw ApiError.notFound('Category not found');
 
+    const isConnected = mongoose.connection.readyState === 1;
     const linkedProducts = await Promise.resolve()
-      .then(() => Product.countDocuments({ category: category._id }))
+      .then(() =>
+        Product.countDocuments(
+          isConnected
+            ? { $or: [{ category: category._id }, { categoryId: category._id }] }
+            : { category: category._id }
+        )
+      )
       .catch(() => 0);
 
     if (linkedProducts > 0) {
@@ -381,6 +478,16 @@ export class AdminCategoryService {
     await Promise.resolve()
       .then(() => Category.updateMany({ parent: category._id }, { $set: { parent: null } }))
       .catch(() => {});
+    if (isConnected) {
+      await Promise.resolve()
+        .then(() =>
+          Category.updateMany(
+            { parentCategory: category._id },
+            { $set: { parentCategory: null } }
+          )
+        )
+        .catch(() => {});
+    }
 
     if (category.image?.publicId) {
       deleteFromCloudinary(category.image.publicId).catch(() => {});

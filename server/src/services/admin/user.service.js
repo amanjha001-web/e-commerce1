@@ -4,6 +4,7 @@ import { Address } from '../../models/Address.model.js';
 import { Order } from '../../models/Order.model.js';
 import { SupportTicket } from '../../models/SupportTicket.model.js';
 import { VendorRequest } from '../../models/VendorRequest.model.js';
+import { Vendor } from '../../models/Vendor.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination, sanitizeUser } from '../../utils/helpers.js';
 import { ROLES, ADMIN_ROLES } from '../../constants/roles.constant.js';
@@ -19,15 +20,34 @@ const formatAdminUser = (user) => {
   const clean = sanitizeUser(user);
   if (!clean) return null;
 
-  const isActive = clean.isActive !== false;
+  const isActive =
+    clean.isActive !== false &&
+    clean.isBlocked !== true &&
+    String(clean.status || '').trim().toLowerCase() !== 'blocked';
+  const normalizedRole = clean.role
+    ? String(clean.role).trim().toLowerCase()
+    : ROLES.USER;
+  const vendorObj =
+    clean.vendorId && typeof clean.vendorId === 'object' ? clean.vendorId : null;
+
   return {
     ...clean,
     fullName: clean.fullName || clean.name || '',
     name: clean.name || clean.fullName || '',
+    phone: clean.phone || clean.mobile || '',
+    role: normalizedRole,
+    vendorId: vendorObj
+      ? {
+          ...vendorObj,
+          storeName: vendorObj.storeName || vendorObj.shopName || '',
+          shopName: vendorObj.shopName || vendorObj.storeName || '',
+          slug: vendorObj.slug || vendorObj.shopSlug || '',
+        }
+      : clean.vendorId,
     isActive,
     isBlocked: !isActive,
     status: isActive ? 'active' : 'blocked',
-    isVerified: Boolean(clean.isEmailVerified),
+    isVerified: Boolean(clean.isEmailVerified ?? clean.isVerified),
     authProvider: clean.googleId ? 'google' : 'email',
   };
 };
@@ -42,38 +62,101 @@ export class AdminUserService {
   async getUsers(params = {}) {
     const { page, limit, skip, sort } = parsePagination(params);
     const filter = {};
+    const andClauses = [];
+    const isConnected = mongoose.connection.readyState === 1;
+
+    const customerRoleFilter = isConnected
+      ? {
+          $or: [
+            { role: { $regex: /^(user|customer)$/i } },
+            { role: { $exists: false } },
+            { role: null },
+            { role: '' },
+          ],
+        }
+      : { role: { $in: [ROLES.USER, 'customer'] } };
+    const vendorRoleFilter = isConnected
+      ? { $or: [{ role: { $regex: /^vendor$/i } }, { vendorId: { $ne: null } }] }
+      : { role: ROLES.VENDOR };
+    const adminRoleFilter = isConnected
+      ? { role: { $regex: /^(admin|super[_\s-]*admin)$/i } }
+      : { role: { $in: [...ADMIN_ROLES, 'ADMIN', 'SUPER_ADMIN'] } };
+    const blockedFilter = isConnected
+      ? {
+          $or: [
+            { isActive: false },
+            { isBlocked: true },
+            { status: { $regex: /^blocked$/i } },
+          ],
+        }
+      : { isActive: false };
 
     if (params.role && String(params.role).toLowerCase() !== 'all') {
       const normalizedRole = String(params.role).trim().toLowerCase();
       if (normalizedRole === 'customer' || normalizedRole === 'user') {
-        filter.role = { $in: [ROLES.USER, 'customer'] };
+        if (isConnected) {
+          andClauses.push(customerRoleFilter);
+        } else {
+          filter.role = { $in: [ROLES.USER, 'customer'] };
+        }
       } else if (normalizedRole === 'admin') {
-        filter.role = { $in: [...ADMIN_ROLES, 'ADMIN', 'SUPER_ADMIN'] };
+        if (isConnected) {
+          andClauses.push(adminRoleFilter);
+        } else {
+          filter.role = { $in: [...ADMIN_ROLES, 'ADMIN', 'SUPER_ADMIN'] };
+        }
+      } else if (normalizedRole === 'vendor') {
+        if (isConnected) {
+          andClauses.push(vendorRoleFilter);
+        } else {
+          filter.role = ROLES.VENDOR;
+        }
       } else {
-        filter.role = normalizedRole;
+        filter.role = isConnected ? new RegExp(`^${normalizedRole}$`, 'i') : normalizedRole;
       }
     }
 
     if (params.search && String(params.search).trim()) {
       const regex = { $regex: String(params.search).trim(), $options: 'i' };
-      filter.$or = [
+      const searchClauses = [
         { fullName: regex },
         { name: regex },
         { email: regex },
         { username: regex },
         { phone: regex },
       ];
+      if (isConnected) {
+        andClauses.push({ $or: searchClauses });
+      } else {
+        filter.$or = searchClauses;
+      }
     }
 
     if (params.status && String(params.status).toLowerCase() !== 'all') {
       const normalizedStatus = String(params.status).trim().toLowerCase();
       if (['blocked', 'inactive', 'suspended'].includes(normalizedStatus)) {
-        filter.isActive = false;
+        if (isConnected) {
+          andClauses.push(blockedFilter);
+        } else {
+          filter.isActive = false;
+        }
       } else if (normalizedStatus === 'active') {
-        filter.isActive = { $ne: false };
+        if (isConnected) {
+          andClauses.push({
+            isActive: { $ne: false },
+            isBlocked: { $ne: true },
+            status: { $not: /^blocked$/i },
+          });
+        } else {
+          filter.isActive = { $ne: false };
+        }
       }
     } else if (params.isActive !== undefined && params.isActive !== '') {
       filter.isActive = String(params.isActive) === 'true' || params.isActive === true;
+    }
+
+    if (andClauses.length > 0) {
+      filter.$and = andClauses;
     }
 
     const [
@@ -88,10 +171,10 @@ export class AdminUserService {
       User.find(filter).sort(sort).skip(skip).limit(limit),
       User.countDocuments(filter),
       User.countDocuments(),
-      User.countDocuments({ role: { $in: [ROLES.USER, 'customer'] } }),
-      User.countDocuments({ role: ROLES.VENDOR }),
-      User.countDocuments({ role: { $in: [...ADMIN_ROLES, 'ADMIN', 'SUPER_ADMIN'] } }),
-      User.countDocuments({ isActive: false }),
+      User.countDocuments(customerRoleFilter),
+      User.countDocuments(vendorRoleFilter),
+      User.countDocuments(adminRoleFilter),
+      User.countDocuments(blockedFilter),
     ]);
 
     return {
@@ -118,54 +201,105 @@ export class AdminUserService {
 
     const user = await User.findById(userId).populate(
       'vendorId',
-      'storeName slug status rating email phone logo'
+      'storeName shopName slug shopSlug status rating email phone logo'
     );
     if (!user) throw ApiError.notFound('User not found');
 
+    const userMatch = { $or: [{ userId: user._id }, { user: user._id }] };
+    const isConnected = mongoose.connection.readyState === 1;
+
     const [
       addresses,
-      recentOrders,
+      recentOrdersRaw,
       totalOrders,
       spendAgg,
       ticketCount,
       vendorRequest,
     ] = await Promise.all([
-      Address.find({ userId: user._id })
+      Address.find(userMatch)
         .sort({ isDefault: -1, createdAt: -1 })
         .lean(),
-      Order.find({ userId: user._id })
+      Order.find(userMatch)
         .select(
-          'orderNumber totalAmount orderStatus paymentStatus paymentMethod isPaid createdAt items'
+          'orderNumber totalAmount total amount orderStatus status paymentStatus paymentMethod isPaid createdAt orderDate items'
         )
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
-      Order.countDocuments({ userId: user._id }),
+      Order.countDocuments(userMatch),
       Order.aggregate([
         {
           $match: {
-            userId: user._id,
+            ...userMatch,
             orderStatus: { $nin: NON_SPEND_STATUSES },
+            status: { $nin: NON_SPEND_STATUSES },
           },
         },
-        { $group: { _id: null, totalSpent: { $sum: '$totalAmount' } } },
+        {
+          $group: {
+            _id: null,
+            totalSpent: {
+              $sum: { $ifNull: ['$totalAmount', { $ifNull: ['$total', '$amount'] }] },
+            },
+          },
+        },
       ]),
-      SupportTicket.countDocuments({ userId: user._id }),
-      VendorRequest.findOne({ userId: user._id, isDeleted: { $ne: true } })
-        .select('storeName businessName status createdAt')
+      SupportTicket.countDocuments(userMatch),
+      VendorRequest.findOne({ ...userMatch, isDeleted: { $ne: true } })
+        .select('storeName shopName businessName status createdAt')
         .lean(),
     ]);
 
+    let resolvedVendor =
+      user.vendorId && typeof user.vendorId === 'object' ? user.vendorId : null;
+    if (!resolvedVendor && isConnected) {
+      resolvedVendor = await Promise.resolve()
+        .then(() =>
+          Vendor.findOne(userMatch)
+            .select('storeName shopName slug shopSlug status rating email phone logo')
+            .lean()
+        )
+        .catch(() => null);
+    }
+
+    const recentOrders = (recentOrdersRaw || []).map((o) => ({
+      ...o,
+      orderNumber:
+        o.orderNumber || (o._id ? `#SS-${String(o._id).slice(-5).toUpperCase()}` : ''),
+      totalAmount: o.totalAmount ?? o.total ?? o.amount ?? 0,
+      orderStatus: o.orderStatus || o.status || 'pending',
+      createdAt: o.createdAt || o.orderDate,
+    }));
+
+    const formatted = formatAdminUser(user);
+    if (resolvedVendor && (!formatted.vendorId || typeof formatted.vendorId !== 'object')) {
+      formatted.vendorId = {
+        ...resolvedVendor,
+        storeName: resolvedVendor.storeName || resolvedVendor.shopName || '',
+        shopName: resolvedVendor.shopName || resolvedVendor.storeName || '',
+        slug: resolvedVendor.slug || resolvedVendor.shopSlug || '',
+      };
+    }
+
     return {
-      ...formatAdminUser(user),
+      ...formatted,
       addresses: addresses || [],
-      recentOrders: recentOrders || [],
+      recentOrders,
       orderStats: {
         totalOrders: Number(totalOrders || 0),
         totalSpent: Number(spendAgg?.[0]?.totalSpent || 0),
       },
       ticketCount: Number(ticketCount || 0),
-      vendorRequest: vendorRequest || null,
+      vendorRequest: vendorRequest
+        ? {
+            ...vendorRequest,
+            storeName:
+              vendorRequest.storeName ||
+              vendorRequest.shopName ||
+              vendorRequest.businessName ||
+              '',
+          }
+        : null,
     };
   }
 
@@ -278,7 +412,11 @@ export class AdminUserService {
     }
 
     user.isActive = nextIsActive;
-    await user.save();
+    if (mongoose.connection.readyState === 1 && user.set) {
+      user.set('isBlocked', !nextIsActive, { strict: false });
+      user.set('status', nextIsActive ? 'active' : 'blocked', { strict: false });
+    }
+    await user.save({ validateModifiedOnly: true });
 
     return formatAdminUser(user);
   }
@@ -300,8 +438,18 @@ export class AdminUserService {
       throw ApiError.badRequest('You cannot block or deactivate your own account');
     }
 
-    user.isActive = user.isActive === false;
-    await user.save();
+    const currentlyBlocked =
+      user.isActive === false ||
+      user.get?.('isBlocked') === true ||
+      user.isBlocked === true ||
+      String(user.get?.('status') || user.status || '').toLowerCase() === 'blocked';
+    const nextIsActive = currentlyBlocked;
+    user.isActive = nextIsActive;
+    if (mongoose.connection.readyState === 1 && user.set) {
+      user.set('isBlocked', !nextIsActive, { strict: false });
+      user.set('status', nextIsActive ? 'active' : 'blocked', { strict: false });
+    }
+    await user.save({ validateModifiedOnly: true });
 
     return formatAdminUser(user);
   }

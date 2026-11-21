@@ -136,8 +136,9 @@ const Categories = () => {
       const isActive = c.isActive !== false;
       const imageUrl =
         c.imageUrl || (typeof c.image === "string" ? c.image : c.image?.url) || "";
+      const rawParent = c.parent || c.parentCategory;
       const parentName =
-        c.parentName || (typeof c.parent === "object" ? c.parent?.name : "") || "";
+        c.parentName || (typeof rawParent === "object" ? rawParent?.name : "") || "";
 
       return {
         ...c,
@@ -151,7 +152,7 @@ const Categories = () => {
         _imageUrl: imageUrl,
         _parentName: parentName,
         _parentId:
-          typeof c.parent === "object" ? c.parent?._id || "" : c.parent || "",
+          typeof rawParent === "object" ? rawParent?._id || "" : rawParent || "",
       };
     });
   }, [categories]);

@@ -33,20 +33,37 @@ const normalizeVendorStatus = (status) => {
 
 const toPlainObject = (doc) => (doc?.toObject ? doc.toObject() : { ...(doc || {}) });
 
+const extractVendorUserId = (raw = {}) => {
+  const candidate = raw.userId?._id || raw.userId || raw.user?._id || raw.user;
+  return candidate && mongoose.isValidObjectId(candidate) ? String(candidate) : '';
+};
+
+const isPopulatedVendorUser = (obj) =>
+  Boolean(obj && typeof obj === 'object' && (obj.email || obj.fullName || obj.name));
+
 const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
   const raw = toPlainObject(vendorDoc);
   const idKey = String(raw._id || '');
-  const populatedUser =
-    raw.userId && typeof raw.userId === 'object' ? toPlainObject(raw.userId) : null;
-  const userKey = String(populatedUser?._id || raw.userId || '');
+  const extractedUserId = extractVendorUserId(raw);
+  const vendorEmail = String(raw.email || '').trim().toLowerCase();
+  const populatedUser = isPopulatedVendorUser(raw.userId)
+    ? toPlainObject(raw.userId)
+    : isPopulatedVendorUser(raw.user)
+      ? toPlainObject(raw.user)
+      : (extractedUserId ? maps.userMap?.get(`id:${extractedUserId}`) : null) ||
+        (vendorEmail ? maps.userMap?.get(`email:${vendorEmail}`) : null) ||
+        null;
+  const userKey = String(populatedUser?._id || extractedUserId || '');
 
-  const productCount = maps.productCounts?.get(idKey) ?? raw.productCount ?? raw.productsCount ?? 0;
+  const productCount = maps.productCounts?.get(idKey) ?? raw.productCount ?? raw.productsCount ?? raw.totalProducts ?? 0;
   const orderStats = maps.orderStats?.get(idKey) || { orderCount: 0, grossSales: 0 };
   const earnings = maps.earningsMap?.get(idKey) || null;
   const vendorReq = maps.requestMap?.get(userKey) || null;
 
   const isActive = raw.isActive !== false;
-  const rawStatus = raw.status || VENDOR_STATUS.PENDING;
+  const rawStatus =
+    raw.status ||
+    (raw.isApproved === true ? VENDOR_STATUS.APPROVED : VENDOR_STATUS.PENDING);
   const rawAddress = raw.address || {};
   const fallbackAddress = vendorReq?.address || vendorReq?.businessAddress || {};
 
@@ -63,11 +80,14 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
   const taxNumber =
     raw.businessDetails?.taxNumber ||
     raw.gstNumber ||
+    raw.taxNumber ||
+    raw.taxId ||
     vendorReq?.taxId ||
     '';
   const businessLicense = raw.businessDetails?.businessLicense || '';
   const bankAccount =
     raw.businessDetails?.bankAccount ||
+    raw.bankDetails ||
     vendorReq?.bankDetails ||
     {};
 
@@ -75,20 +95,21 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
     populatedUser?.fullName ||
     populatedUser?.name ||
     raw.ownerName ||
+    vendorReq?.applicant ||
     '';
   const email = raw.email || populatedUser?.email || vendorReq?.email || '';
   const phone = raw.phone || populatedUser?.phone || vendorReq?.phone || '';
   const totalRevenue =
-    earnings?.totalRevenue ?? orderStats.grossSales ?? raw.totalRevenue ?? raw.revenue ?? 0;
+    earnings?.totalRevenue ?? orderStats.grossSales ?? raw.totalRevenue ?? raw.totalSales ?? raw.revenue ?? 0;
 
   let displayStatus = rawStatus;
-  if (!isActive && rawStatus === VENDOR_STATUS.APPROVED) {
+  if (!isActive && String(rawStatus).toLowerCase() === VENDOR_STATUS.APPROVED) {
     displayStatus = VENDOR_STATUS.SUSPENDED;
-  } else if (!isActive && rawStatus === VENDOR_STATUS.PENDING) {
+  } else if (!isActive && String(rawStatus).toLowerCase() === VENDOR_STATUS.PENDING) {
     displayStatus = 'inactive';
   }
 
-  const hasUserAccount = Boolean(populatedUser?._id || raw.userId);
+  const hasUserAccount = Boolean(populatedUser?._id || userKey);
   const isUserVerified = Boolean(populatedUser?.isEmailVerified);
   const isUserActive = populatedUser ? populatedUser.isActive !== false : null;
   let userVerificationStatus = 'unlinked';
@@ -100,13 +121,20 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
     } else {
       userVerificationStatus = 'unverified';
     }
-  } else if (raw.userId) {
+  } else if (userKey) {
     userVerificationStatus = 'linked';
   }
 
+  const resolvedStoreName = raw.storeName || raw.shopName || raw.businessName || '';
+  const resolvedOrderCount =
+    orderStats.orderCount || raw.orderCount || raw.ordersCount || raw.totalOrders || 0;
+
   return {
     ...raw,
-    shopName: raw.storeName || raw.shopName || '',
+    storeName: resolvedStoreName,
+    shopName: resolvedStoreName,
+    slug: raw.slug || raw.shopSlug || '',
+    description: raw.description ?? raw.shopDescription ?? '',
     shopDescription: raw.description ?? raw.shopDescription ?? '',
     ownerName,
     hasUserAccount,
@@ -150,15 +178,16 @@ const buildAdminVendorPayload = (vendorDoc, maps = {}, extras = {}) => {
     displayStatus,
     productCount,
     productsCount: productCount,
-    orderCount: orderStats.orderCount ?? raw.orderCount ?? raw.ordersCount ?? 0,
-    ordersCount: orderStats.orderCount ?? raw.orderCount ?? raw.ordersCount ?? 0,
+    orderCount: resolvedOrderCount,
+    ordersCount: resolvedOrderCount,
     totalRevenue,
     revenue: totalRevenue,
-    netEarnings: earnings?.netEarnings ?? 0,
+    netEarnings: earnings?.netEarnings ?? raw.totalEarnings ?? 0,
     availableBalance: earnings?.availableBalance ?? 0,
     totalCommission: earnings?.totalCommission ?? 0,
     totalWithdrawn: earnings?.totalWithdrawn ?? 0,
-    averageRating: raw.rating ?? 0,
+    averageRating: raw.rating ?? raw.averageRating ?? 0,
+    numReviews: raw.numReviews ?? raw.totalReviews ?? 0,
     ...(extras.recentProducts !== undefined ? { recentProducts: extras.recentProducts } : {}),
     ...(extras.recentOrders !== undefined ? { recentOrders: extras.recentOrders } : {}),
   };
@@ -168,26 +197,98 @@ const enrichAdminVendors = async (vendorDocs = []) => {
   if (!vendorDocs || vendorDocs.length === 0) return [];
 
   const vendorIds = vendorDocs.map((v) => v._id).filter(Boolean);
-  const userIds = vendorDocs
-    .map((v) => (v.userId && typeof v.userId === 'object' ? v.userId._id : v.userId))
-    .filter(Boolean);
+  const vendorIdSet = new Set(vendorIds.map((id) => String(id)));
+  const userIds = [];
+  const unresolvedUserIds = [];
+  const unresolvedEmails = [];
+  const userToVendorIdsMap = new Map();
+
+  for (const doc of vendorDocs) {
+    const raw = toPlainObject(doc);
+    const vid = raw._id ? String(raw._id) : '';
+    const uid = extractVendorUserId(raw);
+    if (uid) {
+      userIds.push(uid);
+      if (vid) {
+        const list = userToVendorIdsMap.get(uid) || [];
+        list.push(vid);
+        userToVendorIdsMap.set(uid, list);
+      }
+    }
+    if (!isPopulatedVendorUser(raw.userId) && !isPopulatedVendorUser(raw.user)) {
+      if (uid) unresolvedUserIds.push(uid);
+      const email = String(raw.email || '').trim().toLowerCase();
+      if (email) unresolvedEmails.push(email);
+    }
+  }
+
+  let userMap = new Map();
+  if (
+    mongoose.connection.readyState === 1 &&
+    (unresolvedUserIds.length > 0 || unresolvedEmails.length > 0)
+  ) {
+    const userOr = [];
+    if (unresolvedUserIds.length > 0) userOr.push({ _id: { $in: unresolvedUserIds } });
+    if (unresolvedEmails.length > 0) userOr.push({ email: { $in: unresolvedEmails } });
+    const legacyUsers = await Promise.resolve()
+      .then(() =>
+        User.find({ $or: userOr })
+          .select('name fullName email phone avatar role isActive isEmailVerified googleId lastLogin vendorId')
+          .lean()
+      )
+      .catch(() => []);
+    for (const u of legacyUsers || []) {
+      if (u?._id) userMap.set(`id:${String(u._id)}`, u);
+      if (u?.email) userMap.set(`email:${String(u.email).trim().toLowerCase()}`, u);
+    }
+  }
+
+  const legacyVendorRefs = [
+    ...vendorIds,
+    ...userIds.map((id) =>
+      mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : id
+    ),
+  ];
 
   const [productAggRes, orderAggRes, earningsRes, requestsRes] = await Promise.allSettled([
     Promise.resolve().then(() =>
       Product.aggregate([
-        { $match: { vendorId: { $in: vendorIds } } },
-        { $group: { _id: '$vendorId', count: { $sum: 1 } } },
+        {
+          $match: {
+            $or: [
+              { vendorId: { $in: vendorIds } },
+              { vendor: { $in: legacyVendorRefs } },
+            ],
+          },
+        },
+        { $group: { _id: { $ifNull: ['$vendorId', '$vendor'] }, count: { $sum: 1 } } },
       ])
     ),
     Promise.resolve().then(() =>
       Order.aggregate([
-        { $match: { 'items.vendorId': { $in: vendorIds } } },
+        {
+          $match: {
+            $or: [
+              { 'items.vendorId': { $in: vendorIds } },
+              { 'items.vendor': { $in: vendorIds } },
+            ],
+          },
+        },
         { $unwind: '$items' },
-        { $match: { 'items.vendorId': { $in: vendorIds } } },
+        {
+          $addFields: {
+            _resolvedVendorId: { $ifNull: ['$items.vendorId', '$items.vendor'] },
+          },
+        },
+        { $match: { _resolvedVendorId: { $in: vendorIds } } },
         {
           $group: {
-            _id: { vendorId: '$items.vendorId', orderId: '$_id' },
-            grossSales: { $sum: '$items.total' },
+            _id: { vendorId: '$_resolvedVendorId', orderId: '$_id' },
+            grossSales: {
+              $sum: {
+                $ifNull: ['$items.total', { $multiply: ['$items.price', '$items.quantity'] }],
+              },
+            },
           },
         },
         {
@@ -202,7 +303,11 @@ const enrichAdminVendors = async (vendorDocs = []) => {
     Promise.resolve().then(() => VendorEarnings.find({ vendorId: { $in: vendorIds } }).lean()),
     userIds.length
       ? Promise.resolve().then(() =>
-          VendorRequest.find({ userId: { $in: userIds } }).sort({ createdAt: -1 }).lean()
+          VendorRequest.find({
+            $or: [{ userId: { $in: userIds } }, { user: { $in: userIds } }],
+          })
+            .sort({ createdAt: -1 })
+            .lean()
         )
       : Promise.resolve([]),
   ]);
@@ -210,7 +315,16 @@ const enrichAdminVendors = async (vendorDocs = []) => {
   const productCounts = new Map();
   if (productAggRes.status === 'fulfilled' && Array.isArray(productAggRes.value)) {
     for (const row of productAggRes.value) {
-      if (row?._id) productCounts.set(String(row._id), Number(row.count || 0));
+      if (!row?._id) continue;
+      const key = String(row._id);
+      const count = Number(row.count || 0);
+      if (vendorIdSet.has(key)) {
+        productCounts.set(key, (productCounts.get(key) || 0) + count);
+      } else if (userToVendorIdsMap.has(key)) {
+        for (const vid of userToVendorIdsMap.get(key)) {
+          productCounts.set(vid, (productCounts.get(vid) || 0) + count);
+        }
+      }
     }
   }
 
@@ -236,7 +350,7 @@ const enrichAdminVendors = async (vendorDocs = []) => {
   const requestMap = new Map();
   if (requestsRes.status === 'fulfilled' && Array.isArray(requestsRes.value)) {
     for (const req of requestsRes.value) {
-      const uid = String(req?.userId || '');
+      const uid = String(req?.userId || req?.user || '');
       if (uid && !requestMap.has(uid)) {
         requestMap.set(uid, req);
       }
@@ -244,15 +358,35 @@ const enrichAdminVendors = async (vendorDocs = []) => {
   }
 
   return vendorDocs.map((v) =>
-    buildAdminVendorPayload(v, { productCounts, orderStats, earningsMap, requestMap })
+    buildAdminVendorPayload(v, { productCounts, orderStats, earningsMap, requestMap, userMap })
   );
 };
 
 const ensureVendorRequiredDefaults = async (vendor) => {
   if (!vendor) return;
 
+  if (!vendor.storeName) {
+    const legacyName =
+      vendor.get?.('shopName') ||
+      vendor.shopName ||
+      vendor.get?.('businessName') ||
+      vendor.businessName;
+    if (legacyName) {
+      vendor.storeName = legacyName;
+    }
+  }
+
+  if (!vendor.userId) {
+    const legacyUser = vendor.get?.('user') || vendor.user;
+    if (legacyUser) {
+      vendor.userId = legacyUser?._id || legacyUser;
+    }
+  }
+
   if (!vendor.slug) {
-    const baseSlug = slugify(vendor.storeName || vendor.shopName || 'vendor') || 'vendor';
+    const baseSlug =
+      slugify(vendor.storeName || vendor.shopName || vendor.get?.('shopSlug') || 'vendor') ||
+      'vendor';
     let candidate = baseSlug;
     let counter = 1;
     // Check uniqueness safely so legacy records missing slug never collide
@@ -299,6 +433,7 @@ export class AdminVendorService {
   async getVendors(params = {}) {
     const { page, limit, skip, sort } = parsePagination(params);
     const filter = {};
+    const isConnected = mongoose.connection.readyState === 1;
 
     if (params.status && String(params.status).toLowerCase() !== 'all') {
       const normalizedStatus = String(params.status)
@@ -309,15 +444,24 @@ export class AdminVendorService {
       if (normalizedStatus === 'inactive') {
         filter.isActive = false;
       } else if (normalizedStatus === 'active' || normalizedStatus === VENDOR_STATUS.APPROVED) {
-        filter.status = VENDOR_STATUS.APPROVED;
-        filter.isActive = { $ne: false };
+        if (isConnected) {
+          filter.$or = [
+            { status: /^approved$/i, isActive: { $ne: false } },
+            { status: { $exists: false }, isApproved: true, isActive: { $ne: false } },
+          ];
+        } else {
+          filter.status = VENDOR_STATUS.APPROVED;
+          filter.isActive = { $ne: false };
+        }
       } else if (normalizedStatus === VENDOR_STATUS.SUSPENDED) {
         filter.$or = [
-          { status: VENDOR_STATUS.SUSPENDED },
-          { status: VENDOR_STATUS.APPROVED, isActive: false },
+          { status: isConnected ? /^suspended$/i : VENDOR_STATUS.SUSPENDED },
+          { status: isConnected ? /^approved$/i : VENDOR_STATUS.APPROVED, isActive: false },
         ];
       } else if (VENDOR_STATUS_LIST.includes(normalizedStatus)) {
-        filter.status = normalizedStatus;
+        filter.status = isConnected
+          ? new RegExp(`^${normalizedStatus.replace(/_/g, '[\\s_-]*')}$`, 'i')
+          : normalizedStatus;
       }
     }
 
@@ -336,12 +480,19 @@ export class AdminVendorService {
 
       const searchClauses = [
         { storeName: regex },
+        { shopName: regex },
+        { businessName: regex },
+        { ownerName: regex },
         { email: regex },
         { phone: regex },
         { slug: regex },
+        { shopSlug: regex },
       ];
       if (matchedUserIds.length > 0) {
-        searchClauses.push({ userId: { $in: matchedUserIds } });
+        searchClauses.push(
+          { userId: { $in: matchedUserIds } },
+          { user: { $in: matchedUserIds } }
+        );
       }
 
       if (filter.$or) {
@@ -372,15 +523,26 @@ export class AdminVendorService {
         .limit(limit),
       Vendor.countDocuments(filter),
       Vendor.countDocuments(),
-      Vendor.countDocuments({ status: VENDOR_STATUS.APPROVED, isActive: { $ne: false } }),
-      Vendor.countDocuments({ status: { $in: [VENDOR_STATUS.PENDING, VENDOR_STATUS.UNDER_REVIEW] } }),
+      Vendor.countDocuments(
+        isConnected
+          ? {
+              $or: [{ status: /^approved$/i }, { status: { $exists: false }, isApproved: true }],
+              isActive: { $ne: false },
+            }
+          : { status: VENDOR_STATUS.APPROVED, isActive: { $ne: false } }
+      ),
+      Vendor.countDocuments({
+        status: isConnected
+          ? /^(pending|under[_\s-]*review)$/i
+          : { $in: [VENDOR_STATUS.PENDING, VENDOR_STATUS.UNDER_REVIEW] },
+      }),
       Vendor.countDocuments({
         $or: [
-          { status: VENDOR_STATUS.SUSPENDED },
-          { status: VENDOR_STATUS.APPROVED, isActive: false },
+          { status: isConnected ? /^suspended$/i : VENDOR_STATUS.SUSPENDED },
+          { status: isConnected ? /^approved$/i : VENDOR_STATUS.APPROVED, isActive: false },
         ],
       }),
-      Vendor.countDocuments({ status: VENDOR_STATUS.REJECTED }),
+      Vendor.countDocuments({ status: isConnected ? /^rejected$/i : VENDOR_STATUS.REJECTED }),
       Vendor.countDocuments({ isActive: false }),
     ]);
 
@@ -414,12 +576,27 @@ export class AdminVendorService {
     );
     if (!vendor) throw ApiError.notFound('Vendor not found');
 
+    const isConnected = mongoose.connection.readyState === 1;
+    const rawUserId = extractVendorUserId(toPlainObject(vendor));
+    const productFilter = isConnected
+      ? {
+          $or: [
+            { vendorId: vendor._id },
+            { vendor: vendor._id },
+            ...(rawUserId ? [{ vendor: new mongoose.Types.ObjectId(rawUserId) }] : []),
+          ],
+        }
+      : { vendorId: vendor._id };
+    const orderFilter = isConnected
+      ? { $or: [{ 'items.vendorId': vendor._id }, { 'items.vendor': vendor._id }] }
+      : { 'items.vendorId': vendor._id };
+
     const [enrichedList, recentProductsRes, recentOrdersRes] = await Promise.all([
       enrichAdminVendors([vendor]),
       Promise.resolve()
         .then(() =>
-          Product.find({ vendorId: vendor._id })
-            .select('name price stock status images createdAt')
+          Product.find(productFilter)
+            .select('name price stock status images thumbnail createdAt')
             .sort({ createdAt: -1 })
             .limit(5)
             .lean()
@@ -427,8 +604,8 @@ export class AdminVendorService {
         .catch(() => []),
       Promise.resolve()
         .then(() =>
-          Order.find({ 'items.vendorId': vendor._id })
-            .select('orderNumber orderStatus totalAmount createdAt')
+          Order.find(orderFilter)
+            .select('orderNumber orderStatus status totalAmount total amount createdAt orderDate')
             .sort({ createdAt: -1 })
             .limit(5)
             .lean()
@@ -436,11 +613,20 @@ export class AdminVendorService {
         .catch(() => []),
     ]);
 
+    const normalizedOrders = (Array.isArray(recentOrdersRes) ? recentOrdersRes : []).map((o) => ({
+      ...o,
+      orderNumber:
+        o.orderNumber || (o._id ? `#SS-${String(o._id).slice(-5).toUpperCase()}` : ''),
+      totalAmount: o.totalAmount ?? o.total ?? o.amount ?? 0,
+      orderStatus: o.orderStatus || o.status || 'pending',
+      createdAt: o.createdAt || o.orderDate,
+    }));
+
     const base = enrichedList[0] || buildAdminVendorPayload(vendor);
     return {
       ...base,
       recentProducts: Array.isArray(recentProductsRes) ? recentProductsRes : [],
-      recentOrders: Array.isArray(recentOrdersRes) ? recentOrdersRes : [],
+      recentOrders: normalizedOrders,
     };
   }
 
@@ -745,15 +931,25 @@ export class AdminVendorService {
     const vendor = await Vendor.findByIdAndDelete(vendorId);
     if (!vendor) throw ApiError.notFound('Vendor not found');
 
+    const isConnected = mongoose.connection.readyState === 1;
+    const legacyUserId = vendor.userId || vendor.get?.('user') || vendor.user;
+
     await Promise.resolve()
-      .then(() => Product.updateMany({ vendorId: vendor._id }, { isActive: false }))
+      .then(() =>
+        Product.updateMany(
+          isConnected
+            ? { $or: [{ vendorId: vendor._id }, { vendor: vendor._id }] }
+            : { vendorId: vendor._id },
+          { isActive: false }
+        )
+      )
       .catch(() => {});
 
-    if (vendor.userId) {
+    if (legacyUserId) {
       await Promise.resolve()
         .then(() =>
           User.updateOne(
-            { _id: vendor.userId, role: ROLES.VENDOR },
+            { _id: legacyUserId, role: ROLES.VENDOR },
             { $set: { role: ROLES.USER }, $unset: { vendorId: 1 } }
           )
         )
@@ -761,7 +957,7 @@ export class AdminVendorService {
       await Promise.resolve()
         .then(() =>
           User.updateOne(
-            { _id: vendor.userId, vendorId: vendor._id },
+            { _id: legacyUserId, vendorId: vendor._id },
             { $unset: { vendorId: 1 } }
           )
         )
@@ -769,9 +965,9 @@ export class AdminVendorService {
 
       notificationService
         .createNotification({
-          userId: vendor.userId,
+          userId: legacyUserId,
           title: 'Vendor Store Removed',
-          message: `Your vendor store "${vendor.storeName || 'Store'}" has been removed by an administrator.`,
+          message: `Your vendor store "${vendor.storeName || vendor.shopName || 'Store'}" has been removed by an administrator.`,
           type: 'vendor',
           link: '/',
           data: { deletedVendorId: vendor._id },

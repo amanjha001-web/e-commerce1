@@ -156,16 +156,19 @@ const Orders = () => {
           ? `#SS-${String(o._id).slice(-5).toUpperCase()}`
           : `#SS-${10482 - idx}`);
       const customer =
+        o.customerName ||
         o.customer?.fullName ||
         o.customer?.name ||
+        o.userId?.fullName ||
         o.userId?.name ||
         o.user?.fullName ||
         o.user?.name ||
-        o.customerName ||
+        o.shippingAddress?.fullName ||
         (typeof o.customer === "string" ? o.customer : "Customer");
-      const date = o.date || formatDate(o.createdAt);
-      const amount = o.totalAmount ?? o.total ?? o.amount ?? 0;
-      const rawStatus = o.status || o.orderStatus || "Processing";
+      const date = o.date || formatDate(o.createdAt || o.orderDate);
+      const amount =
+        o.totalAmount ?? o.total ?? o.grandTotal ?? o.finalAmount ?? o.amount ?? 0;
+      const rawStatus = o.orderStatus || o.status || "Processing";
       const status = formatOrderStatusLabel(rawStatus);
 
       return {

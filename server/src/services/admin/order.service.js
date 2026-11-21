@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { ReturnRequest } from '../../models/ReturnRequest.model.js';
 import { Order } from '../../models/Order.model.js';
 import { User } from '../../models/User.model.js';
+import { Vendor } from '../../models/Vendor.model.js';
 import { Payment } from '../../models/Payment.model.js';
 import { Refund } from '../../models/Refund.model.js';
 import { Product } from '../../models/Product.model.js';
@@ -18,10 +19,201 @@ import {
   applyOrderStatusTransition,
 } from '../../utils/orderStatus.utils.js';
 
+const toPlain = (doc) => (doc?.toObject ? doc.toObject() : { ...(doc || {}) });
+
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const extractId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'object' && val._id) return String(val._id);
+  return mongoose.isValidObjectId(val) ? String(val) : '';
+};
+
+const isPopulatedObj = (val, keys = ['name', 'fullName', 'email', 'storeName', 'shopName']) =>
+  Boolean(val && typeof val === 'object' && keys.some((k) => val[k]));
+
+const resolveLegacyOrderRelations = async (docs = []) => {
+  if (mongoose.connection.readyState !== 1 || !Array.isArray(docs) || docs.length === 0) {
+    return { users: new Map(), vendors: new Map() };
+  }
+
+  const missingUserIds = [];
+  const missingVendorIds = [];
+
+  for (const doc of docs) {
+    const raw = toPlain(doc);
+    if (!isPopulatedObj(raw.userId, ['fullName', 'name', 'email']) && !isPopulatedObj(raw.user, ['fullName', 'name', 'email'])) {
+      const uid = extractId(raw.userId) || extractId(raw.user) || extractId(raw.customer);
+      if (uid) missingUserIds.push(uid);
+    }
+    if (Array.isArray(raw.items)) {
+      for (const item of raw.items) {
+        if (!isPopulatedObj(item?.vendorId, ['storeName', 'shopName']) && !isPopulatedObj(item?.vendor, ['storeName', 'shopName'])) {
+          const vid = extractId(item?.vendorId) || extractId(item?.vendor);
+          if (vid) missingVendorIds.push(vid);
+        }
+      }
+    }
+  }
+
+  const [usersRes, vendorsRes] = await Promise.all([
+    missingUserIds.length > 0
+      ? Promise.resolve()
+          .then(() =>
+            User.find({ _id: { $in: [...new Set(missingUserIds)] } })
+              .select('fullName name username email phone')
+              .lean()
+          )
+          .catch(() => [])
+      : Promise.resolve([]),
+    missingVendorIds.length > 0
+      ? Promise.resolve()
+          .then(() =>
+            Vendor.find({ _id: { $in: [...new Set(missingVendorIds)] } })
+              .select('storeName shopName businessName slug shopSlug email phone')
+              .lean()
+          )
+          .catch(() => [])
+      : Promise.resolve([]),
+  ]);
+
+  const users = new Map();
+  for (const u of usersRes || []) {
+    if (u?._id) users.set(String(u._id), u);
+  }
+  const vendors = new Map();
+  for (const v of vendorsRes || []) {
+    if (v?._id) vendors.set(String(v._id), v);
+  }
+  return { users, vendors };
+};
+
+const formatAdminOrder = (doc, relations = {}) => {
+  if (!doc) return null;
+  const raw = toPlain(doc);
+
+  let userObj = isPopulatedObj(raw.userId, ['fullName', 'name', 'email'])
+    ? toPlain(raw.userId)
+    : isPopulatedObj(raw.user, ['fullName', 'name', 'email'])
+      ? toPlain(raw.user)
+      : isPopulatedObj(raw.customer, ['fullName', 'name', 'email'])
+        ? toPlain(raw.customer)
+        : null;
+
+  if (!userObj && relations.users instanceof Map) {
+    const uid = extractId(raw.userId) || extractId(raw.user) || extractId(raw.customer);
+    if (uid && relations.users.has(uid)) {
+      userObj = relations.users.get(uid);
+    }
+  }
+
+  const customerName =
+    userObj?.fullName ||
+    userObj?.name ||
+    userObj?.username ||
+    raw.customerName ||
+    raw.shippingAddress?.fullName ||
+    userObj?.email ||
+    'Customer';
+
+  const normalizedOrderStatus = String(
+    raw.orderStatus || raw.status || ORDER_STATUS.PENDING
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  const resolvedTotal = Number(
+    raw.totalAmount ?? raw.total ?? raw.grandTotal ?? raw.finalAmount ?? raw.amount ?? 0
+  );
+
+  const normalizedItems = Array.isArray(raw.items)
+    ? raw.items.map((item) => {
+        const productObj =
+          item?.product && typeof item.product === 'object' ? toPlain(item.product) : null;
+        let vendorObj = isPopulatedObj(item?.vendorId, ['storeName', 'shopName', 'businessName'])
+          ? toPlain(item.vendorId)
+          : isPopulatedObj(item?.vendor, ['storeName', 'shopName', 'businessName'])
+            ? toPlain(item.vendor)
+            : null;
+        if (!vendorObj && relations.vendors instanceof Map) {
+          const vid = extractId(item?.vendorId) || extractId(item?.vendor);
+          if (vid && relations.vendors.has(vid)) {
+            vendorObj = relations.vendors.get(vid);
+          }
+        }
+        const storeName =
+          vendorObj?.storeName || vendorObj?.shopName || vendorObj?.businessName || '';
+        const itemImage =
+          (typeof item?.image === 'string' ? item.image : item?.image?.url) ||
+          (typeof productObj?.images?.[0] === 'string'
+            ? productObj.images[0]
+            : productObj?.images?.[0]?.url) ||
+          (typeof productObj?.thumbnail === 'string'
+            ? productObj.thumbnail
+            : productObj?.thumbnail?.url) ||
+          '';
+
+        return {
+          ...item,
+          name: item?.name || productObj?.name || 'Product',
+          image: itemImage,
+          price: Number(item?.price ?? productObj?.price ?? 0),
+          quantity: Number(item?.quantity ?? 1),
+          total: Number(item?.total ?? (Number(item?.price ?? productObj?.price ?? 0) * Number(item?.quantity ?? 1))),
+          vendorId: vendorObj ? { ...vendorObj, storeName } : item?.vendorId || item?.vendor,
+        };
+      })
+    : [];
+
+  return {
+    ...raw,
+    orderNumber:
+      raw.orderNumber || (raw._id ? `#SS-${String(raw._id).slice(-5).toUpperCase()}` : ''),
+    userId: userObj || raw.userId || raw.user || null,
+    user: userObj || undefined,
+    customerName,
+    orderStatus: normalizedOrderStatus,
+    paymentStatus: String(
+      raw.paymentStatus || (raw.isPaid ? PAYMENT_STATUS.SUCCESS : PAYMENT_STATUS.PENDING)
+    )
+      .trim()
+      .toLowerCase(),
+    totalAmount: resolvedTotal,
+    createdAt: raw.createdAt || raw.orderDate || raw.updatedAt,
+    items: normalizedItems,
+  };
+};
+
+const hydrateLegacyOrderForSave = (order) => {
+  if (!order) return;
+  const legacyUser = order.get?.('user') || order.user;
+  if (!order.userId && legacyUser) {
+    order.userId = legacyUser?._id || legacyUser;
+  }
+  const legacyStatus = order.get?.('status') || order.status;
+  if (!order.orderStatus && legacyStatus) {
+    order.orderStatus = String(legacyStatus).trim().toLowerCase().replace(/[\s-]+/g, '_');
+  }
+  const legacyTotal =
+    order.get?.('total') ?? order.total ?? order.get?.('grandTotal') ?? order.get?.('amount');
+  if ((order.totalAmount === undefined || order.totalAmount === null) && legacyTotal !== undefined) {
+    order.totalAmount = Number(legacyTotal || 0);
+  }
+  if (!order.orderNumber && order._id) {
+    order.orderNumber = `#SS-${String(order._id).slice(-5).toUpperCase()}`;
+  }
+  if (!Array.isArray(order.statusHistory)) {
+    order.statusHistory = [];
+  }
+};
+
 export class AdminOrderService {
   async getOrders(params = {}) {
     const { page, limit, skip, sort } = parsePagination(params);
     const filter = {};
+    const andClauses = [];
+    const isConnected = mongoose.connection.readyState === 1;
 
     if (
       params.status &&
@@ -29,17 +221,26 @@ export class AdminOrderService {
         String(params.status).trim().toLowerCase()
       )
     ) {
-      filter.orderStatus = String(params.status)
+      const normalizedStatus = String(params.status)
         .trim()
         .toLowerCase()
         .replace(/[\s-]+/g, '_');
+      if (isConnected) {
+        const statusRegex = new RegExp(`^${normalizedStatus.replace(/_/g, '[\\s_-]*')}$`, 'i');
+        andClauses.push({
+          $or: [{ orderStatus: statusRegex }, { status: statusRegex }],
+        });
+      } else {
+        filter.orderStatus = normalizedStatus;
+      }
     }
     if (params.paymentStatus && String(params.paymentStatus).toLowerCase() !== 'all') {
-      filter.paymentStatus = String(params.paymentStatus).trim().toLowerCase();
+      const normPay = String(params.paymentStatus).trim().toLowerCase();
+      filter.paymentStatus = isConnected ? new RegExp(`^${escapeRegex(normPay)}$`, 'i') : normPay;
     }
     if (params.search && String(params.search).trim()) {
       const q = String(params.search).trim();
-      const regex = { $regex: q, $options: 'i' };
+      const regex = { $regex: escapeRegex(q), $options: 'i' };
       const matchingUsers = await Promise.resolve()
         .then(() =>
           User.find({
@@ -51,26 +252,43 @@ export class AdminOrderService {
         .catch(() => []);
       const userIds = (matchingUsers || []).map((u) => u._id);
 
-      const orClauses = [{ orderNumber: regex }];
-      if (userIds.length > 0) {
-        orClauses.push({ userId: { $in: userIds } });
+      const orClauses = [
+        { orderNumber: regex },
+        { 'shippingAddress.fullName': regex },
+        { 'shippingAddress.phone': regex },
+      ];
+      if (isConnected && mongoose.isValidObjectId(q)) {
+        orClauses.push({ _id: q });
       }
-      filter.$or = orClauses;
+      if (userIds.length > 0) {
+        orClauses.push({ userId: { $in: userIds } }, { user: { $in: userIds } });
+      }
+      if (andClauses.length > 0) {
+        andClauses.push({ $or: orClauses });
+      } else {
+        filter.$or = orClauses;
+      }
+    }
+
+    if (andClauses.length > 0) {
+      filter.$and = andClauses;
     }
 
     const [orders, total] = await Promise.all([
       Order.find(filter)
-        .populate('userId', 'name email phone')
-        .populate('items.product', 'name slug images price')
-        .populate('items.vendorId', 'storeName slug')
+        .populate('userId', 'fullName name username email phone')
+        .populate('items.product', 'name slug images thumbnail price')
+        .populate('items.vendorId', 'storeName shopName slug shopSlug')
         .sort(sort)
         .skip(skip)
         .limit(limit),
       Order.countDocuments(filter),
     ]);
 
+    const relations = await resolveLegacyOrderRelations(orders);
+
     return {
-      orders,
+      orders: orders.map((doc) => formatAdminOrder(doc, relations)),
       pagination: {
         total,
         page,
@@ -82,17 +300,19 @@ export class AdminOrderService {
 
   async getOrderById(orderId) {
     const order = await Order.findById(orderId)
-      .populate('userId', 'name email phone')
-      .populate('items.product', 'name slug images price')
-      .populate('items.vendorId', 'storeName slug email phone');
+      .populate('userId', 'fullName name username email phone')
+      .populate('items.product', 'name slug images thumbnail price')
+      .populate('items.vendorId', 'storeName shopName slug shopSlug email phone');
 
     if (!order) throw ApiError.notFound('Order not found');
-    return order;
+    const relations = await resolveLegacyOrderRelations([order]);
+    return formatAdminOrder(order, relations);
   }
 
   async updateOrderStatus(orderId, status, note = '', adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     const normalizedStatus = await applyOrderStatusTransition(order, {
       status,
@@ -101,7 +321,7 @@ export class AdminOrderService {
       actorLabel: 'admin',
     });
 
-    await order.save();
+    await order.save({ validateModifiedOnly: true });
 
     notificationService
       .createNotification({
@@ -120,6 +340,7 @@ export class AdminOrderService {
   async cancelOrder(orderId, reason = 'Cancelled by admin', adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     order.orderStatus = ORDER_STATUS.CANCELLED;
     order.cancellation = {
@@ -133,7 +354,7 @@ export class AdminOrderService {
       updatedBy: adminId,
       timestamp: new Date(),
     });
-    await order.save();
+    await order.save({ validateModifiedOnly: true });
 
     // Restock items
     for (const item of order.items) {
@@ -177,6 +398,7 @@ export class AdminOrderService {
 
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     const normalizedOrderStatus = String(order.orderStatus || '').toLowerCase();
     const normalizedOrderPayStatus = String(order.paymentStatus || '').toLowerCase();
@@ -322,6 +544,8 @@ export class AdminOrderService {
     }
 
     if (refund) {
+      refund.orderId = refund.orderId || order._id;
+      refund.userId = refund.userId || order.userId;
       refund.paymentId = payment._id;
       refund.amount = refundAmount;
       refund.reason = finalReason;
@@ -330,7 +554,7 @@ export class AdminOrderService {
       refund.processedBy = adminId;
       refund.processedAt = new Date();
       if (adminNotes) refund.adminNotes = adminNotes;
-      await refund.save();
+      await refund.save({ validateModifiedOnly: true });
     } else {
       refund = await Refund.create({
         orderId: order._id,
@@ -368,8 +592,8 @@ export class AdminOrderService {
       note: `${isFullRefund ? 'Full' : 'Partial'} refund processed: ₹${refundAmount}. Reason: ${finalReason}`,
       updatedBy: adminId,
     });
-    await order.save();
-    await payment.save();
+    await order.save({ validateModifiedOnly: true });
+    await payment.save({ validateModifiedOnly: true });
 
     notificationService
       .createNotification({
@@ -394,6 +618,7 @@ export class AdminOrderService {
   async updateOrderShipping(orderId, payload = {}, adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     const {
       carrier,
@@ -450,6 +675,7 @@ export class AdminOrderService {
   async approveReturn(orderId, adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     order.orderStatus = ORDER_STATUS.RETURN_APPROVED;
     order.returnRequest = order.returnRequest || {};
@@ -462,7 +688,7 @@ export class AdminOrderService {
       updatedBy: adminId,
       timestamp: new Date(),
     });
-    await order.save();
+    await order.save({ validateModifiedOnly: true });
 
     await Promise.resolve()
       .then(() =>
@@ -490,6 +716,7 @@ export class AdminOrderService {
   async rejectReturn(orderId, reason = '', adminId) {
     const order = await Order.findById(orderId);
     if (!order) throw ApiError.notFound('Order not found');
+    hydrateLegacyOrderForSave(order);
 
     order.orderStatus = ORDER_STATUS.RETURN_REJECTED;
     order.returnRequest = order.returnRequest || {};
@@ -503,7 +730,7 @@ export class AdminOrderService {
       updatedBy: adminId,
       timestamp: new Date(),
     });
-    await order.save();
+    await order.save({ validateModifiedOnly: true });
 
     await Promise.resolve()
       .then(() =>

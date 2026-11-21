@@ -172,11 +172,17 @@ const Refunds = () => {
         userObj?.fullName ||
         userObj?.name ||
         userObj?.username ||
+        orderObj?.shippingAddress?.fullName ||
         userObj?.email ||
         "Customer";
 
       const rawAmount = Number(
-        r.amount ?? r.orderTotal ?? orderObj?.totalAmount ?? 0,
+        r.amount ??
+          r.refundAmount ??
+          r.orderTotal ??
+          orderObj?.totalAmount ??
+          orderObj?.total ??
+          0,
       );
 
       return {
@@ -190,7 +196,7 @@ const Refunds = () => {
         _customerPhone: r.customerPhone || userObj?.phone || "",
         _rawAmount: rawAmount,
         _amountLabel: money(rawAmount),
-        _reason: r.reason || "Customer request",
+        _reason: r.reason || r.refundReason || r.notes || "Customer request",
         _rawStatus: rawStatus,
         _statusLabel: formatStatusLabel(rawStatus),
         _statusClass: getStatusBadgeClass(rawStatus),

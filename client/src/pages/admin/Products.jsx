@@ -13,6 +13,10 @@ const extractImageUrl = (product) => {
   if (typeof product.thumbnail === "string" && product.thumbnail) {
     return product.thumbnail;
   }
+  if (product.thumbnail && typeof product.thumbnail === "object") {
+    const thumbUrl = product.thumbnail.url || product.thumbnail.secure_url;
+    if (thumbUrl) return thumbUrl;
+  }
   const first = Array.isArray(product.images) ? product.images[0] : null;
   if (typeof first === "string") return first;
   if (first && typeof first === "object") return first.url || first.secure_url || "";
@@ -158,8 +162,11 @@ const Products = () => {
       const price = p.sellingPrice ?? p.salePrice ?? p.price ?? 0;
       const vendorName =
         p.vendorId?.storeName ||
+        p.vendorId?.shopName ||
+        p.vendorId?.businessName ||
         p.vendor?.storeName ||
         p.vendor?.shopName ||
+        p.vendor?.businessName ||
         p.vendorName ||
         p.storeName ||
         "Unassigned";
@@ -255,7 +262,9 @@ const Products = () => {
               _price: detail.price ?? row._price,
               _vendor:
                 detail.vendorId?.storeName ||
+                detail.vendorId?.shopName ||
                 detail.vendor?.storeName ||
+                detail.vendor?.shopName ||
                 detail.vendorName ||
                 row._vendor,
               _isActive: detail.isActive !== false,
@@ -417,7 +426,10 @@ const Products = () => {
           _price: updated.price ?? Number(editForm.price),
           _vendor:
             updated.vendorId?.storeName ||
+            updated.vendorId?.shopName ||
             updated.vendor?.storeName ||
+            updated.vendor?.shopName ||
+            updated.vendorName ||
             viewingProduct._vendor,
           _desc: updated.description || editForm.description.trim(),
           _isActive: updated.isActive !== false,
