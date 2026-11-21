@@ -35,6 +35,22 @@ const supportTicketSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+      index: true,
+    },
+    vendorStoreName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    requesterRole: {
+      type: String,
+      enum: ['customer', 'vendor', 'admin'],
+      default: 'customer',
+      index: true,
+    },
     subject: {
       type: String,
       required: true,

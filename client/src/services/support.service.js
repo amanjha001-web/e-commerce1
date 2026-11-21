@@ -44,6 +44,49 @@ const supportService = {
     return response.data;
   },
 
+  // Vendor
+
+  getVendorTickets: async (params = {}) => {
+    const response = await api.get("/vendor/support/tickets", {
+      params,
+    });
+
+    return response.data;
+  },
+
+  createVendorTicket: async (ticketData) => {
+    const response = await api.post("/vendor/support/tickets", ticketData);
+
+    return response.data;
+  },
+
+  getVendorTicketById: async (ticketId) => {
+    const response = await api.get(`/vendor/support/tickets/${ticketId}`);
+
+    return response.data;
+  },
+
+  addVendorMessage: async (ticketId, messageData) => {
+    const response = await api.post(
+      `/vendor/support/tickets/${ticketId}/messages`,
+      messageData,
+    );
+
+    return response.data;
+  },
+
+  closeVendorTicket: async (ticketId) => {
+    const response = await api.patch(`/vendor/support/tickets/${ticketId}/close`);
+
+    return response.data;
+  },
+
+  reopenVendorTicket: async (ticketId) => {
+    const response = await api.patch(`/vendor/support/tickets/${ticketId}/reopen`);
+
+    return response.data;
+  },
+
   // Admin
 
   getAdminTickets: async (params = {}) => {

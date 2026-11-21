@@ -10,6 +10,7 @@ import payoutRoutes from './payouts.routes.js';
 import reviewRoutes from './reviews.routes.js';
 import requestRoutes from './requests.routes.js';
 import couponRoutes from './coupons.routes.js';
+import supportRoutes from './support.routes.js';
 
 import * as vendorStoreController from '../../controllers/vendor/store.controller.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
@@ -33,5 +34,6 @@ router.use('/payouts', payoutRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/requests', requestRoutes);
 router.use('/coupons', couponRoutes);
+router.use('/support', supportRoutes);
 
 export default router;

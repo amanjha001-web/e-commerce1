@@ -130,13 +130,19 @@ export class NotificationService {
         }
 
         for (const ticket of tickets) {
+          const ticketLink =
+            ticket.requesterRole === 'vendor' ||
+            ticket.vendorId ||
+            claimedUser.role === 'vendor'
+              ? '/vendor/support'
+              : '/support';
           docs.push({
             userId,
             title: `Support Ticket #${ticket.ticketId || String(ticket._id).slice(-6)}`,
             message: `${ticket.subject} — Status: ${String(ticket.status || 'open').replace(/_/g, ' ')}`,
             type: 'system',
-            link: '/support',
-            data: { ticketId: ticket._id, ticketCode: ticket.ticketId, link: '/support' },
+            link: ticketLink,
+            data: { ticketId: ticket._id, ticketCode: ticket.ticketId, link: ticketLink },
             isRead: false,
             createdAt: ticket.updatedAt || ticket.createdAt || new Date(),
             updatedAt: ticket.updatedAt || ticket.createdAt || new Date(),

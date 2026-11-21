@@ -216,6 +216,8 @@ export const formatAdminSupportTicket = (doc, hydratedUsersMap = new Map()) => {
     id: raw._id,
     ticketId: raw.ticketId || raw.ticketNumber || String(raw._id || ''),
     userId: isUserObj(userObj) ? userObj : raw.userId,
+    requesterRole: raw.requesterRole || (raw.vendorId ? 'vendor' : 'customer'),
+    vendorStoreName: raw.vendorId?.storeName || raw.vendorStoreName || '',
     customerName,
     customerEmail,
     customerPhone,
@@ -494,14 +496,18 @@ export class AdminSupportService {
 
     const recipientId = ticket.userId?._id || ticket.userId || ticket.user || ticket.customerId;
     if (recipientId) {
+      const targetLink =
+        ticket.requesterRole === 'vendor' || ticket.vendorId
+          ? '/vendor/support'
+          : '/support';
       notificationService
         .createNotification({
           userId: recipientId,
           title: `Support Reply (#${ticket.ticketId})`,
           message: `Support replied to "${ticket.subject}": ${cleanMessage.slice(0, 120)}`,
           type: 'system',
-          link: '/support',
-          data: { ticketId: ticket._id, ticketCode: ticket.ticketId },
+          link: targetLink,
+          data: { ticketId: ticket._id, ticketCode: ticket.ticketId, link: targetLink },
         })
         .catch(() => {});
     }
@@ -543,14 +549,23 @@ export class AdminSupportService {
 
     const recipientId = ticket.userId?._id || ticket.userId;
     if (recipientId) {
+      const targetLink =
+        ticket.requesterRole === 'vendor' || ticket.vendorId
+          ? '/vendor/support'
+          : '/support';
       notificationService
         .createNotification({
           userId: recipientId,
           title: `Support Ticket #${ticket.ticketId} Updated`,
           message: `Your support ticket "${ticket.subject}" status is now ${normalizedStatus.replace(/_/g, ' ')}.`,
           type: 'system',
-          link: '/support',
-          data: { ticketId: ticket._id, ticketCode: ticket.ticketId, status: normalizedStatus },
+          link: targetLink,
+          data: {
+            ticketId: ticket._id,
+            ticketCode: ticket.ticketId,
+            status: normalizedStatus,
+            link: targetLink,
+          },
         })
         .catch(() => {});
     }
