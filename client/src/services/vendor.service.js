@@ -46,13 +46,17 @@ const vendorService = {
   },
 
   updateStoreLogo: async (formData) => {
-    const response = await api.patch("/vendor/store/logo", formData);
+    const response = await api.patch("/vendor/store/logo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
     return response.data;
   },
 
   updateStoreBanner: async (formData) => {
-    const response = await api.patch("/vendor/store/banner", formData);
+    const response = await api.patch("/vendor/store/banner", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
     return response.data;
   },

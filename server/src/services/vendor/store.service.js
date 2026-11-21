@@ -9,7 +9,10 @@ import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
 import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { PRODUCT_STATUS } from '../../constants/productStatus.constant.js';
 import { ApiError } from '../../utils/apiError.js';
-import { uploadToCloudinary } from '../../integrations/cloudinary/cloudinary.client.js';
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} from '../../integrations/cloudinary/cloudinary.client.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOW_STOCK_THRESHOLD = 10;
@@ -206,6 +209,136 @@ const belongsToVendor = (item, vendorRefSet, productIdSet) => {
   return false;
 };
 
+export const buildSafeStoreUpdate = (existingVendor = {}, rawData = {}) => {
+  const data = rawData && typeof rawData === 'object' ? rawData : {};
+  const existingAddr =
+    existingVendor?.address && typeof existingVendor.address === 'object'
+      ? { ...(existingVendor.address.toObject ? existingVendor.address.toObject() : existingVendor.address) }
+      : {};
+  const existingBiz =
+    existingVendor?.businessDetails && typeof existingVendor.businessDetails === 'object'
+      ? {
+          ...(existingVendor.businessDetails.toObject
+            ? existingVendor.businessDetails.toObject()
+            : existingVendor.businessDetails),
+        }
+      : {};
+  const existingBank =
+    existingBiz?.bankAccount && typeof existingBiz.bankAccount === 'object'
+      ? { ...(existingBiz.bankAccount.toObject ? existingBiz.bankAccount.toObject() : existingBiz.bankAccount) }
+      : {};
+
+  const updates = {};
+
+  const rawName = data.storeName !== undefined ? data.storeName : data.name;
+  if (rawName !== undefined) {
+    const trimmedName = String(rawName || '').trim();
+    if (trimmedName.length < 2) {
+      throw ApiError.badRequest('Shop name must be at least 2 characters');
+    }
+    updates.storeName = trimmedName;
+  }
+
+  if (data.description !== undefined) {
+    updates.description = String(data.description || '').trim();
+  }
+
+  if (data.email !== undefined) {
+    const cleanEmail = String(data.email || '').trim().toLowerCase();
+    if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      throw ApiError.badRequest('Please enter a valid business email address');
+    }
+    updates.email = cleanEmail;
+  }
+
+  if (data.phone !== undefined) {
+    updates.phone = String(data.phone || '').trim();
+  }
+
+  if (data.website !== undefined) {
+    updates.website = String(data.website || '').trim();
+  }
+
+  if (data.businessType !== undefined) {
+    updates.businessType = String(data.businessType || '').trim();
+  }
+
+  // Merge Address (accepts nested object or legacy string/flat city/state/pincode)
+  const hasAddressFields =
+    data.address !== undefined ||
+    data.street !== undefined ||
+    data.city !== undefined ||
+    data.state !== undefined ||
+    data.postalCode !== undefined ||
+    data.pincode !== undefined ||
+    data.pinCode !== undefined ||
+    data.country !== undefined;
+
+  if (hasAddressFields) {
+    const nextAddress = { ...existingAddr };
+    if (typeof data.address === 'string') {
+      nextAddress.street = data.address.trim();
+    } else if (data.address && typeof data.address === 'object') {
+      if (data.address.street !== undefined) nextAddress.street = String(data.address.street || '').trim();
+      if (data.address.city !== undefined) nextAddress.city = String(data.address.city || '').trim();
+      if (data.address.state !== undefined) nextAddress.state = String(data.address.state || '').trim();
+      const nestedPostal =
+        data.address.postalCode ?? data.address.pincode ?? data.address.pinCode;
+      if (nestedPostal !== undefined) nextAddress.postalCode = String(nestedPostal || '').trim();
+      if (data.address.country !== undefined) nextAddress.country = String(data.address.country || '').trim();
+    }
+    if (data.street !== undefined) nextAddress.street = String(data.street || '').trim();
+    if (data.city !== undefined) nextAddress.city = String(data.city || '').trim();
+    if (data.state !== undefined) nextAddress.state = String(data.state || '').trim();
+    const flatPostal = data.postalCode ?? data.pincode ?? data.pinCode;
+    if (flatPostal !== undefined) nextAddress.postalCode = String(flatPostal || '').trim();
+    if (data.country !== undefined) nextAddress.country = String(data.country || '').trim();
+    updates.address = nextAddress;
+  }
+
+  // Merge Business Details & Bank Account (accepts nested businessDetails or flat gstin/bankAccount aliases)
+  const incomingBank =
+    data.businessDetails?.bankAccount || data.bankAccount || data.bankDetails || null;
+  const rawTax = data.businessDetails?.taxNumber ?? data.gstin ?? data.taxNumber;
+  const rawLicense = data.businessDetails?.businessLicense ?? data.businessLicense;
+
+  if (
+    rawTax !== undefined ||
+    rawLicense !== undefined ||
+    (incomingBank && typeof incomingBank === 'object')
+  ) {
+    const nextBiz = { ...existingBiz };
+    if (rawTax !== undefined) {
+      nextBiz.taxNumber = String(rawTax || '').trim().toUpperCase();
+    }
+    if (rawLicense !== undefined) {
+      nextBiz.businessLicense = String(rawLicense || '').trim();
+    }
+    if (incomingBank && typeof incomingBank === 'object') {
+      const nextBank = { ...existingBank };
+      if (incomingBank.accountHolderName !== undefined) {
+        nextBank.accountHolderName = String(incomingBank.accountHolderName || '').trim();
+      }
+      if (incomingBank.accountNumber !== undefined) {
+        nextBank.accountNumber = String(incomingBank.accountNumber || '').trim();
+      }
+      if (incomingBank.bankName !== undefined) {
+        nextBank.bankName = String(incomingBank.bankName || '').trim();
+      }
+      if (incomingBank.ifscCode !== undefined) {
+        nextBank.ifscCode = String(incomingBank.ifscCode || '').trim().toUpperCase();
+      }
+      if (incomingBank.routingNumber !== undefined) {
+        nextBank.routingNumber = String(incomingBank.routingNumber || '').trim();
+      }
+      nextBiz.bankAccount = nextBank;
+    }
+    updates.businessDetails = nextBiz;
+  }
+
+  return updates;
+};
+
 export class VendorStoreService {
   async findVendorForUser(userId, notFoundMessage = 'Vendor not found') {
     const vendor = await Vendor.findOne({ $or: [{ userId }, { user: userId }] });
@@ -268,13 +401,21 @@ export class VendorStoreService {
   }
 
   async getMyStore(userId) {
-    return this.findVendorForUser(userId, 'Store not found for this vendor');
+    const vendor = await Vendor.findOne({ $or: [{ userId }, { user: userId }] }).populate(
+      'userId',
+      'fullName name email phone avatar'
+    );
+    if (!vendor) throw ApiError.notFound('Store not found for this vendor');
+    return vendor;
   }
 
   async updateStore(userId, storeData) {
-    const vendor = await Vendor.findOneAndUpdate(
-      { $or: [{ userId }, { user: userId }] },
-      storeData,
+    const existing = await this.findVendorForUser(userId, 'Store not found');
+    const safeUpdates = buildSafeStoreUpdate(existing, storeData);
+
+    const vendor = await Vendor.findByIdAndUpdate(
+      existing._id,
+      { $set: safeUpdates },
       { new: true, runValidators: true }
     );
     if (!vendor) throw ApiError.notFound('Store not found');
@@ -284,20 +425,28 @@ export class VendorStoreService {
   async updateStoreLogo(userId, file) {
     if (!file) throw ApiError.badRequest('Logo image required');
     const vendor = await this.findVendorForUser(userId, 'Store not found');
+    const oldPublicId = vendor.logo?.publicId;
 
     const uploaded = await uploadToCloudinary(file.buffer, 'vendor-logos');
     vendor.logo = { url: uploaded.url, publicId: uploaded.publicId };
     await vendor.save();
+    if (oldPublicId && oldPublicId !== uploaded.publicId) {
+      deleteFromCloudinary(oldPublicId).catch(() => {});
+    }
     return vendor;
   }
 
   async updateStoreBanner(userId, file) {
     if (!file) throw ApiError.badRequest('Banner image required');
     const vendor = await this.findVendorForUser(userId, 'Store not found');
+    const oldPublicId = vendor.banner?.publicId;
 
     const uploaded = await uploadToCloudinary(file.buffer, 'vendor-banners');
     vendor.banner = { url: uploaded.url, publicId: uploaded.publicId };
     await vendor.save();
+    if (oldPublicId && oldPublicId !== uploaded.publicId) {
+      deleteFromCloudinary(oldPublicId).catch(() => {});
+    }
     return vendor;
   }
 

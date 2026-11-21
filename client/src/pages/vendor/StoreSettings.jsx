@@ -7,6 +7,22 @@ import Input from "../../components/common/Input";
 import Textarea from "../../components/common/Textarea";
 import Loader from "../../components/common/Loader";
 
+const mapStoreToSettingsForm = (storeData, userData) => ({
+  storeName: storeData?.storeName || storeData?.name || "",
+  description: storeData?.description || "",
+  email: storeData?.email || userData?.email || "",
+  phone: storeData?.phone || userData?.phone || "",
+  address: typeof storeData?.address === "string" ? storeData.address : storeData?.address?.street || "",
+  city: storeData?.city || storeData?.address?.city || "",
+  state: storeData?.state || storeData?.address?.state || "",
+  pincode:
+    storeData?.pincode ||
+    storeData?.postalCode ||
+    storeData?.address?.postalCode ||
+    storeData?.address?.pinCode ||
+    "",
+});
+
 const StoreSettings = ({
   user = null,
   store: propStore = null,
@@ -16,49 +32,31 @@ const StoreSettings = ({
 }) => {
   const [loading, setLoading] = useState(propLoading || !propStore);
   const [saving, setSaving] = useState(propSaving);
-  const [form, setForm] = useState(() => ({
-    storeName: propStore?.storeName || propStore?.name || "",
-    description: propStore?.description || "",
-    email: propStore?.email || user?.email || "",
-    phone: propStore?.phone || user?.phone || "",
-    address: propStore?.address || "",
-    city: propStore?.city || "",
-    state: propStore?.state || "",
-    pincode: propStore?.pincode || propStore?.postalCode || "",
-  }));
+  const [form, setForm] = useState(() => mapStoreToSettingsForm(propStore, user));
 
   useEffect(() => {
+    let isMounted = true;
+    let syncTimer = null;
+
     if (propStore) {
-      setForm({
-        storeName: propStore?.storeName || propStore?.name || "",
-        description: propStore?.description || "",
-        email: propStore?.email || user?.email || "",
-        phone: propStore?.phone || user?.phone || "",
-        address: typeof propStore?.address === "string" ? propStore.address : propStore?.address?.street || "",
-        city: propStore?.city || propStore?.address?.city || "",
-        state: propStore?.state || propStore?.address?.state || "",
-        pincode: propStore?.pincode || propStore?.address?.pinCode || "",
-      });
-      return;
+      syncTimer = setTimeout(() => {
+        if (!isMounted) return;
+        setForm(mapStoreToSettingsForm(propStore, user));
+        setLoading(false);
+      }, 0);
+      return () => {
+        isMounted = false;
+        if (syncTimer) clearTimeout(syncTimer);
+      };
     }
 
-    let isMounted = true;
     const fetchStore = async () => {
       try {
         setLoading(true);
         const res = await vendorService.getMyStore();
         const s = res?.data?.store || res?.data || res;
         if (isMounted && s && typeof s === "object") {
-          setForm({
-            storeName: s.name || s.storeName || "",
-            description: s.description || "",
-            email: s.email || user?.email || "",
-            phone: s.phone || user?.phone || "",
-            address: typeof s.address === "string" ? s.address : s.address?.street || "",
-            city: s.city || s.address?.city || "",
-            state: s.state || s.address?.state || "",
-            pincode: s.pincode || s.postalCode || s.address?.pinCode || "",
-          });
+          setForm(mapStoreToSettingsForm(s, user));
         }
       } catch (err) {
         console.error("Failed to load store settings:", err);
@@ -70,6 +68,7 @@ const StoreSettings = ({
     fetchStore();
     return () => {
       isMounted = false;
+      if (syncTimer) clearTimeout(syncTimer);
     };
   }, [propStore, user]);
 
