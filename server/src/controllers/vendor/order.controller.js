@@ -13,7 +13,16 @@ export const getVendorOrderById = asyncHandler(async (req, res) => {
 });
 
 export const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status, note } = req.body;
-  const order = await vendorOrderService.updateOrderStatus(req.user._id, req.params.orderId, { status, note });
+  const { status, note, tracking } = req.body;
+  const order = await vendorOrderService.updateOrderStatus(req.user._id, req.params.orderId, {
+    status,
+    note,
+    tracking,
+  });
   return ApiResponse.success(res, order, 'Order status updated');
+});
+
+export const updateOrderTracking = asyncHandler(async (req, res) => {
+  const order = await vendorOrderService.updateOrderTracking(req.user._id, req.params.orderId, req.body);
+  return ApiResponse.success(res, order, 'Order tracking updated');
 });

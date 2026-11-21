@@ -46,8 +46,18 @@ const orderService = {
   // Vendor
 
   getVendorOrders: async (params = {}) => {
+    const cleaned = Object.fromEntries(
+      Object.entries(params || {}).filter(
+        ([, v]) =>
+          v !== undefined &&
+          v !== null &&
+          v !== "" &&
+          String(v).toLowerCase() !== "all" &&
+          String(v).toLowerCase() !== "all statuses",
+      ),
+    );
     const response = await api.get("/vendor/orders", {
-      params,
+      params: cleaned,
     });
 
     return response.data;
@@ -59,11 +69,21 @@ const orderService = {
     return response.data;
   },
 
-  updateOrderStatus: async (orderId, status, note = "") => {
-    const response = await api.patch(`/vendor/orders/${orderId}/status`, {
-      status,
-      note,
-    });
+  updateOrderStatus: async (orderId, status, note = "", tracking = undefined) => {
+    const payload = { status, note };
+    if (tracking && typeof tracking === "object") {
+      payload.tracking = tracking;
+    }
+    const response = await api.patch(`/vendor/orders/${orderId}/status`, payload);
+
+    return response.data;
+  },
+
+  updateOrderTracking: async (orderId, trackingData) => {
+    const response = await api.patch(
+      `/vendor/orders/${orderId}/tracking`,
+      trackingData,
+    );
 
     return response.data;
   },

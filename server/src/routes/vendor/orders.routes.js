@@ -10,5 +10,6 @@ router.use(authenticate, requireVendor);
 router.get('/', vendorOrderController.getVendorOrders);
 router.get('/:orderId', vendorOrderController.getVendorOrderById);
 router.patch('/:orderId/status', vendorOrderController.updateOrderStatus);
+router.patch('/:orderId/tracking', vendorOrderController.updateOrderTracking);
 
 export default router;
