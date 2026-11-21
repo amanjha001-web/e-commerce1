@@ -50,6 +50,8 @@ describe('Admin Legacy DB Schema Compatibility Tests', () => {
     vi.restoreAllMocks();
     if (originalReadyStateDescriptor) {
       Object.defineProperty(mongoose.connection, 'readyState', originalReadyStateDescriptor);
+    } else {
+      delete mongoose.connection.readyState;
     }
   });
 

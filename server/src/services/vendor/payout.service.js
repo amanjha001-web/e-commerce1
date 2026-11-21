@@ -5,9 +5,14 @@ import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
 
 export class VendorPayoutService {
-  async getVendorId(userId) {
-    const vendor = await Vendor.findOne({ userId });
+  async getVendorProfile(userId) {
+    const vendor = await Vendor.findOne({ $or: [{ userId }, { user: userId }] });
     if (!vendor) throw ApiError.notFound('Vendor profile not found');
+    return vendor;
+  }
+
+  async getVendorId(userId) {
+    const vendor = await this.getVendorProfile(userId);
     return vendor._id;
   }
 
@@ -39,24 +44,38 @@ export class VendorPayoutService {
   }
 
   async requestPayout(userId, { amount, notes = '' }) {
-    const vendorId = await this.getVendorId(userId);
+    const vendor = await this.getVendorProfile(userId);
+    const vendorId = vendor._id;
+    const requestedAmount = Number(amount);
+
+    if (!Number.isFinite(requestedAmount) || requestedAmount < 1) {
+      throw ApiError.badRequest('Payout amount must be at least ₹1');
+    }
+
     const earnings = await VendorEarnings.findOne({ vendorId });
 
-    if (!earnings || earnings.availableBalance < Number(amount)) {
+    if (!earnings || earnings.availableBalance < requestedAmount) {
       throw ApiError.badRequest(
         `Insufficient available balance. Available: ₹${earnings?.availableBalance || 0}`
       );
     }
 
+    const bankDetails = vendor.businessDetails?.bankAccount || vendor.bankDetails || {};
     const payout = await VendorPayout.create({
       vendorId,
-      amount: Number(amount),
+      amount: requestedAmount,
       status: 'PENDING',
-      notes,
+      bankDetails: {
+        accountHolderName: bankDetails.accountHolderName || '',
+        accountNumber: bankDetails.accountNumber || '',
+        bankName: bankDetails.bankName || '',
+        ifscCode: bankDetails.ifscCode || '',
+      },
+      notes: String(notes || '').trim(),
     });
 
-    earnings.availableBalance -= Number(amount);
-    earnings.pendingBalance += Number(amount);
+    earnings.availableBalance -= requestedAmount;
+    earnings.pendingBalance += requestedAmount;
     await earnings.save();
 
     return payout;

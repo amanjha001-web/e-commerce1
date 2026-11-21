@@ -32,7 +32,13 @@ export const createRazorpayOrder = async ({ amount, currency = 'INR', receipt, n
 export const fetchRazorpayPayment = async (paymentId) => {
   const razorpay = getRazorpayInstance();
   if (!razorpay) {
-    return { id: paymentId, status: 'captured', amount: 10000, currency: 'INR' };
+    return {
+      id: paymentId,
+      status: 'captured',
+      amount: 10000,
+      currency: 'INR',
+      isSimulated: true,
+    };
   }
   return razorpay.payments.fetch(paymentId);
 };

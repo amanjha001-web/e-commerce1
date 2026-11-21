@@ -20,6 +20,7 @@ export const fetchPayments = createAsyncThunk(
           : Array.isArray(data)
             ? data
             : [],
+        summary: data?.summary || null,
         pagination: data?.pagination || {},
         message: response?.message || "",
       };
@@ -100,6 +101,7 @@ export const fetchVendorPayouts = createAsyncThunk(
           : Array.isArray(data)
             ? data
             : [],
+        summary: data?.summary || null,
         pagination: data?.pagination || {},
       };
     } catch (error) {
@@ -129,11 +131,15 @@ export const fetchVendorPayoutById = createAsyncThunk(
 // Update vendor payout status (PATCH /admin/vendor-payouts/:id/status)
 export const updateVendorPayoutStatus = createAsyncThunk(
   "adminPayments/updateVendorPayoutStatus",
-  async ({ payoutId, status }, { rejectWithValue }) => {
+  async ({ payoutId, status, transactionReference, notes }, { rejectWithValue }) => {
     try {
       const response = await paymentService.updateVendorPayoutStatus(
         payoutId,
-        status,
+        {
+          status,
+          ...(transactionReference !== undefined ? { transactionReference } : {}),
+          ...(notes !== undefined ? { notes } : {}),
+        },
       );
       if (response?.success === false) {
         return rejectWithValue(
@@ -149,8 +155,10 @@ export const updateVendorPayoutStatus = createAsyncThunk(
 
 const initialState = {
   payments: [],
+  summary: null,
   selectedPayment: null,
   vendorPayouts: [],
+  payoutSummary: null,
   selectedPayout: null,
   pagination: {
     total: 0,
@@ -196,7 +204,13 @@ const adminPaymentsSlice = createSlice({
       .addCase(fetchPayments.fulfilled, (state, action) => {
         state.loading = false;
         state.payments = action.payload?.payments || [];
-        state.pagination = action.payload?.pagination || {};
+        if (action.payload?.summary) {
+          state.summary = action.payload.summary;
+        }
+        state.pagination = {
+          ...state.pagination,
+          ...(action.payload?.pagination || {}),
+        };
       })
       .addCase(fetchPayments.rejected, (state, action) => {
         state.loading = false;
@@ -247,12 +261,23 @@ const adminPaymentsSlice = createSlice({
       })
       .addCase(fetchVendorPayouts.fulfilled, (state, action) => {
         state.vendorPayouts = action.payload?.payouts || [];
-        state.payoutPagination = action.payload?.pagination || {};
+        if (action.payload?.summary) {
+          state.payoutSummary = action.payload.summary;
+        }
+        state.payoutPagination = {
+          ...state.payoutPagination,
+          ...(action.payload?.pagination || {}),
+        };
       })
       .addCase(fetchVendorPayoutById.fulfilled, (state, action) => {
         state.selectedPayout = action.payload;
       })
+      .addCase(updateVendorPayoutStatus.pending, (state) => {
+        state.saving = true;
+        state.error = null;
+      })
       .addCase(updateVendorPayoutStatus.fulfilled, (state, action) => {
+        state.saving = false;
         const updated = action.payload;
         if (updated?._id) {
           state.vendorPayouts = state.vendorPayouts.map((p) =>
@@ -262,6 +287,10 @@ const adminPaymentsSlice = createSlice({
             state.selectedPayout = { ...state.selectedPayout, ...updated };
           }
         }
+      })
+      .addCase(updateVendorPayoutStatus.rejected, (state, action) => {
+        state.saving = false;
+        state.error = action.payload || "Failed to update vendor payout status";
       });
   },
 });

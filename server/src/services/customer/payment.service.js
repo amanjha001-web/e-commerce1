@@ -1,11 +1,11 @@
+import mongoose from 'mongoose';
 import { Payment } from '../../models/Payment.model.js';
 import { Order } from '../../models/Order.model.js';
 import { Refund } from '../../models/Refund.model.js';
-import { VendorEarnings } from '../../models/VendorEarnings.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { PAYMENT_STATUS } from '../../constants/paymentStatus.constant.js';
 import { ORDER_STATUS } from '../../constants/orderStatus.constant.js';
-import { createRazorpayOrder, createRazorpayRefund } from '../../integrations/razorpay/razorpay.client.js';
+import { createRazorpayOrder } from '../../integrations/razorpay/razorpay.client.js';
 import { verifyPaymentSignature } from '../../integrations/razorpay/razorpay.utils.js';
 import { env } from '../../config/env.js';
 import { notificationService } from '../common/notification.service.js';
@@ -13,27 +13,37 @@ import { accrueVendorEarningsForOrder } from '../../utils/orderPayment.utils.js'
 
 export class CustomerPaymentService {
   async createPaymentOrder(userId, orderId) {
-    const order = await Order.findOne({ _id: orderId, userId });
+    if (!orderId || !mongoose.isValidObjectId(orderId)) {
+      throw ApiError.badRequest('Invalid Order ID');
+    }
+
+    const order = await Order.findOne({ _id: orderId, $or: [{ userId }, { user: userId }] });
     if (!order) throw ApiError.notFound('Order not found');
 
-    if (order.isPaid) {
+    if (order.isPaid || String(order.paymentStatus || '').toLowerCase() === PAYMENT_STATUS.SUCCESS) {
       throw ApiError.badRequest('Order is already paid');
     }
 
+    const resolvedTotal = Number(order.totalAmount ?? order.get?.('total') ?? 0);
+
     // Call Razorpay API
     const rzpOrder = await createRazorpayOrder({
-      amount: order.totalAmount,
+      amount: resolvedTotal,
       currency: 'INR',
-      receipt: `rcpt_${order.orderNumber}`,
+      receipt: `rcpt_${order.orderNumber || order._id}`,
       notes: { orderId: order._id.toString(), userId: userId.toString() },
     });
 
     let payment = await Payment.findOne({ orderId: order._id });
+    if (payment && payment.status === PAYMENT_STATUS.SUCCESS) {
+      throw ApiError.badRequest('Payment is already completed for this order');
+    }
+
     if (!payment) {
       payment = await Payment.create({
         orderId: order._id,
         userId,
-        amount: order.totalAmount,
+        amount: resolvedTotal,
         currency: 'INR',
         paymentMethod: 'razorpay',
         status: PAYMENT_STATUS.PENDING,
@@ -45,8 +55,9 @@ export class CustomerPaymentService {
       await payment.save();
     }
 
+    if (!order.userId) order.userId = userId;
     order.paymentId = payment._id;
-    await order.save();
+    await order.save({ validateModifiedOnly: true });
 
     return {
       keyId: env.RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
@@ -93,20 +104,24 @@ export class CustomerPaymentService {
 
     const order = await Order.findById(payment.orderId);
     if (order) {
+      const wasAlreadyPaid = Boolean(order.isPaid);
       order.paymentStatus = PAYMENT_STATUS.SUCCESS;
       order.orderStatus = ORDER_STATUS.CONFIRMED;
       order.isPaid = true;
-      order.paidAt = new Date();
+      order.paidAt = order.paidAt || new Date();
+      if (!Array.isArray(order.statusHistory)) order.statusHistory = [];
       order.statusHistory.push({
         status: ORDER_STATUS.CONFIRMED,
         note: `Payment verified successfully (ID: ${razorpay_payment_id})`,
         updatedBy: userId,
         timestamp: new Date(),
       });
-      await order.save();
+      await order.save({ validateModifiedOnly: true });
 
-      // Accrue vendor earnings
-      await accrueVendorEarningsForOrder(order);
+      // Accrue vendor earnings only once
+      if (!wasAlreadyPaid) {
+        await accrueVendorEarningsForOrder(order);
+      }
     }
 
     notificationService
@@ -151,17 +166,33 @@ export class CustomerPaymentService {
   }
 
   async requestRefund(userId, paymentId, { reason }) {
-    const payment = await Payment.findOne({ _id: paymentId, userId });
+    if (!paymentId || !mongoose.isValidObjectId(paymentId)) {
+      throw ApiError.badRequest('Invalid Payment ID');
+    }
+
+    const payment = await Payment.findOne({ _id: paymentId, $or: [{ userId }, { user: userId }] });
     if (!payment) throw ApiError.notFound('Payment not found');
 
-    if (payment.status !== PAYMENT_STATUS.SUCCESS) {
+    if (
+      ![PAYMENT_STATUS.SUCCESS, PAYMENT_STATUS.PARTIALLY_REFUNDED].includes(
+        String(payment.status || '').toLowerCase()
+      )
+    ) {
       throw ApiError.badRequest('Can only refund successful payments');
+    }
+
+    const existingPending = await Refund.findOne({
+      orderId: payment.orderId,
+      status: { $in: ['pending', 'requested', 'approved'] },
+    }).lean();
+    if (existingPending) {
+      throw ApiError.badRequest('A refund request for this order is already in progress');
     }
 
     const refund = await Refund.create({
       orderId: payment.orderId,
       paymentId: payment._id,
-      userId,
+      userId: payment.userId || userId,
       amount: payment.amount,
       reason,
       status: 'pending',

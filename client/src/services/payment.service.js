@@ -64,7 +64,6 @@ const paymentService = {
       cleaned.paymentMethod = cleaned.method;
       delete cleaned.method;
     }
-    delete cleaned.dateRange;
     const response = await api.get("/admin/payments", {
       params: cleaned,
     });
@@ -103,10 +102,17 @@ const paymentService = {
     return response.data;
   },
 
-  updateVendorPayoutStatus: async (payoutId, status) => {
+  updateVendorPayoutStatus: async (payoutId, statusOrPayload) => {
+    const payload =
+      typeof statusOrPayload === "object" && statusOrPayload !== null
+        ? {
+            ...statusOrPayload,
+            status: String(statusOrPayload.status || "").toUpperCase(),
+          }
+        : { status: String(statusOrPayload || "").toUpperCase() };
     const response = await api.patch(
       `/admin/vendor-payouts/${payoutId}/status`,
-      { status: String(status).toUpperCase() },
+      payload,
     );
     return response.data;
   },

@@ -10,6 +10,7 @@ router.use(authenticate, requireAdmin);
 router.get('/', paymentController.getPayments);
 router.get('/:paymentId', paymentController.getPaymentById);
 router.post('/:paymentId/refund', paymentController.refundPayment);
+router.post('/:paymentId/reconcile', paymentController.reconcilePayment);
 router.post('/reconcile', paymentController.reconcilePayment);
 
 export default router;

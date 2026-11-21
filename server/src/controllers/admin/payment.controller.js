@@ -16,7 +16,12 @@ export const getPaymentById = asyncHandler(async (req, res) => {
 
 export const refundPayment = asyncHandler(async (req, res) => {
   const payment = await adminPaymentService.getPaymentById(req.params.paymentId);
-  const orderId = payment.orderId?._id || payment.orderId;
+  const orderId =
+    payment.orderRefId ||
+    payment.orderId?._id ||
+    payment.orderId ||
+    payment.order?._id ||
+    payment.order;
   if (!orderId) {
     throw ApiError.notFound('Order associated with this payment was not found');
   }
@@ -25,7 +30,7 @@ export const refundPayment = asyncHandler(async (req, res) => {
 });
 
 export const reconcilePayment = asyncHandler(async (req, res) => {
-  const paymentId = req.params.paymentId || req.body.paymentId;
+  const paymentId = req.params.paymentId || req.body?.paymentId;
   const result = await adminPaymentService.reconcilePayment(paymentId);
   return ApiResponse.success(res, result, 'Payment reconciled');
 });
@@ -41,6 +46,14 @@ export const getVendorPayoutById = asyncHandler(async (req, res) => {
 });
 
 export const updateVendorPayoutStatus = asyncHandler(async (req, res) => {
-  const payout = await adminPaymentService.updateVendorPayoutStatus(req.params.payoutId, req.body.status, req.user._id);
+  const payload =
+    req.body && typeof req.body === 'object'
+      ? req.body
+      : { status: req.body?.status };
+  const payout = await adminPaymentService.updateVendorPayoutStatus(
+    req.params.payoutId,
+    payload,
+    req.user._id
+  );
   return ApiResponse.success(res, payout, 'Payout status updated');
 });
