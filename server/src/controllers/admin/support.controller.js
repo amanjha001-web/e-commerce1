@@ -12,12 +12,18 @@ export const getSupportTicketById = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, ticket, 'Ticket details');
 });
 
+export const getSupportAgents = asyncHandler(async (req, res) => {
+  const agents = await adminSupportService.getSupportAgents();
+  return ApiResponse.success(res, { agents }, 'Support agents list');
+});
+
 export const replyToSupportTicket = asyncHandler(async (req, res) => {
   const message = req.body?.message || req.body?.reply;
   const ticket = await adminSupportService.replyToSupportTicket(
     req.params.ticketId,
     message,
-    req.user._id
+    req.user._id,
+    { status: req.body?.status }
   );
   return ApiResponse.success(res, ticket, 'Reply posted');
 });
@@ -55,9 +61,14 @@ export const getTicketHistory = asyncHandler(async (req, res) => {
 });
 
 export const assignSupportTicket = asyncHandler(async (req, res) => {
-  const userId = req.body?.userId || req.body?.assignedTo;
-  const ticket = await adminSupportService.assignSupportTicket(req.params.ticketId, userId);
-  return ApiResponse.success(res, ticket, 'Ticket assigned');
+  const rawAssignee =
+    req.body?.userId !== undefined ? req.body.userId : req.body?.assignedTo;
+  const ticket = await adminSupportService.assignSupportTicket(
+    req.params.ticketId,
+    rawAssignee,
+    req.user?._id
+  );
+  return ApiResponse.success(res, ticket, 'Ticket assignment updated');
 });
 
 export const deleteTicket = asyncHandler(async (req, res) => {

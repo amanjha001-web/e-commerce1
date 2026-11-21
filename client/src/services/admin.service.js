@@ -794,6 +794,11 @@ const adminService = {
   },
 
   // ==================== 14. Support Tickets (/api/v1/admin/support-tickets*) ====================
+  getSupportAgents: async () => {
+    const response = await api.get("/admin/support-tickets/agents");
+    return response.data;
+  },
+
   getSupportTickets: async (params = {}) => {
     const response = await api.get("/admin/support-tickets", {
       params: cleanParams(params),
@@ -806,10 +811,14 @@ const adminService = {
     return response.data;
   },
 
-  updateSupportTicketStatus: async (ticketId, status) => {
+  updateSupportTicketStatus: async (ticketId, status, resolution = "") => {
+    const payload = { status: String(status).toUpperCase() };
+    if (resolution && String(resolution).trim()) {
+      payload.resolution = String(resolution).trim();
+    }
     const response = await api.patch(
       `/admin/support-tickets/${ticketId}/status`,
-      { status: String(status).toUpperCase() },
+      payload,
     );
     return response.data;
   },
@@ -825,15 +834,19 @@ const adminService = {
   assignSupportTicket: async (ticketId, assignedTo) => {
     const response = await api.patch(
       `/admin/support-tickets/${ticketId}/assign`,
-      { assignedTo },
+      { assignedTo: assignedTo || null },
     );
     return response.data;
   },
 
-  replyToSupportTicket: async (ticketId, message) => {
+  replyToSupportTicket: async (ticketId, messageOrPayload) => {
+    const payload =
+      typeof messageOrPayload === "object" && messageOrPayload !== null
+        ? messageOrPayload
+        : { message: messageOrPayload };
     const response = await api.post(
       `/admin/support-tickets/${ticketId}/reply`,
-      { message },
+      payload,
     );
     return response.data;
   },
@@ -858,6 +871,11 @@ const adminService = {
     const response = await api.patch(
       `/admin/support-tickets/${ticketId}/reopen`,
     );
+    return response.data;
+  },
+
+  deleteSupportTicket: async (ticketId) => {
+    const response = await api.delete(`/admin/support-tickets/${ticketId}`);
     return response.data;
   },
 

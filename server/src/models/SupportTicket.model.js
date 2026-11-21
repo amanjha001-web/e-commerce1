@@ -45,6 +45,18 @@ const supportTicketSchema = new mongoose.Schema(
       enum: ['order', 'payment', 'product', 'account', 'delivery', 'payout', 'general'],
       default: 'general',
     },
+    description: {
+      type: String,
+      default: '',
+    },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order',
+    },
+    orderNumber: {
+      type: String,
+      default: '',
+    },
     priority: {
       type: String,
       enum: ['low', 'medium', 'high', 'urgent'],

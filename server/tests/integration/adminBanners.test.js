@@ -3,6 +3,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { User } from '../../src/models/User.model.js';
 import { Banner } from '../../src/models/Banner.model.js';
+import { cloudinary } from '../../src/config/cloudinary.js';
 import { generateAccessToken } from '../../src/utils/token.utils.js';
 
 const ADMIN_ID = '65f100000000000000000001';
@@ -167,6 +168,15 @@ describe('Admin & Public Banners Integration Tests', () => {
   it('creates banners via multipart image upload as well as URL/alias payloads and rejects endDate < startDate', async () => {
     const token = mockAdminAuth();
 
+    vi.spyOn(cloudinary.uploader, 'upload_stream').mockImplementation((_opts, cb) => ({
+      end: () =>
+        cb(null, {
+          secure_url: 'https://cdn.example.com/banners/winter.png',
+          public_id: 'banners/winter_mock',
+        }),
+    }));
+    vi.spyOn(cloudinary.uploader, 'destroy').mockResolvedValue({ result: 'ok' });
+
     const badDateRes = await request(app)
       .post('/api/v1/admin/banners')
       .set('Authorization', `Bearer ${token}`)
@@ -244,6 +254,7 @@ describe('Admin & Public Banners Integration Tests', () => {
     expect(toggleRes.body.data.isActive).toBe(false);
     expect(toggleRes.body.data.computedStatus).toBe('inactive');
 
+    vi.spyOn(cloudinary.uploader, 'destroy').mockResolvedValue({ result: 'ok' });
     vi.spyOn(Banner, 'findByIdAndDelete').mockResolvedValueOnce({
       _id: BANNER_ID_1,
       title: 'Live Hero',

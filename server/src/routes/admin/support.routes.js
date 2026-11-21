@@ -12,9 +12,11 @@ const withForcedStatus = (status) => (req, res, next) => {
   return supportController.updateSupportTicketStatus(req, res, next);
 };
 
-// Collection routes
+// Collection & metadata routes
 router.get('/', supportController.getSupportTickets);
 router.get('/tickets', supportController.getSupportTickets);
+router.get('/agents', supportController.getSupportAgents);
+router.get('/tickets/agents', supportController.getSupportAgents);
 
 // Specific `/tickets/:ticketId` routes first
 router.get('/tickets/:ticketId/history', supportController.getTicketHistory);
