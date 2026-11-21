@@ -363,4 +363,101 @@ describe('Vendor Support Tickets Service & Routes Integration Tests', () => {
       })
     );
   });
+
+  it('auto-heals stale unique indexes (e.g. ticketNumber_1 / userId_1) and ticketId collisions on 11000 during createTicket', async () => {
+    // 1. Stale ticketNumber_1 / userId_1 unique index causing 11000 -> dropped & retried
+    mockAuthUser(ROLES.VENDOR);
+    vi.spyOn(Vendor, 'findOne').mockReturnValueOnce(
+      createQueryMock({ _id: vendorStoreId, userId: vendorUserId, storeName: 'Mainboard' })
+    );
+
+    const dropIndexMock = vi.fn().mockResolvedValue(true);
+    const indexesMock = vi.fn().mockResolvedValue([
+      { name: '_id_', key: { _id: 1 }, unique: true },
+      { name: 'ticketId_1', key: { ticketId: 1 }, unique: true },
+      { name: 'ticketNumber_1', key: { ticketNumber: 1 }, unique: true },
+      { name: 'userId_1', key: { userId: 1 }, unique: true },
+    ]);
+    const updateManyMock = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+
+    vi.spyOn(SupportTicket, 'collection', 'get').mockReturnValue({
+      indexes: indexesMock,
+      dropIndex: dropIndexMock,
+      updateMany: updateManyMock,
+    });
+
+    const dupLegacyErr = Object.assign(
+      new Error('E11000 duplicate key error collection: test.supporttickets index: ticketNumber_1 dup key: { ticketNumber: null }'),
+      { code: 11000, keyPattern: { ticketNumber: 1 }, keyValue: { ticketNumber: null } }
+    );
+    const createdAfterHeal = {
+      _id: ticketObjectId,
+      ticketId: 'TCK-HEALED-1',
+      userId: vendorUserId,
+      vendorId: vendorStoreId,
+      requesterRole: 'vendor',
+      subject: 'Inventory sync issue',
+      category: 'product',
+      priority: 'medium',
+      status: 'open',
+      messages: [{ sender: vendorUserId, message: 'Cannot sync SKU' }],
+      populate: vi.fn().mockResolvedValue(true),
+    };
+
+    const createSpy = vi
+      .spyOn(SupportTicket, 'create')
+      .mockRejectedValueOnce(dupLegacyErr)
+      .mockResolvedValueOnce(createdAfterHeal);
+    vi.spyOn(notificationService, 'createNotification').mockResolvedValue({});
+    vi.spyOn(notificationService, 'notifyAdmins').mockResolvedValue([]);
+
+    const healRes = await request(app)
+      .post('/api/v1/vendor/support/tickets')
+      .set('Authorization', `Bearer ${vendorToken}`)
+      .send({
+        subject: 'Inventory sync issue',
+        category: 'product',
+        message: 'Cannot sync SKU',
+      });
+
+    expect(healRes.status).toBe(201);
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(updateManyMock).toHaveBeenCalledTimes(1);
+    expect(dropIndexMock).toHaveBeenCalledWith('ticketNumber_1');
+    expect(dropIndexMock).toHaveBeenCalledWith('userId_1');
+    expect(dropIndexMock).not.toHaveBeenCalledWith('ticketId_1');
+    expect(dropIndexMock).not.toHaveBeenCalledWith('_id_');
+
+    // 2. ticketId collision regenerates a new ticketId and succeeds on retry
+    mockAuthUser(ROLES.VENDOR);
+    vi.spyOn(Vendor, 'findOne').mockReturnValueOnce(
+      createQueryMock({ _id: vendorStoreId, userId: vendorUserId, storeName: 'Mainboard' })
+    );
+    vi.spyOn(SupportTicket, 'collection', 'get').mockReturnValue({
+      indexes: vi.fn().mockResolvedValue([{ name: 'ticketId_1', key: { ticketId: 1 }, unique: true }]),
+      dropIndex: vi.fn(),
+    });
+    const dupTicketIdErr = Object.assign(
+      new Error('E11000 duplicate key error index: ticketId_1 dup key: { ticketId: "TCK-1" }'),
+      { code: 11000, keyPattern: { ticketId: 1 }, keyValue: { ticketId: 'TCK-1' } }
+    );
+    const secondCreateSpy = vi
+      .spyOn(SupportTicket, 'create')
+      .mockRejectedValueOnce(dupTicketIdErr)
+      .mockResolvedValueOnce(createdAfterHeal);
+
+    const retryRes = await request(app)
+      .post('/api/v1/vendor/support/tickets')
+      .set('Authorization', `Bearer ${vendorToken}`)
+      .send({
+        subject: 'Retry ticketId test',
+        message: 'Testing collision retry',
+      });
+
+    expect(retryRes.status).toBe(201);
+    expect(secondCreateSpy).toHaveBeenCalledTimes(2);
+    expect(secondCreateSpy.mock.calls[0][0].ticketId).not.toBe(
+      secondCreateSpy.mock.calls[1][0].ticketId
+    );
+  });
 });

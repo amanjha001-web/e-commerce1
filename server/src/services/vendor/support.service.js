@@ -4,6 +4,10 @@ import { Vendor } from '../../models/Vendor.model.js';
 import { Order } from '../../models/Order.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
+import {
+  createSupportTicketWithRetry,
+  generateSupportTicketCode,
+} from '../../utils/supportTicket.utils.js';
 import { notificationService } from '../common/notification.service.js';
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -401,9 +405,9 @@ export class VendorSupportService {
 
     const category = normalizeCategory(payload.category);
     const priority = normalizePriority(payload.priority);
-    const ticketId = `TCK-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const ticketId = generateSupportTicketCode();
 
-    const ticket = await SupportTicket.create({
+    const ticket = await createSupportTicketWithRetry({
       ticketId,
       userId,
       vendorId: vendor?._id,
@@ -424,26 +428,27 @@ export class VendorSupportService {
         },
       ],
     });
+    const resolvedTicketId = ticket.ticketId || ticketId;
 
     notificationService
       .createNotification({
         userId,
-        title: `Seller Support Ticket #${ticketId}`,
+        title: `Seller Support Ticket #${resolvedTicketId}`,
         message: `Your support request "${subject}" was submitted. Our seller success team will respond shortly.`,
         type: 'system',
         link: '/vendor/support',
-        data: { ticketId: ticket._id, ticketCode: ticketId, link: '/vendor/support' },
+        data: { ticketId: ticket._id, ticketCode: resolvedTicketId, link: '/vendor/support' },
       })
       .catch(() => {});
 
     const storeLabel = vendor?.storeName ? ` (${vendor.storeName})` : '';
     notificationService
       .notifyAdmins({
-        title: `New Seller Support Ticket #${ticketId}`,
+        title: `New Seller Support Ticket #${resolvedTicketId}`,
         message: `Seller${storeLabel}: ${subject}`,
         type: 'system',
         link: '/admin/support',
-        data: { ticketId: ticket._id, ticketCode: ticketId, requesterRole: 'vendor' },
+        data: { ticketId: ticket._id, ticketCode: resolvedTicketId, requesterRole: 'vendor' },
       })
       .catch(() => {});
 

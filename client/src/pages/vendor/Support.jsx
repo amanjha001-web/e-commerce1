@@ -257,6 +257,7 @@ const VendorSupport = () => {
 
   const handleSubmitTicket = async (e) => {
     e?.preventDefault?.();
+    if (submitting) return;
     const cleanSubject = form.subject.trim();
     const cleanMessage = form.message.trim();
     const cleanOrder = form.orderNumber.trim().replace(/^#/, "");

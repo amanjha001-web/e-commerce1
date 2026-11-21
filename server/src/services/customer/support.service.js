@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 import { SupportTicket } from '../../models/SupportTicket.model.js';
 import { ApiError } from '../../utils/apiError.js';
 import { parsePagination } from '../../utils/helpers.js';
+import {
+  createSupportTicketWithRetry,
+  generateSupportTicketCode,
+} from '../../utils/supportTicket.utils.js';
 import { notificationService } from '../common/notification.service.js';
 
 const VALID_CATEGORIES = new Set([
@@ -48,9 +52,9 @@ export class SupportService {
     const rawPriority = String(payload.priority || 'medium').trim().toLowerCase();
     const priority = VALID_PRIORITIES.has(rawPriority) ? rawPriority : 'medium';
 
-    const ticketId = `TCK-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    const ticketId = generateSupportTicketCode();
 
-    const ticket = await SupportTicket.create({
+    const ticket = await createSupportTicketWithRetry({
       ticketId,
       userId,
       subject,
@@ -65,25 +69,26 @@ export class SupportService {
         },
       ],
     });
+    const resolvedTicketId = ticket.ticketId || ticketId;
 
     notificationService
       .createNotification({
         userId,
-        title: `Support Ticket #${ticketId}`,
+        title: `Support Ticket #${resolvedTicketId}`,
         message: `Your support ticket "${subject}" has been created. Our team will respond soon.`,
         type: 'system',
         link: '/support',
-        data: { ticketId: ticket._id, ticketCode: ticketId },
+        data: { ticketId: ticket._id, ticketCode: resolvedTicketId },
       })
       .catch(() => {});
 
     notificationService
       .notifyAdmins({
-        title: `New Support Ticket #${ticketId}`,
+        title: `New Support Ticket #${resolvedTicketId}`,
         message: `Subject: ${subject}`,
         type: 'system',
         link: '/admin/support',
-        data: { ticketId: ticket._id, ticketCode: ticketId },
+        data: { ticketId: ticket._id, ticketCode: resolvedTicketId },
       })
       .catch(() => {});
 
