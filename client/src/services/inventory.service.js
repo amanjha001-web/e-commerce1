@@ -43,12 +43,28 @@ const inventoryService = {
 
   // Vendor inventory
   getVendorInventory: async (params = {}) => {
-    const response = await api.get('/vendor/inventory', { params });
+    const cleaned = Object.fromEntries(
+      Object.entries(params || {}).filter(
+        ([, v]) =>
+          v !== undefined &&
+          v !== null &&
+          v !== '' &&
+          String(v).toLowerCase() !== 'all',
+      ),
+    );
+    const response = await api.get('/vendor/inventory', { params: cleaned });
     return response.data;
   },
 
   updateVendorInventory: async (productId, data) => {
     const response = await api.patch(`/vendor/inventory/${productId}`, data);
+    return response.data;
+  },
+
+  getVendorMovements: async (productId, params = {}) => {
+    const response = await api.get(`/vendor/inventory/${productId}/movements`, {
+      params,
+    });
     return response.data;
   },
 };

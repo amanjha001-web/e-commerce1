@@ -11,3 +11,12 @@ export const updateInventory = asyncHandler(async (req, res) => {
   const result = await vendorInventoryService.updateInventory(req.user._id, req.params.productId, req.body);
   return ApiResponse.success(res, result, 'Inventory updated');
 });
+
+export const getInventoryMovements = asyncHandler(async (req, res) => {
+  const result = await vendorInventoryService.getInventoryMovements(
+    req.user._id,
+    req.params.productId,
+    req.query
+  );
+  return ApiResponse.success(res, result, 'Inventory movements retrieved');
+});

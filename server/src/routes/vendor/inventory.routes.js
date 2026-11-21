@@ -8,6 +8,7 @@ const router = Router();
 router.use(authenticate, requireVendor);
 
 router.get('/', vendorInventoryController.getInventory);
+router.get('/:productId/movements', vendorInventoryController.getInventoryMovements);
 router.patch('/:productId', vendorInventoryController.updateInventory);
 
 export default router;
