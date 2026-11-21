@@ -17,6 +17,7 @@ router.use(authenticate, requireVendor);
 
 router.get('/', vendorProductController.getVendorProducts);
 router.post('/', validate({ body: createProductSchema }), vendorProductController.createProduct);
+router.get('/:productId', checkVendorProductOwnership, vendorProductController.getVendorProductById);
 
 router.patch(
   '/:productId',

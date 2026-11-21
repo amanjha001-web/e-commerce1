@@ -7,6 +7,11 @@ export const getVendorProducts = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, 'Vendor products');
 });
 
+export const getVendorProductById = asyncHandler(async (req, res) => {
+  const product = await vendorProductService.getVendorProductById(req.user._id, req.params.productId);
+  return ApiResponse.success(res, product, 'Vendor product details');
+});
+
 export const createProduct = asyncHandler(async (req, res) => {
   const product = await vendorProductService.createProduct(req.user._id, req.body);
   return ApiResponse.created(res, product, 'Product created and submitted for approval');

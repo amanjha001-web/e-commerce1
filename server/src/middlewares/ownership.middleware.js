@@ -2,6 +2,7 @@ import { ApiError } from '../utils/apiError.js';
 import { ROLES } from '../constants/roles.constant.js';
 import { Product } from '../models/Product.model.js';
 import { Order } from '../models/Order.model.js';
+import { Vendor } from '../models/Vendor.model.js';
 
 export const checkVendorProductOwnership = async (req, res, next) => {
   if (req.user.role === ROLES.ADMIN || req.user.role === ROLES.SUPER_ADMIN) {
@@ -15,8 +16,28 @@ export const checkVendorProductOwnership = async (req, res, next) => {
     return next(ApiError.notFound('Product not found.'));
   }
 
-  const vendorId = req.user.vendorId?._id || req.user.vendorId;
-  if (!vendorId || product.vendorId.toString() !== vendorId.toString()) {
+  const productOwnerId =
+    product.vendorId?._id || product.vendorId || product.vendor?._id || product.vendor;
+  const candidateVendorIds = new Set();
+
+  const directVendorId = req.user.vendorId?._id || req.user.vendorId;
+  if (directVendorId) {
+    candidateVendorIds.add(String(directVendorId));
+  }
+  if (req.user._id) {
+    candidateVendorIds.add(String(req.user._id));
+  }
+
+  if (!productOwnerId || !candidateVendorIds.has(String(productOwnerId))) {
+    const vendorProfile = await Vendor.findOne({
+      $or: [{ userId: req.user._id }, { user: req.user._id }],
+    }).select('_id userId user');
+    if (vendorProfile?._id) {
+      candidateVendorIds.add(String(vendorProfile._id));
+    }
+  }
+
+  if (!productOwnerId || !candidateVendorIds.has(String(productOwnerId))) {
     return next(ApiError.forbidden('You do not have permission to manage this product.'));
   }
 

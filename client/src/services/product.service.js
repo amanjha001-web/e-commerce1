@@ -87,9 +87,25 @@ const productService = {
   // Vendor
 
   getVendorProducts: async (params = {}) => {
+    const cleaned = Object.fromEntries(
+      Object.entries(params || {}).filter(
+        ([, v]) =>
+          v !== undefined &&
+          v !== null &&
+          v !== "" &&
+          String(v).toLowerCase() !== "all" &&
+          String(v).toLowerCase() !== "all statuses",
+      ),
+    );
     const response = await api.get("/vendor/products", {
-      params,
+      params: cleaned,
     });
+
+    return response.data;
+  },
+
+  getVendorProductById: async (productId) => {
+    const response = await api.get(`/vendor/products/${productId}`);
 
     return response.data;
   },
@@ -119,6 +135,35 @@ const productService = {
     const response = await api.patch(`/vendor/products/${productId}/stock`, {
       stock,
     });
+
+    return response.data;
+  },
+
+  // Vendor Product Variants
+
+  getProductVariants: async (productId) => {
+    const response = await api.get(`/vendor/variants/product/${productId}`);
+
+    return response.data;
+  },
+
+  createProductVariant: async (productId, variantData) => {
+    const response = await api.post(
+      `/vendor/variants/product/${productId}`,
+      variantData,
+    );
+
+    return response.data;
+  },
+
+  updateProductVariant: async (variantId, variantData) => {
+    const response = await api.patch(`/vendor/variants/${variantId}`, variantData);
+
+    return response.data;
+  },
+
+  deleteProductVariant: async (variantId) => {
+    const response = await api.delete(`/vendor/variants/${variantId}`);
 
     return response.data;
   },
