@@ -19,7 +19,7 @@ const initialFilters = {
   search: "",
   status: "",
   page: 1,
-  limit: 12,
+  limit: 10,
 };
 
 const VendorRequestsContainer = () => {
@@ -41,7 +41,7 @@ const VendorRequestsContainer = () => {
   const refreshRequests = (targetFilters = filters) => {
     const params = {
       page: targetFilters.page || 1,
-      limit: targetFilters.limit || 12,
+      limit: targetFilters.limit || 10,
     };
     if (targetFilters.search?.trim()) {
       params.search = targetFilters.search.trim();

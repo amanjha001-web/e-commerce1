@@ -6,6 +6,7 @@ import UserFilters from "../../components/admin/users/UserFilters";
 import UserTable from "../../components/admin/users/UserTable";
 import UserDetails from "../../components/admin/users/UserDetails";
 import UserStatusToggle from "../../components/admin/users/UserStatusToggle";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 import {
   fetchAdminUsers,
@@ -16,6 +17,7 @@ import {
   clearSelectedUser,
   clearAdminUsersError,
   setAdminUsersPage,
+  setAdminUsersLimit,
 } from "../../store/slices/Admin/adminUsersSlice";
 
 const initialFilters = {
@@ -329,37 +331,18 @@ const Users = () => {
           onToggleStatus={handleStatusClick}
         />
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-[var(--muted)]">
-              Page {page} of {Math.max(totalPages, 1)} · {total} users
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => dispatch(setAdminUsersPage(page - 1))}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-
-              <button
-                type="button"
-                disabled={
-                  loading ||
-                  (totalPages > 0 && page >= totalPages) ||
-                  totalPages === 0
-                }
-                onClick={() => dispatch(setAdminUsersPage(page + 1))}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={limit}
+          itemLabel="users"
+          loading={loading}
+          onPageChange={(nextPage) => dispatch(setAdminUsersPage(nextPage))}
+          onPageSizeChange={(nextLimit) =>
+            dispatch(setAdminUsersLimit(nextLimit))
+          }
+        />
       </div>
 
       <UserDetails

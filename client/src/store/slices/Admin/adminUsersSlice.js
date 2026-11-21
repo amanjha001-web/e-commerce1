@@ -150,6 +150,10 @@ const adminUsersSlice = createSlice({
     setAdminUsersPage(state, action) {
       state.pagination.page = action.payload;
     },
+    setAdminUsersLimit(state, action) {
+      state.pagination.limit = action.payload;
+      state.pagination.page = 1;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -272,8 +276,12 @@ const adminUsersSlice = createSlice({
   },
 });
 
-export const { clearSelectedUser, clearAdminUsersError, setAdminUsersPage } =
-  adminUsersSlice.actions;
+export const {
+  clearSelectedUser,
+  clearAdminUsersError,
+  setAdminUsersPage,
+  setAdminUsersLimit,
+} = adminUsersSlice.actions;
 
 export {
   fetchAdminUsers,

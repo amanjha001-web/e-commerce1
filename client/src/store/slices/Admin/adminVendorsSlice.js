@@ -235,6 +235,11 @@ const adminVendorsSlice = createSlice({
       state.pagination.page = action.payload;
     },
 
+    setAdminVendorsLimit(state, action) {
+      state.pagination.limit = action.payload;
+      state.pagination.page = 1;
+    },
+
     setSelectedVendor(state, action) {
       state.selectedVendor = action.payload;
     },
@@ -263,7 +268,12 @@ const adminVendorsSlice = createSlice({
         state.loading = false;
         state.vendors = action.payload.vendors;
         state.summary = action.payload.summary || state.summary;
-        state.pagination = action.payload.pagination;
+        state.pagination = {
+          ...state.pagination,
+          ...(action.payload.pagination || {}),
+          limit:
+            action.payload.pagination?.limit ?? state.pagination.limit ?? 10,
+        };
         state.message = action.payload.message;
       })
       .addCase(fetchAdminVendors.rejected, (state, action) => {
@@ -411,6 +421,7 @@ const adminVendorsSlice = createSlice({
 export const {
   setVendorFilters,
   setAdminVendorsPage,
+  setAdminVendorsLimit,
   setSelectedVendor,
   clearSelectedVendor,
   clearAdminVendorsError,

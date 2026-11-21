@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import Button from "../../components/common/Button";
@@ -6,6 +6,7 @@ import Input from "../../components/common/Input";
 import Modal from "../../components/common/Modal";
 import Loader from "../../components/common/Loader";
 import EmptyState from "../../components/common/EmptyState";
+import AdminPagination from "../../components/admin/AdminPagination";
 import adminService from "../../services/admin.service";
 
 const EMPTY_FORM = {
@@ -29,6 +30,8 @@ const Brands = ({
   const [apiBrands, setApiBrands] = useState([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiSaving, setApiSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -36,11 +39,14 @@ const Brands = ({
   const fetchBrands = useCallback(async () => {
     try {
       setApiLoading(true);
-      const res = await adminService.getBrands({ limit: 50 });
+      const res = await adminService.getBrands({ limit: 100 });
       const data = res?.data ?? res;
-      if (Array.isArray(data?.brands)) {
-        setApiBrands(data.brands);
-      }
+      const list = Array.isArray(data?.brands)
+        ? data.brands
+        : Array.isArray(data)
+          ? data
+          : [];
+      setApiBrands(list);
     } catch {
       // Ignore fallback error
     } finally {
@@ -55,6 +61,12 @@ const Brands = ({
   }, [propBrands.length, fetchBrands]);
 
   const brands = propBrands.length > 0 ? propBrands : apiBrands;
+  const totalBrandPages = Math.max(1, Math.ceil(brands.length / limit));
+  const currentPage = Math.min(page, totalBrandPages);
+  const paginatedBrands = useMemo(() => {
+    const start = (currentPage - 1) * limit;
+    return brands.slice(start, start + limit);
+  }, [brands, currentPage, limit]);
   const loading = propLoading || apiLoading;
   const saving = propSaving || apiSaving;
 
@@ -252,7 +264,7 @@ const Brands = ({
                   </thead>
 
                   <tbody className="divide-y divide-[#f0e8eb] dark:divide-line">
-                    {brands.map((brand) => {
+                    {paginatedBrands.map((brand) => {
                       const brandId = brand?._id || brand?.id;
                       const logo =
                         brand?.logo?.url || brand?.logo || brand?.logoUrl;
@@ -335,6 +347,22 @@ const Brands = ({
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="px-5 pb-4">
+                <AdminPagination
+                  currentPage={currentPage}
+                  totalPages={totalBrandPages}
+                  totalItems={brands.length}
+                  pageSize={limit}
+                  itemLabel="brands"
+                  loading={loading}
+                  onPageChange={setPage}
+                  onPageSizeChange={(nextLimit) => {
+                    setLimit(nextLimit);
+                    setPage(1);
+                  }}
+                />
               </div>
             </div>
           )}

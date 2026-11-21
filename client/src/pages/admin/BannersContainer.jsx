@@ -14,14 +14,18 @@ import {
 const BannersContainer = () => {
   const dispatch = useDispatch();
 
-  const { banners = [], loading, error, actionLoading } = useSelector(
-    (state) => state.adminBanners || {}
-  );
+  const {
+    banners = [],
+    pagination = {},
+    loading,
+    error,
+    actionLoading,
+  } = useSelector((state) => state.adminBanners || {});
 
   const [filters, setFilters] = useState({
     search: "",
     page: 1,
-    limit: 20,
+    limit: 10,
   });
 
   // Fetch banners
@@ -83,7 +87,8 @@ const BannersContainer = () => {
   return (
     <Banners
       banners={banners}
-      totalBanners={banners.length}
+      totalBanners={pagination?.total || banners.length}
+      pagination={pagination}
       loading={loading}
       saving={actionLoading}
       error={error}

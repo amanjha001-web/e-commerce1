@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import adminService from "../../services/admin.service";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const DEMO_REFUNDS = [
   {
@@ -31,6 +32,8 @@ const Refunds = () => {
   const [apiRefunds, setApiRefunds] = useState([]);
   const [demoRefunds, setDemoRefunds] = useState(DEMO_REFUNDS);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [viewingRefund, setViewingRefund] = useState(null);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [newRefundForm, setNewRefundForm] = useState({
@@ -117,6 +120,11 @@ const Refunds = () => {
         .includes(q),
     );
   }, [rows, search]);
+
+  const paginatedRefunds = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filtered.slice(start, start + limit);
+  }, [filtered, page, limit]);
 
   const handleApproveRefund = async (r) => {
     if (!r.isDemo && r._id) {
@@ -209,7 +217,10 @@ const Refunds = () => {
             className="field"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (page !== 1) setPage(1);
+            }}
           />
           <button
             type="button"
@@ -237,7 +248,7 @@ const Refunds = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {paginatedRefunds.map((r) => (
                 <tr key={r._id || r.request}>
                   <td>{r.request}</td>
                   <td>{r.order}</td>
@@ -284,6 +295,19 @@ const Refunds = () => {
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={page}
+          totalPages={Math.max(1, Math.ceil(filtered.length / limit))}
+          totalItems={filtered.length}
+          pageSize={limit}
+          itemLabel="refund requests"
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
       </div>
 
       {viewingRefund && (

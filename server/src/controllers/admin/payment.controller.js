@@ -2,6 +2,7 @@ import { adminPaymentService } from '../../services/admin/payment.service.js';
 import { adminOrderService } from '../../services/admin/order.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiResponse } from '../../utils/apiResponse.js';
+import { ApiError } from '../../utils/apiError.js';
 
 export const getPayments = asyncHandler(async (req, res) => {
   const result = await adminPaymentService.getPayments(req.query);
@@ -15,7 +16,11 @@ export const getPaymentById = asyncHandler(async (req, res) => {
 
 export const refundPayment = asyncHandler(async (req, res) => {
   const payment = await adminPaymentService.getPaymentById(req.params.paymentId);
-  const result = await adminOrderService.processRefund(payment.orderId._id, req.body, req.body.reason, req.user._id);
+  const orderId = payment.orderId?._id || payment.orderId;
+  if (!orderId) {
+    throw ApiError.notFound('Order associated with this payment was not found');
+  }
+  const result = await adminOrderService.processRefund(orderId, req.body, req.body.reason, req.user._id);
   return ApiResponse.success(res, result, 'Payment refunded');
 });
 

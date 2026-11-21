@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const DEMO_PAYMENTS = [
   {
@@ -52,13 +53,19 @@ const AdminPayments = ({
   payments = [],
   vendorPayouts = [],
   selectedPayment = null,
+  loading = false,
   saving = false,
+  pagination = {},
+  filters = {},
+  onFilterChange,
   onViewPayment,
   onRefundPayment,
   onReconcilePayment,
   onUpdatePayoutStatus,
 }) => {
   const [search, setSearch] = useState("");
+  const [localPage, setLocalPage] = useState(1);
+  const [localLimit, setLocalLimit] = useState(10);
   const [viewingPayment, setViewingPayment] = useState(null);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [refundReason, setRefundReason] = useState("");
@@ -128,6 +135,28 @@ const AdminPayments = ({
     );
   }, [rows, search]);
 
+  const isServerPaginated =
+    payments.length > 0 && typeof pagination?.total === "number";
+
+  const visibleRows = useMemo(() => {
+    if (isServerPaginated) return filtered;
+    const start = (localPage - 1) * localLimit;
+    return filtered.slice(start, start + localLimit);
+  }, [isServerPaginated, filtered, localPage, localLimit]);
+
+  const currentPage = isServerPaginated
+    ? pagination?.page || filters?.page || 1
+    : localPage;
+  const pageLimit = isServerPaginated
+    ? pagination?.limit || filters?.limit || 10
+    : localLimit;
+  const totalItems = isServerPaginated
+    ? pagination?.total ?? filtered.length
+    : filtered.length;
+  const totalPages = isServerPaginated
+    ? pagination?.totalPages || Math.ceil(totalItems / pageLimit) || 1
+    : Math.max(1, Math.ceil(filtered.length / localLimit));
+
   const handleOpenPayment = (p) => {
     setViewingPayment(p);
     setRefundAmount(String(p.rawAmount || ""));
@@ -159,7 +188,10 @@ const AdminPayments = ({
             className="field"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setLocalPage(1);
+            }}
           />
           <button
             type="button"
@@ -186,7 +218,7 @@ const AdminPayments = ({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
+              {visibleRows.map((p) => (
                 <tr
                   key={p._id || p.paymentId}
                   style={{ cursor: "pointer" }}
@@ -207,6 +239,30 @@ const AdminPayments = ({
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageLimit}
+          itemLabel="payments"
+          loading={loading}
+          onPageChange={(nextPage) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ page: nextPage });
+            } else {
+              setLocalPage(nextPage);
+            }
+          }}
+          onPageSizeChange={(nextLimit) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ limit: nextLimit, page: 1 });
+            } else {
+              setLocalLimit(nextLimit);
+              setLocalPage(1);
+            }
+          }}
+        />
       </div>
 
       {activePayment && (

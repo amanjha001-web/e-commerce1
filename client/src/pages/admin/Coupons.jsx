@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const DEMO_COUPONS = [
   {
@@ -42,7 +43,11 @@ const formatDate = (date) => {
 const Coupons = ({
   coupons = [],
   couponUsage = null,
+  loading = false,
   saving = false,
+  pagination = {},
+  filters = {},
+  onFilterChange,
   onInspectCoupon,
   onCreateCoupon,
   onEditCoupon,
@@ -50,7 +55,9 @@ const Coupons = ({
   onToggleCouponStatus,
 }) => {
   const [demoCoupons, setDemoCoupons] = useState(DEMO_COUPONS);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(filters?.search || "");
+  const [demoPage, setDemoPage] = useState(1);
+  const [demoLimit, setDemoLimit] = useState(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState(null);
   const [form, setForm] = useState({
@@ -100,6 +107,37 @@ const Coupons = ({
         .includes(q),
     );
   }, [rows, search]);
+
+  useEffect(() => {
+    if (!onFilterChange || search === (filters?.search || "")) return undefined;
+    const timer = setTimeout(() => {
+      onFilterChange({ search, page: 1 });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, filters?.search, onFilterChange]);
+
+  const isServerPaginated =
+    typeof pagination?.total === "number" &&
+    (coupons.length > 0 || Boolean(filters?.search) || (pagination?.page || 1) > 1);
+
+  const visibleRows = useMemo(() => {
+    if (isServerPaginated) return coupons.length > 0 ? rows : [];
+    const start = (demoPage - 1) * demoLimit;
+    return filtered.slice(start, start + demoLimit);
+  }, [isServerPaginated, coupons.length, rows, filtered, demoPage, demoLimit]);
+
+  const currentPage = isServerPaginated
+    ? pagination?.page || filters?.page || 1
+    : demoPage;
+  const pageLimit = isServerPaginated
+    ? pagination?.limit || filters?.limit || 10
+    : demoLimit;
+  const totalItems = isServerPaginated
+    ? pagination?.total ?? rows.length
+    : filtered.length;
+  const totalPages = isServerPaginated
+    ? pagination?.totalPages || Math.ceil(totalItems / pageLimit) || 1
+    : Math.max(1, Math.ceil(filtered.length / demoLimit));
 
   const handleOpenCreate = () => {
     setEditingCoupon(null);
@@ -222,7 +260,10 @@ const Coupons = ({
             className="field"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setDemoPage(1);
+            }}
           />
           <button
             type="button"
@@ -246,7 +287,7 @@ const Coupons = ({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
+              {visibleRows.map((c) => (
                 <tr key={c._id || c.code}>
                   <td>{c.code}</td>
                   <td>{c.discount}</td>
@@ -271,6 +312,30 @@ const Coupons = ({
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageLimit}
+          itemLabel="coupons"
+          loading={loading}
+          onPageChange={(nextPage) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ page: nextPage });
+            } else {
+              setDemoPage(nextPage);
+            }
+          }}
+          onPageSizeChange={(nextLimit) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ limit: nextLimit, page: 1 });
+            } else {
+              setDemoLimit(nextLimit);
+              setDemoPage(1);
+            }
+          }}
+        />
       </div>
 
       {modalOpen && (

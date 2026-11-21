@@ -4,6 +4,7 @@ import adminService from "../../services/admin.service";
 import Modal from "../../components/common/Modal";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
@@ -50,7 +51,7 @@ const Products = () => {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 12,
+    limit: 10,
     totalPages: 0,
   });
 
@@ -61,6 +62,7 @@ const Products = () => {
   const [stockFilter, setStockFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [viewingProduct, setViewingProduct] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -95,7 +97,7 @@ const Products = () => {
       setError("");
       const params = {
         page,
-        limit: 12,
+        limit,
       };
       if (search.trim()) params.search = search.trim();
       if (statusFilter !== "all") params.status = statusFilter;
@@ -123,7 +125,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, stockFilter, categoryFilter]);
+  }, [page, limit, search, statusFilter, stockFilter, categoryFilter]);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -881,32 +883,23 @@ const Products = () => {
           </table>
         </div>
 
-        {(pagination.totalPages || 0) > 1 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-[var(--muted)]">
-              Page {page} of {Math.max(pagination.totalPages || 1, 1)} ·{" "}
-              {pagination.total || rows.length} products
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => p - 1)}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={loading || page >= (pagination.totalPages || 1)}
-                onClick={() => setPage((p) => p + 1)}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          currentPage={page}
+          totalPages={
+            pagination.totalPages ||
+            Math.ceil((pagination.total || rows.length) / limit) ||
+            1
+          }
+          totalItems={pagination.total ?? rows.length}
+          pageSize={limit}
+          itemLabel="products"
+          loading={loading}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Product View / Edit / Moderate Modal */}

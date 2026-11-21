@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import adminService from "../../services/admin.service";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const statusClass = (s) => {
   const val = String(s || "").toLowerCase();
@@ -19,9 +20,17 @@ const formatLabel = (val) =>
 
 const Support = ({ tickets: propTickets = [] }) => {
   const [apiTickets, setApiTickets] = useState([]);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [activeTicket, setActiveTicket] = useState(null);
   const [ticketHistory, setTicketHistory] = useState([]);
   const [replyText, setReplyText] = useState("");
@@ -31,10 +40,25 @@ const Support = ({ tickets: propTickets = [] }) => {
   const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await adminService.getSupportTickets({ limit: 50 });
+      const params = { page, limit };
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (search.trim()) params.search = search.trim();
+
+      const response = await adminService.getSupportTickets(params);
       const data = response?.data ?? response;
       const list = data?.tickets || data || [];
       setApiTickets(Array.isArray(list) ? list : []);
+      if (data?.pagination) {
+        setPagination((prev) => ({ ...prev, ...data.pagination }));
+      } else {
+        const count = Array.isArray(list) ? list.length : 0;
+        setPagination({
+          total: count,
+          page: 1,
+          limit,
+          totalPages: Math.max(1, Math.ceil(count / limit)),
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch admin tickets:", err);
       toast.error(err?.response?.data?.message || "Failed to load support tickets");
@@ -42,11 +66,17 @@ const Support = ({ tickets: propTickets = [] }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, search, statusFilter]);
 
   useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    const timer = setTimeout(
+      () => {
+        fetchTickets();
+      },
+      search ? 300 : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [fetchTickets, search]);
 
   const rows = useMemo(() => {
     const source = propTickets.length > 0 ? propTickets : apiTickets;
@@ -273,7 +303,10 @@ const Support = ({ tickets: propTickets = [] }) => {
             className="field"
             placeholder="Search tickets..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (page !== 1) setPage(1);
+            }}
           />
 
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
@@ -282,7 +315,10 @@ const Support = ({ tickets: propTickets = [] }) => {
                 key={st}
                 type="button"
                 className={statusFilter === st ? "primarybtn" : "btnsm"}
-                onClick={() => setStatusFilter(st)}
+                onClick={() => {
+                  setStatusFilter(st);
+                  if (page !== 1) setPage(1);
+                }}
               >
                 {st === "all" ? "All" : formatLabel(st)}
               </button>
@@ -358,6 +394,28 @@ const Support = ({ tickets: propTickets = [] }) => {
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={page}
+          totalPages={
+            pagination.totalPages ||
+            Math.ceil((pagination.total || filtered.length) / limit) ||
+            1
+          }
+          totalItems={
+            propTickets.length > 0
+              ? filtered.length
+              : pagination.total ?? filtered.length
+          }
+          pageSize={limit}
+          itemLabel="tickets"
+          loading={loading}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
       </div>
 
       {activeTicket && (

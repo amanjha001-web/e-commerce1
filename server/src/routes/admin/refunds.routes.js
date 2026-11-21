@@ -23,7 +23,19 @@ router.get('/', asyncHandler(async (req, res) => {
     Refund.countDocuments(),
   ]);
 
-  return ApiResponse.success(res, { refunds, pagination: { total, page, limit } }, 'Refund requests');
+  return ApiResponse.success(
+    res,
+    {
+      refunds,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    },
+    'Refund requests'
+  );
 }));
 
 export default router;

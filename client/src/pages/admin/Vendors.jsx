@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import VendorDetails from "../../components/admin/vendors/VendorDetails";
 import VendorStatusToggle from "../../components/admin/vendors/VendorStatusToggle";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 import {
   fetchAdminVendors,
@@ -14,6 +15,7 @@ import {
   approveAdminVendor,
   rejectAdminVendor,
   setAdminVendorsPage,
+  setAdminVendorsLimit,
   setSelectedVendor,
   clearSelectedVendor,
   clearAdminVendorsError,
@@ -55,7 +57,7 @@ const Vendors = () => {
     error = null,
   } = useSelector((state) => state.adminVendors || {});
 
-  const { page = 1, limit = 15, total = 0, totalPages = 0 } = pagination;
+  const { page = 1, limit = 10, total = 0, totalPages = 0 } = pagination;
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -462,31 +464,18 @@ const Vendors = () => {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-[var(--muted)]">
-              Page {page} of {Math.max(totalPages, 1)} · {total} vendors
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => dispatch(setAdminVendorsPage(page - 1))}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={loading || page >= totalPages}
-                onClick={() => dispatch(setAdminVendorsPage(page + 1))}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={limit}
+          itemLabel="vendors"
+          loading={loading}
+          onPageChange={(nextPage) => dispatch(setAdminVendorsPage(nextPage))}
+          onPageSizeChange={(nextLimit) =>
+            dispatch(setAdminVendorsLimit(nextLimit))
+          }
+        />
       </div>
 
       {detailsOpen && selectedVendor && (

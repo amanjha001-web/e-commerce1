@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const DEMO_BANNERS = [
   {
@@ -37,7 +38,11 @@ const SECTION_LABELS = {
 
 const Banners = ({
   banners = [],
+  pagination = {},
+  filters = {},
+  loading = false,
   saving = false,
+  onFilterChange,
   onCreateBanner,
   onEditBanner,
   onDeleteBanner,
@@ -45,6 +50,8 @@ const Banners = ({
 }) => {
   const [demoBanners, setDemoBanners] = useState(DEMO_BANNERS);
   const [search, setSearch] = useState("");
+  const [localPage, setLocalPage] = useState(1);
+  const [localLimit, setLocalLimit] = useState(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
   const [form, setForm] = useState({
@@ -95,6 +102,28 @@ const Banners = ({
         .includes(q),
     );
   }, [rows, search]);
+
+  const isServerPaginated =
+    banners.length > 0 && typeof pagination?.total === "number";
+
+  const visibleRows = useMemo(() => {
+    if (isServerPaginated) return filtered;
+    const start = (localPage - 1) * localLimit;
+    return filtered.slice(start, start + localLimit);
+  }, [isServerPaginated, filtered, localPage, localLimit]);
+
+  const currentPage = isServerPaginated
+    ? pagination?.page || filters?.page || 1
+    : localPage;
+  const pageLimit = isServerPaginated
+    ? pagination?.limit || filters?.limit || 10
+    : localLimit;
+  const totalItems = isServerPaginated
+    ? pagination?.total ?? filtered.length
+    : filtered.length;
+  const totalPages = isServerPaginated
+    ? pagination?.totalPages || Math.ceil(totalItems / pageLimit) || 1
+    : Math.max(1, Math.ceil(filtered.length / localLimit));
 
   const handleOpenCreate = () => {
     setEditingBanner(null);
@@ -204,7 +233,10 @@ const Banners = ({
             className="field"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setLocalPage(1);
+            }}
           />
           <button
             type="button"
@@ -228,7 +260,7 @@ const Banners = ({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((b, i) => (
+              {visibleRows.map((b, i) => (
                 <tr key={b._id || b.title || i}>
                   <td>{b.preview}</td>
                   <td>{b.title}</td>
@@ -253,6 +285,30 @@ const Banners = ({
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageLimit}
+          itemLabel="banners"
+          loading={loading}
+          onPageChange={(nextPage) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ page: nextPage });
+            } else {
+              setLocalPage(nextPage);
+            }
+          }}
+          onPageSizeChange={(nextLimit) => {
+            if (isServerPaginated && onFilterChange) {
+              onFilterChange({ limit: nextLimit, page: 1 });
+            } else {
+              setLocalLimit(nextLimit);
+              setLocalPage(1);
+            }
+          }}
+        />
       </div>
 
       {modalOpen && (

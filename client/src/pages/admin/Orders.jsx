@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import adminService from "../../services/admin.service";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const INITIAL_DEMO_ORDERS = [
   {
@@ -73,7 +74,17 @@ const formatOrderStatusLabel = (value) =>
 
 const Orders = () => {
   const [apiOrders, setApiOrders] = useState([]);
+  const [hasApiOrders, setHasApiOrders] = useState(false);
   const [demoOrders, setDemoOrders] = useState(INITIAL_DEMO_ORDERS);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [viewingOrder, setViewingOrder] = useState(null);
@@ -95,22 +106,48 @@ const Orders = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await adminService.getOrders({ limit: 50 });
+      setLoading(true);
+      const params = { page, limit };
+      if (search.trim()) params.search = search.trim();
+      if (statusFilter !== "All statuses") {
+        params.status = statusFilter.trim().toLowerCase().replace(/\s+/g, "_");
+      }
+
+      const response = await adminService.getOrders(params);
       const data = response?.data ?? response;
-      if (Array.isArray(data?.orders) && data.orders.length > 0) {
+      if (Array.isArray(data?.orders)) {
+        setHasApiOrders(true);
         setApiOrders(data.orders);
+        if (data.pagination) {
+          setPagination((prev) => ({ ...prev, ...data.pagination }));
+        } else {
+          setPagination({
+            total: data.orders.length,
+            page,
+            limit,
+            totalPages: Math.max(1, Math.ceil(data.orders.length / limit)),
+          });
+        }
       }
     } catch {
       // Fallback to demo orders when unmapped
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [page, limit, search, statusFilter]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    const timer = setTimeout(
+      () => {
+        fetchOrders();
+      },
+      search ? 300 : 0,
+    );
+    return () => clearTimeout(timer);
+  }, [fetchOrders, search]);
 
   const rows = useMemo(() => {
-    const source = apiOrders.length > 0 ? apiOrders : demoOrders;
+    const source = hasApiOrders ? apiOrders : demoOrders;
     return source.map((o, idx) => {
       const id =
         o.id ||
@@ -141,9 +178,10 @@ const Orders = () => {
         _status: status,
       };
     });
-  }, [apiOrders, demoOrders]);
+  }, [hasApiOrders, apiOrders, demoOrders]);
 
-  const filteredRows = useMemo(() => {
+  const filteredDemoRows = useMemo(() => {
+    if (hasApiOrders) return rows;
     return rows.filter((o) => {
       if (
         statusFilter !== "All statuses" &&
@@ -160,7 +198,22 @@ const Orders = () => {
       }
       return true;
     });
-  }, [rows, search, statusFilter]);
+  }, [hasApiOrders, rows, search, statusFilter]);
+
+  const filteredRows = useMemo(() => {
+    if (hasApiOrders) return rows;
+    const start = (page - 1) * limit;
+    return filteredDemoRows.slice(start, start + limit);
+  }, [hasApiOrders, rows, filteredDemoRows, page, limit]);
+
+  const totalOrderItems = hasApiOrders
+    ? pagination.total ?? rows.length
+    : filteredDemoRows.length;
+  const totalOrderPages = hasApiOrders
+    ? pagination.totalPages ||
+      Math.ceil(totalOrderItems / limit) ||
+      1
+    : Math.max(1, Math.ceil(filteredDemoRows.length / limit));
 
   const handleOpenDetails = async (order) => {
     setViewingOrder(order);
@@ -187,15 +240,22 @@ const Orders = () => {
         if (detailRes.status === "fulfilled") {
           const detail = detailRes.value?.data ?? detailRes.value;
           if (detail && typeof detail === "object") {
+            const resolvedAmount =
+              detail.totalAmount ?? detail.total ?? detail.amount ?? order._amount;
             setViewingOrder((prev) =>
               prev
                 ? {
                     ...prev,
                     ...detail,
+                    _amount: resolvedAmount,
                     _status: formatOrderStatusLabel(detail.orderStatus || detail.status || prev._status),
                   }
                 : prev
             );
+            setRefundForm((prev) => ({
+              ...prev,
+              amount: prev.amount || String(resolvedAmount || ""),
+            }));
             const detailEta =
               detail.tracking?.estimatedDeliveryDate ||
               detail.expectedDeliveryDate ||
@@ -349,18 +409,60 @@ const Orders = () => {
   const handleProcessRefund = async () => {
     if (!viewingOrder) return;
     if (viewingOrder.isDemo || !viewingOrder._id) {
+      setDemoOrders((prev) =>
+        prev.map((x) =>
+          x.id === viewingOrder._idLabel ? { ...x, status: "Refunded" } : x,
+        ),
+      );
       toast.success("Refund processed");
       setViewingOrder(null);
       return;
     }
 
+    const orderStatusLower = String(
+      viewingOrder.orderStatus || viewingOrder._status || "",
+    ).toLowerCase();
+    const payStatusLower = String(viewingOrder.paymentStatus || "").toLowerCase();
+
+    if (orderStatusLower === "refunded" || payStatusLower === "refunded") {
+      toast.error("This order has already been fully refunded.");
+      return;
+    }
+
+    const isPaidOrder =
+      Boolean(viewingOrder.isPaid) ||
+      ["success", "paid", "partially_refunded"].includes(payStatusLower);
+    if (!isPaidOrder) {
+      toast.error("Cannot refund an unpaid order.");
+      return;
+    }
+
+    const maxAmount = Number(viewingOrder._amount || 0);
+    const parsedAmount = refundForm.amount ? Number(refundForm.amount) : undefined;
+    if (
+      parsedAmount !== undefined &&
+      (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || (maxAmount > 0 && parsedAmount > maxAmount))
+    ) {
+      toast.error(
+        maxAmount > 0
+          ? `Refund amount must be between ₹1 and ₹${maxAmount}`
+          : "Refund amount must be greater than 0",
+      );
+      return;
+    }
+
     try {
       setSaving(true);
-      await adminService.processRefund(viewingOrder._id, {
-        amount: refundForm.amount ? Number(refundForm.amount) : undefined,
+      const res = await adminService.processRefund(viewingOrder._id, {
+        amount: parsedAmount,
         reason: refundForm.reason.trim() || "Admin processed refund",
       });
-      toast.success("Refund processed");
+      const data = res?.data ?? res;
+      toast.success(
+        data?.isFullRefund === false
+          ? "Partial refund processed"
+          : "Refund processed",
+      );
       setViewingOrder(null);
       fetchOrders();
     } catch (err) {
@@ -402,14 +504,20 @@ const Orders = () => {
         <div className="toolbar">
           <input
             className="field"
-            placeholder="Search orders..."
+            placeholder="Search order # or customer..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (page !== 1) setPage(1);
+            }}
           />
           <select
             className="field"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              if (page !== 1) setPage(1);
+            }}
           >
             <option>All statuses</option>
             <option>Pending</option>
@@ -421,6 +529,19 @@ const Orders = () => {
             <option>Delivered</option>
             <option>Cancelled</option>
           </select>
+          {(search || statusFilter !== "All statuses") && (
+            <button
+              type="button"
+              className="outlinebtn"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("All statuses");
+                setPage(1);
+              }}
+            >
+              Reset
+            </button>
+          )}
           <button
             type="button"
             className="outlinebtn"
@@ -443,42 +564,70 @@ const Orders = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((o) => (
-                <tr key={o._key}>
-                  <td>{o._idLabel}</td>
-                  <td>{o._customer}</td>
-                  <td>{o._date}</td>
-                  <td>{money(o._amount)}</td>
-                  <td>
-                    <span className={`status ${statusClass(o._status)}`}>
-                      {o._status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => handleOpenDetails(o)}
-                    >
-                      Details
-                    </button>{" "}
-                    <button
-                      type="button"
-                      className="btnsm"
-                      onClick={() => {
-                        setUpdatingOrder(o);
-                        setNewStatus(o._status || "Processing");
-                        setStatusNote("");
-                      }}
-                    >
-                      Update
-                    </button>
+              {loading && filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-[var(--muted)]">
+                    Loading orders...
                   </td>
                 </tr>
-              ))}
+              ) : filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-sm text-[var(--muted)]">
+                    No orders match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((o) => (
+                  <tr key={o._key}>
+                    <td>{o._idLabel}</td>
+                    <td>{o._customer}</td>
+                    <td>{o._date}</td>
+                    <td>{money(o._amount)}</td>
+                    <td>
+                      <span className={`status ${statusClass(o._status)}`}>
+                        {o._status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btnsm"
+                        onClick={() => handleOpenDetails(o)}
+                      >
+                        Details
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className="btnsm"
+                        onClick={() => {
+                          setUpdatingOrder(o);
+                          setNewStatus(o._status || "Processing");
+                          setStatusNote("");
+                        }}
+                      >
+                        Update
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalOrderPages}
+          totalItems={totalOrderItems}
+          pageSize={limit}
+          itemLabel="orders"
+          loading={loading}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
       </div>
 
       {viewingOrder && (
@@ -511,8 +660,12 @@ const Orders = () => {
             </p>
             <p>
               <b>Total:</b> {money(viewingOrder._amount)} · <b>Payment:</b>{" "}
-              {viewingOrder.paymentStatus || "Paid"} (
-              {viewingOrder.paymentMethod || "Online"})
+              {formatOrderStatusLabel(
+                viewingOrder.paymentStatus ||
+                  (viewingOrder.isPaid ? "Paid" : "Pending"),
+              )}{" "}
+              (
+              {formatOrderStatusLabel(viewingOrder.paymentMethod || "Online")})
             </p>
             <div className="notice">
               {orderHistory.length > 0
@@ -584,28 +737,70 @@ const Orders = () => {
                 </div>
               </div>
               <div className="formgroup">
-                <label>Refund reason</label>
-                <div style={{ display: "flex", gap: "6px" }}>
-                  <input
-                    className="field full"
-                    placeholder="Refund reason"
-                    value={refundForm.reason}
-                    onChange={(e) =>
-                      setRefundForm((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="btnsm"
-                    disabled={saving}
-                    onClick={handleProcessRefund}
-                  >
-                    Refund
-                  </button>
-                </div>
+                <label>Refund amount (₹) & reason</label>
+                {(() => {
+                  const isAlreadyRefunded =
+                    String(viewingOrder.orderStatus || viewingOrder._status || "").toLowerCase() === "refunded" ||
+                    String(viewingOrder.paymentStatus || "").toLowerCase() === "refunded";
+                  const isOrderPaid =
+                    viewingOrder.isDemo ||
+                    Boolean(viewingOrder.isPaid) ||
+                    ["success", "paid", "partially_refunded"].includes(
+                      String(viewingOrder.paymentStatus || "").toLowerCase(),
+                    );
+                  return (
+                    <>
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                        <input
+                          type="number"
+                          min="1"
+                          max={viewingOrder._amount || undefined}
+                          className="field"
+                          style={{ width: "120px" }}
+                          placeholder="Amount"
+                          disabled={saving || isAlreadyRefunded || !isOrderPaid}
+                          value={refundForm.amount}
+                          onChange={(e) =>
+                            setRefundForm((prev) => ({
+                              ...prev,
+                              amount: e.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          className="field"
+                          style={{ flex: 1, minWidth: "150px" }}
+                          placeholder="Refund reason"
+                          disabled={saving || isAlreadyRefunded || !isOrderPaid}
+                          value={refundForm.reason}
+                          onChange={(e) =>
+                            setRefundForm((prev) => ({
+                              ...prev,
+                              reason: e.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btnsm"
+                          disabled={saving || isAlreadyRefunded || !isOrderPaid}
+                          onClick={handleProcessRefund}
+                        >
+                          {isAlreadyRefunded ? "Refunded" : "Refund"}
+                        </button>
+                      </div>
+                      {isAlreadyRefunded ? (
+                        <p className="mt-1 text-[11px] font-semibold text-[var(--muted)]">
+                          This order has already been fully refunded.
+                        </p>
+                      ) : !isOrderPaid ? (
+                        <p className="mt-1 text-[11px] font-semibold text-[var(--muted)]">
+                          Payment is pending/unpaid — refund is available only after payment is received.
+                        </p>
+                      ) : null}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>

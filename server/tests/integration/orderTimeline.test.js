@@ -5,6 +5,7 @@ import { User } from '../../src/models/User.model.js';
 import { Vendor } from '../../src/models/Vendor.model.js';
 import { Order } from '../../src/models/Order.model.js';
 import { Payment } from '../../src/models/Payment.model.js';
+import { Refund } from '../../src/models/Refund.model.js';
 import { VendorEarnings } from '../../src/models/VendorEarnings.model.js';
 import { notificationService } from '../../src/services/common/notification.service.js';
 import { generateAccessToken } from '../../src/utils/token.utils.js';
@@ -197,5 +198,175 @@ describe('Order Status & Timeline Synchronization Integration Tests', () => {
     });
     expect(paymentCreateSpy).toHaveBeenCalledTimes(1);
     expect(earningsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('GET /api/v1/admin/orders supports page/limit pagination, normalized status filter, and customer search', async () => {
+    mockAuth(ROLES.ADMIN, adminId);
+
+    const makeQuery = (result) => ({
+      populate: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+    });
+
+    vi.spyOn(User, 'find').mockReturnValue(makeQuery([{ _id: customerId }]));
+    const orderQuery = makeQuery([
+      {
+        _id: orderId,
+        orderNumber: 'ORD-2001',
+        userId: { _id: customerId, name: 'Riya Sharma' },
+        orderStatus: ORDER_STATUS.OUT_FOR_DELIVERY,
+        totalAmount: 2499,
+      },
+    ]);
+    const findSpy = vi.spyOn(Order, 'find').mockReturnValue(orderQuery);
+    vi.spyOn(Order, 'countDocuments').mockResolvedValueOnce(25);
+
+    const res = await request(app)
+      .get('/api/v1/admin/orders?page=3&limit=10&status=Out%20For%20Delivery&search=Riya')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(findSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderStatus: 'out_for_delivery',
+        $or: expect.any(Array),
+      })
+    );
+    expect(orderQuery.skip).toHaveBeenCalledWith(20);
+    expect(orderQuery.limit).toHaveBeenCalledWith(10);
+    expect(res.body.data.pagination).toEqual({
+      total: 25,
+      page: 3,
+      limit: 10,
+      totalPages: 3,
+    });
+  });
+
+  it('GET /api/v1/admin/refunds returns pagination with totalPages', async () => {
+    mockAuth(ROLES.ADMIN, adminId);
+
+    const refundQuery = {
+      populate: vi.fn().mockReturnThis(),
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      then: (resolve, reject) =>
+        Promise.resolve([{ _id: 'ref1', amount: 499 }]).then(resolve, reject),
+    };
+    vi.spyOn(Refund, 'find').mockReturnValue(refundQuery);
+    vi.spyOn(Refund, 'countDocuments').mockResolvedValueOnce(24);
+
+    const res = await request(app)
+      .get('/api/v1/admin/refunds?page=2&limit=10')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(refundQuery.skip).toHaveBeenCalledWith(10);
+    expect(refundQuery.limit).toHaveBeenCalledWith(10);
+    expect(res.body.data.pagination).toEqual({
+      total: 24,
+      page: 2,
+      limit: 10,
+      totalPages: 3,
+    });
+  });
+
+  it('PATCH /api/v1/admin/orders/:orderId/refund handles paid COD fallback, partial refunds, unpaid/duplicate guards', async () => {
+    mockAuth(ROLES.ADMIN, adminId);
+
+    const unpaidOrder = {
+      _id: orderId,
+      orderNumber: 'ORD-3001',
+      userId: customerId,
+      orderStatus: ORDER_STATUS.PROCESSING,
+      paymentStatus: PAYMENT_STATUS.PENDING,
+      isPaid: false,
+      totalAmount: 1000,
+      statusHistory: [],
+    };
+    const orderFindSpy = vi.spyOn(Order, 'findById').mockResolvedValueOnce(unpaidOrder);
+    vi.spyOn(Payment, 'findOne').mockReturnValue({
+      sort: vi.fn().mockResolvedValue(null),
+    });
+
+    const unpaidRes = await request(app)
+      .patch(`/api/v1/admin/orders/${orderId}/refund`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Test unpaid' });
+    expect(unpaidRes.status).toBe(400);
+    expect(unpaidRes.body.message).toMatch(/unpaid/i);
+
+    const refundedOrder = {
+      ...unpaidOrder,
+      orderStatus: ORDER_STATUS.REFUNDED,
+      paymentStatus: PAYMENT_STATUS.REFUNDED,
+      isPaid: true,
+    };
+    orderFindSpy.mockResolvedValueOnce(refundedOrder);
+    const duplicateRes = await request(app)
+      .patch(`/api/v1/admin/orders/${orderId}/refund`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Second attempt' });
+    expect(duplicateRes.status).toBe(400);
+    expect(duplicateRes.body.message).toMatch(/already been fully refunded/i);
+
+    const codPaidOrder = {
+      _id: orderId,
+      orderNumber: 'ORD-3002',
+      userId: customerId,
+      paymentMethod: PAYMENT_METHODS.COD,
+      orderStatus: ORDER_STATUS.DELIVERED,
+      paymentStatus: PAYMENT_STATUS.SUCCESS,
+      isPaid: true,
+      totalAmount: 1000,
+      statusHistory: [],
+      save: vi.fn().mockResolvedValue(true),
+    };
+    const createdCodPayment = {
+      _id: '507f1f77bcf86cd799439099',
+      orderId,
+      amount: 1000,
+      status: PAYMENT_STATUS.SUCCESS,
+      save: vi.fn().mockResolvedValue(true),
+    };
+    orderFindSpy.mockResolvedValueOnce(codPaidOrder);
+    vi.spyOn(Payment, 'findOne')
+      .mockReturnValueOnce({ sort: vi.fn().mockResolvedValueOnce(null) })
+      .mockReturnValueOnce({ sort: vi.fn().mockResolvedValueOnce(null) });
+    const payCreateSpy = vi
+      .spyOn(Payment, 'create')
+      .mockResolvedValueOnce(createdCodPayment);
+    vi.spyOn(Refund, 'aggregate').mockResolvedValueOnce([{ total: 200 }]);
+    const refundCreateSpy = vi.spyOn(Refund, 'create').mockResolvedValueOnce({
+      _id: 'ref-partial',
+      amount: 300,
+      reason: 'Admin processed refund',
+      status: 'processed',
+    });
+    vi.spyOn(notificationService, 'createNotification').mockResolvedValue({});
+
+    const partialRes = await request(app)
+      .patch(`/api/v1/admin/orders/${orderId}/refund`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ amount: 300 });
+
+    expect(partialRes.status).toBe(200);
+    expect(payCreateSpy).toHaveBeenCalledTimes(1);
+    expect(refundCreateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 300,
+        reason: 'Admin processed refund',
+        status: 'processed',
+      })
+    );
+    expect(codPaidOrder.paymentStatus).toBe(PAYMENT_STATUS.PARTIALLY_REFUNDED);
+    expect(codPaidOrder.orderStatus).toBe(ORDER_STATUS.DELIVERED);
+    expect(partialRes.body.data.isFullRefund).toBe(false);
+    expect(partialRes.body.data.remainingRefundable).toBe(500);
   });
 });

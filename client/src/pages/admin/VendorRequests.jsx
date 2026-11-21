@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Modal from "../../components/common/Modal";
 import Badge from "../../components/common/Badge";
 import Button from "../../components/common/Button";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const getStatusClass = (s) => {
   const normalized = String(s || "").trim().toLowerCase();
@@ -87,6 +88,7 @@ const VendorRequests = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { page = 1, total = 0, totalPages = 0 } = pagination;
+  const pageLimit = filters?.limit || pagination?.limit || 10;
 
   const rows = useMemo(() => {
     return (Array.isArray(requests) ? requests : []).map((req, idx) => {
@@ -455,31 +457,18 @@ const VendorRequests = ({
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-[var(--muted)]">
-              Page {page} of {Math.max(totalPages, 1)} · {total} applications
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => onFilterChange?.({ page: page - 1 })}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={loading || page >= totalPages}
-                onClick={() => onFilterChange?.({ page: page + 1 })}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={pageLimit}
+          itemLabel="applications"
+          loading={loading}
+          onPageChange={(nextPage) => onFilterChange?.({ page: nextPage })}
+          onPageSizeChange={(nextLimit) =>
+            onFilterChange?.({ limit: nextLimit, page: 1 })
+          }
+        />
       </div>
 
       {/* Application Details Modal */}

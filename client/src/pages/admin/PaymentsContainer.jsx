@@ -33,7 +33,7 @@ const PaymentsContainer = () => {
     method: "all",
     dateRange: "all",
     page: 1,
-    limit: 20,
+    limit: 10,
   });
 
   useEffect(() => {

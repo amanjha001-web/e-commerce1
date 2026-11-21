@@ -8,6 +8,7 @@ import Input from "../../components/common/Input";
 import Loader from "../../components/common/Loader";
 
 import NotificationItem from "../../components/notification/NotificationItem";
+import AdminPagination from "../../components/admin/AdminPagination";
 import notificationService from "../../services/notification.service";
 
 const Notifications = ({
@@ -22,6 +23,8 @@ const Notifications = ({
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [localNotifications, setLocalNotifications] = useState([]);
   const [localLoading, setLocalLoading] = useState(false);
 
@@ -137,6 +140,16 @@ const Notifications = ({
     });
   }, [notifications, search, filter]);
 
+  const totalNotificationPages = Math.max(
+    1,
+    Math.ceil(filteredNotifications.length / limit),
+  );
+  const currentPage = Math.min(page, totalNotificationPages);
+  const paginatedNotifications = useMemo(() => {
+    const start = (currentPage - 1) * limit;
+    return filteredNotifications.slice(start, start + limit);
+  }, [filteredNotifications, currentPage, limit]);
+
   const unreadCount = notifications.filter(
     (notification) => !(notification.read ?? notification.isRead ?? false),
   ).length;
@@ -215,7 +228,10 @@ const Notifications = ({
               <div className="w-full md:max-w-md">
                 <Input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
                   placeholder="Search notifications..."
                 />
               </div>
@@ -225,7 +241,10 @@ const Notifications = ({
                   <button
                     key={item}
                     type="button"
-                    onClick={() => setFilter(item)}
+                    onClick={() => {
+                      setFilter(item);
+                      setPage(1);
+                    }}
                     className={`btnsm cursor-pointer capitalize ${
                       filter === item
                         ? "primary"
@@ -259,7 +278,7 @@ const Notifications = ({
             ) : (
               <>
                 <div className="divide-y divide-border">
-                  {filteredNotifications.map((notification) => {
+                  {paginatedNotifications.map((notification) => {
                     const id = notification._id || notification.id;
 
                     return (
@@ -280,15 +299,31 @@ const Notifications = ({
 
                 {/* Bottom Actions */}
                 {notifications.length > 0 && (
-                  <div className="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Showing {filteredNotifications.length} of{" "}
-                      {notifications.length} notifications
-                    </p>
+                  <div className="border-t border-border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {filteredNotifications.length} of{" "}
+                        {notifications.length} notifications
+                      </p>
 
-                    <Button variant="outline" onClick={() => handleClearAll()}>
-                      Clear all
-                    </Button>
+                      <Button variant="outline" onClick={() => handleClearAll()}>
+                        Clear all
+                      </Button>
+                    </div>
+
+                    <AdminPagination
+                      currentPage={currentPage}
+                      totalPages={totalNotificationPages}
+                      totalItems={filteredNotifications.length}
+                      pageSize={limit}
+                      itemLabel="notifications"
+                      loading={loading}
+                      onPageChange={setPage}
+                      onPageSizeChange={(nextLimit) => {
+                        setLimit(nextLimit);
+                        setPage(1);
+                      }}
+                    />
                   </div>
                 )}
               </>

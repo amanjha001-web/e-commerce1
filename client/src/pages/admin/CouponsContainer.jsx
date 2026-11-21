@@ -31,7 +31,7 @@ const CouponsContainer = () => {
     status: "all",
     type: "all",
     page: 1,
-    limit: 20,
+    limit: 10,
   });
 
   useEffect(() => {

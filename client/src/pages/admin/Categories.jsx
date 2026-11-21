@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import adminService from "../../services/admin.service";
 import Modal from "../../components/common/Modal";
 import Button from "../../components/common/Button";
+import AdminPagination from "../../components/admin/AdminPagination";
 
 const toSlugPreview = (text = "") =>
   String(text)
@@ -21,7 +22,7 @@ const Categories = () => {
   const [pagination, setPagination] = useState({
     total: null,
     page: 1,
-    limit: 20,
+    limit: 10,
     totalPages: 0,
   });
 
@@ -30,6 +31,7 @@ const Categories = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCat, setEditingCat] = useState(null);
@@ -45,25 +47,25 @@ const Categories = () => {
   const [catSortOrder, setCatSortOrder] = useState("0");
   const [catImageUrl, setCatImageUrl] = useState("");
   const [catImageFile, setCatImageFile] = useState(null);
-  const [catImagePreview, setCatImagePreview] = useState("");
   const [removeImage, setRemoveImage] = useState(false);
   const [catActive, setCatActive] = useState(true);
 
-  useEffect(() => {
-    if (!catImageFile) {
-      setCatImagePreview("");
-      return undefined;
-    }
-    const objectUrl = URL.createObjectURL(catImageFile);
-    setCatImagePreview(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
+  const catImagePreview = useMemo(() => {
+    if (!catImageFile) return "";
+    return URL.createObjectURL(catImageFile);
   }, [catImageFile]);
+
+  useEffect(() => {
+    return () => {
+      if (catImagePreview) URL.revokeObjectURL(catImagePreview);
+    };
+  }, [catImagePreview]);
 
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      const params = { page, limit: 20 };
+      const params = { page, limit };
       if (search.trim()) params.search = search.trim();
       if (statusFilter !== "all") params.status = statusFilter;
 
@@ -95,8 +97,8 @@ const Categories = () => {
         setPagination({
           total: list.length,
           page: 1,
-          limit: 20,
-          totalPages: 1,
+          limit,
+          totalPages: Math.max(1, Math.ceil(list.length / limit)),
         });
       } else {
         setSummary(data?.summary || null);
@@ -111,7 +113,7 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, limit, search, statusFilter]);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -154,7 +156,7 @@ const Categories = () => {
     });
   }, [categories]);
 
-  const rows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     if (!isLegacyList) return allMappedRows;
     const q = search.trim().toLowerCase();
     return allMappedRows.filter((item) => {
@@ -172,6 +174,12 @@ const Categories = () => {
     });
   }, [allMappedRows, isLegacyList, search, statusFilter]);
 
+  const rows = useMemo(() => {
+    if (!isLegacyList) return filteredRows;
+    const start = (page - 1) * limit;
+    return filteredRows.slice(start, start + limit);
+  }, [filteredRows, isLegacyList, page, limit]);
+
   const resetModalForm = () => {
     setEditingCat(null);
     setCatName("");
@@ -182,7 +190,6 @@ const Categories = () => {
     setCatSortOrder("0");
     setCatImageUrl("");
     setCatImageFile(null);
-    setCatImagePreview("");
     setRemoveImage(false);
     setCatActive(true);
     setFormError("");
@@ -366,20 +373,33 @@ const Categories = () => {
     return allMappedRows.filter((c) => !editingCat || c._id !== editingCat._id);
   }, [allMappedRows, editingCat]);
 
+  const effectiveTotalItems = isLegacyList
+    ? filteredRows.length
+    : typeof pagination.total === "number"
+      ? pagination.total
+      : rows.length;
+  const effectiveTotalPages = isLegacyList
+    ? Math.max(1, Math.ceil(filteredRows.length / limit))
+    : pagination.totalPages ||
+      Math.ceil(effectiveTotalItems / limit) ||
+      1;
+
   const statActive =
-    summary?.active ?? rows.filter((r) => r._isActive).length;
+    summary?.active ?? allMappedRows.filter((r) => r._isActive).length;
   const statArchived =
-    summary?.archived ?? rows.filter((r) => !r._isActive).length;
+    summary?.archived ?? allMappedRows.filter((r) => !r._isActive).length;
   const rawStatTotal =
     summary?.total ??
-    (typeof pagination.total === "number" ? pagination.total : rows.length);
+    (typeof pagination.total === "number"
+      ? pagination.total
+      : allMappedRows.length);
   const statTotal =
     rawStatTotal === 0 && (statActive > 0 || statArchived > 0)
       ? statActive + statArchived
       : rawStatTotal;
   const statProducts =
     summary?.totalCategorizedProducts ??
-    rows.reduce((sum, r) => sum + r._products, 0);
+    allMappedRows.reduce((sum, r) => sum + r._products, 0);
 
   const previewImageSrc = catImageFile
     ? catImagePreview
@@ -614,32 +634,19 @@ const Categories = () => {
           </table>
         </div>
 
-        {(pagination.totalPages || 0) > 1 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold text-[var(--muted)]">
-              Page {page} of {Math.max(pagination.totalPages || 1, 1)} ·{" "}
-              {pagination.total || rows.length} categories
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => p - 1)}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={loading || page >= (pagination.totalPages || 1)}
-                onClick={() => setPage((p) => p + 1)}
-                className="btnsm cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <AdminPagination
+          currentPage={page}
+          totalPages={effectiveTotalPages}
+          totalItems={effectiveTotalItems}
+          pageSize={limit}
+          itemLabel="categories"
+          loading={loading}
+          onPageChange={setPage}
+          onPageSizeChange={(nextLimit) => {
+            setLimit(nextLimit);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Add / Edit Category Modal */}
