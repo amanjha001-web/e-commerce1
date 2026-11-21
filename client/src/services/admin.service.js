@@ -243,9 +243,54 @@ const adminService = {
   },
 
   getRefundRequests: async (params = {}) => {
-    const response = await api.get("/admin/orders/refunds", {
+    const response = await api.get("/admin/refunds", {
       params: cleanParams(params),
     });
+    return response.data;
+  },
+
+  getRefundById: async (refundId) => {
+    const response = await api.get(`/admin/refunds/${refundId}`);
+    return response.data;
+  },
+
+  createManualRefund: async (payload = {}) => {
+    const response = await api.post("/admin/refunds", payload);
+    return response.data;
+  },
+
+  approveRefundRequest: async (refundId, payload = {}) => {
+    const response = await api.patch(`/admin/refunds/${refundId}/approve`, payload);
+    return response.data;
+  },
+
+  rejectRefundRequest: async (refundId, payloadOrReason = "") => {
+    const payload =
+      typeof payloadOrReason === "object" && payloadOrReason !== null
+        ? payloadOrReason
+        : { reason: payloadOrReason };
+    const response = await api.patch(`/admin/refunds/${refundId}/reject`, payload);
+    return response.data;
+  },
+
+  getReturnRequests: async (params = {}) => {
+    const response = await api.get("/admin/refunds/returns", {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
+  approveReturnRequest: async (returnId, payload = {}) => {
+    const response = await api.patch(`/admin/refunds/returns/${returnId}/approve`, payload);
+    return response.data;
+  },
+
+  rejectReturnRequest: async (returnId, payloadOrReason = "") => {
+    const payload =
+      typeof payloadOrReason === "object" && payloadOrReason !== null
+        ? payloadOrReason
+        : { reason: payloadOrReason };
+    const response = await api.patch(`/admin/refunds/returns/${returnId}/reject`, payload);
     return response.data;
   },
 

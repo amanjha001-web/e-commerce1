@@ -46,6 +46,14 @@ const refundSchema = new mongoose.Schema(
     processedAt: {
       type: Date,
     },
+    adminNotes: {
+      type: String,
+      default: '',
+    },
+    rejectionReason: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ReturnRequest } from '../../models/ReturnRequest.model.js';
 import { Order } from '../../models/Order.model.js';
 import { User } from '../../models/User.model.js';
 import { Payment } from '../../models/Payment.model.js';
@@ -235,15 +236,27 @@ export class AdminOrderService {
       order.paymentId = order.paymentId || payment._id;
     }
 
+    const existingRefundId =
+      typeof amountOrPayload === 'object' && amountOrPayload !== null
+        ? amountOrPayload.existingRefundId
+        : null;
+    const adminNotes =
+      typeof amountOrPayload === 'object' && amountOrPayload !== null
+        ? String(amountOrPayload.adminNotes || '').trim()
+        : '';
+
+    const priorMatch = {
+      orderId: order._id,
+      status: { $in: ['processed', 'approved'] },
+      ...(existingRefundId && mongoose.isValidObjectId(existingRefundId)
+        ? { _id: { $ne: new mongoose.Types.ObjectId(existingRefundId) } }
+        : {}),
+    };
+
     const priorRefunds = await Promise.resolve()
       .then(() =>
         Refund.aggregate([
-          {
-            $match: {
-              orderId: order._id,
-              status: { $in: ['processed', 'approved'] },
-            },
-          },
+          { $match: priorMatch },
           { $group: { _id: null, total: { $sum: '$amount' } } },
         ])
       )
@@ -303,17 +316,35 @@ export class AdminOrderService {
       }
     }
 
-    const refund = await Refund.create({
-      orderId: order._id,
-      paymentId: payment._id,
-      userId: order.userId,
-      amount: refundAmount,
-      reason: finalReason,
-      status: 'processed',
-      razorpayRefundId: rzpRefund?.id,
-      processedBy: adminId,
-      processedAt: new Date(),
-    });
+    let refund;
+    if (existingRefundId && mongoose.isValidObjectId(existingRefundId)) {
+      refund = await Refund.findById(existingRefundId);
+    }
+
+    if (refund) {
+      refund.paymentId = payment._id;
+      refund.amount = refundAmount;
+      refund.reason = finalReason;
+      refund.status = 'processed';
+      refund.razorpayRefundId = rzpRefund?.id || refund.razorpayRefundId;
+      refund.processedBy = adminId;
+      refund.processedAt = new Date();
+      if (adminNotes) refund.adminNotes = adminNotes;
+      await refund.save();
+    } else {
+      refund = await Refund.create({
+        orderId: order._id,
+        paymentId: payment._id,
+        userId: order.userId,
+        amount: refundAmount,
+        reason: finalReason,
+        status: 'processed',
+        razorpayRefundId: rzpRefund?.id,
+        processedBy: adminId,
+        processedAt: new Date(),
+        ...(adminNotes ? { adminNotes } : {}),
+      });
+    }
 
     const totalRefundedAfter =
       Math.round((alreadyRefunded + refundAmount) * 100) / 100;
@@ -421,6 +452,7 @@ export class AdminOrderService {
     if (!order) throw ApiError.notFound('Order not found');
 
     order.orderStatus = ORDER_STATUS.RETURN_APPROVED;
+    order.returnRequest = order.returnRequest || {};
     order.returnRequest.status = 'approved';
     order.returnRequest.actionedAt = new Date();
     order.returnRequest.actionedBy = adminId;
@@ -431,6 +463,15 @@ export class AdminOrderService {
       timestamp: new Date(),
     });
     await order.save();
+
+    await Promise.resolve()
+      .then(() =>
+        ReturnRequest.updateMany(
+          { orderId: order._id, status: 'pending' },
+          { $set: { status: 'approved', actionedBy: adminId, actionedAt: new Date() } }
+        )
+      )
+      .catch(() => {});
 
     notificationService
       .createNotification({
@@ -451,6 +492,7 @@ export class AdminOrderService {
     if (!order) throw ApiError.notFound('Order not found');
 
     order.orderStatus = ORDER_STATUS.RETURN_REJECTED;
+    order.returnRequest = order.returnRequest || {};
     order.returnRequest.status = 'rejected';
     order.returnRequest.rejectionReason = reason;
     order.returnRequest.actionedAt = new Date();
@@ -462,6 +504,22 @@ export class AdminOrderService {
       timestamp: new Date(),
     });
     await order.save();
+
+    await Promise.resolve()
+      .then(() =>
+        ReturnRequest.updateMany(
+          { orderId: order._id, status: 'pending' },
+          {
+            $set: {
+              status: 'rejected',
+              adminNotes: reason || '',
+              actionedBy: adminId,
+              actionedAt: new Date(),
+            },
+          }
+        )
+      )
+      .catch(() => {});
 
     notificationService
       .createNotification({
