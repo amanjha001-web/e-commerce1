@@ -74,11 +74,17 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isPublic: {
+      type: Boolean,
+      default: true, // Controls visibility on public storefront coupon routes (/api/v1/coupons)
+    },
   },
   {
     timestamps: true,
   }
 );
+
+couponSchema.index({ isActive: 1, isPublic: 1, expiryDate: 1 });
 
 couponSchema.index({ isActive: 1, expiryDate: 1 });
 

@@ -28,7 +28,7 @@ export const deleteCoupon = asyncHandler(async (req, res) => {
 });
 
 export const toggleCouponStatus = asyncHandler(async (req, res) => {
-  const coupon = await adminCouponService.toggleCouponStatus(req.params.couponId, req.body.isActive);
+  const coupon = await adminCouponService.toggleCouponStatus(req.params.couponId, req.body?.isActive);
   return ApiResponse.success(res, coupon, 'Coupon status toggled');
 });
 

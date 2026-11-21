@@ -4,6 +4,7 @@ const CouponBox = ({
   appliedCoupon = null,
   coupon = null,
   discount = 0,
+  availableCoupons = [],
   onApply,
   onRemove,
   loading = false,
@@ -111,6 +112,35 @@ const CouponBox = ({
         <p className="mt-2 text-xs font-medium text-[#16845b]">
           {success}
         </p>
+      )}
+
+      {!hasActiveCoupon && Array.isArray(availableCoupons) && availableCoupons.length > 0 && (
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Available offers
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {availableCoupons.map((offer) => (
+              <button
+                key={offer._id || offer.id || offer.code}
+                type="button"
+                disabled={loading}
+                onClick={() => onApply?.(offer.code)}
+                className="cursor-pointer rounded-lg border border-dashed border-[var(--primary)]/50 bg-[var(--soft)]/60 px-2.5 py-1 text-left text-[11px] font-semibold text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--soft)] disabled:opacity-50"
+              >
+                <span className="font-black text-[var(--primary)]">
+                  {offer.code}
+                </span>
+                <span className="ml-1.5 text-[var(--muted)]">
+                  · {offer.discountLabel}
+                  {offer.minPurchaseAmount > 0
+                    ? ` (Min ₹${offer.minPurchaseAmount})`
+                    : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

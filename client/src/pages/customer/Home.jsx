@@ -18,6 +18,7 @@ import {
 
 import productService from "../../services/product.service";
 import categoryService from "../../services/category.service";
+import couponService from "../../services/coupon.service";
 
 const DEFAULT_CATEGORIES = [
   { name: "Fashion", icon: "👗", slug: "fashion" },
@@ -101,6 +102,7 @@ const Home = ({
   // =========================
 
   const [categoriesList, setCategoriesList] = useState([]);
+  const [featuredCoupon, setFeaturedCoupon] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -120,7 +122,23 @@ const Home = ({
       }
     };
 
+    const fetchFeaturedCoupon = async () => {
+      try {
+        const res = await couponService.getPublicCoupons({
+          scope: "global",
+          limit: 1,
+        });
+        const list = res?.data?.coupons || res?.coupons || [];
+        if (isMounted && Array.isArray(list) && list.length > 0) {
+          setFeaturedCoupon(list[0]);
+        }
+      } catch {
+        // Fallback promo banner handles missing public coupon silently
+      }
+    };
+
     fetchCategories();
+    fetchFeaturedCoupon();
     return () => {
       isMounted = false;
     };
@@ -344,9 +362,14 @@ const Home = ({
     navigate("/categories");
   };
 
+  const activePromoCode = featuredCoupon?.code || "WELCOME10";
+  const activePromoHeadline = featuredCoupon?.discountLabel
+    ? `Enjoy ${featuredCoupon.discountLabel} on your order`
+    : "Enjoy 10% off your first order";
+
   const handleCopyCoupon = () => {
-    navigator.clipboard?.writeText("WELCOME10");
-    toast.success("Coupon code WELCOME10 copied!");
+    navigator.clipboard?.writeText(activePromoCode);
+    toast.success(`Coupon code ${activePromoCode} copied!`);
   };
 
   const activeBanner = banners?.[0] || null;
@@ -604,11 +627,21 @@ const Home = ({
         <div>
           <div className="eyebrow">A little something extra</div>
           <h2 className="my-1 text-xl font-extrabold text-[var(--text)]">
-            Enjoy 10% off your first order
+            {activePromoHeadline}
           </h2>
           <p className="muted m-0 text-sm">
-            Use code <b className="text-[var(--primary)]">WELCOME10</b> at
-            checkout.
+            {featuredCoupon?.description ? (
+              <>
+                {featuredCoupon.description} · Use code{" "}
+                <b className="text-[var(--primary)]">{activePromoCode}</b> at
+                checkout.
+              </>
+            ) : (
+              <>
+                Use code <b className="text-[var(--primary)]">{activePromoCode}</b> at
+                checkout.
+              </>
+            )}
           </p>
         </div>
 

@@ -12,6 +12,14 @@ const cleanParams = (params = {}) =>
   );
 
 const couponService = {
+  // Public storefront (/api/v1/coupons)
+  getPublicCoupons: async (params = {}) => {
+    const response = await api.get("/coupons", {
+      params: cleanParams(params),
+    });
+    return response.data;
+  },
+
   // Customer
   validateCoupon: async (couponCode, cartData = {}) => {
     const response = await api.post("/coupons/validate", {
@@ -59,14 +67,7 @@ const couponService = {
   // Admin (/api/v1/admin/coupons*)
   getAdminCoupons: async (params = {}) => {
     const cleaned = cleanParams(params);
-    if (cleaned.status === "active") {
-      cleaned.isActive = "true";
-      delete cleaned.status;
-    } else if (cleaned.status === "inactive" || cleaned.status === "scheduled") {
-      cleaned.isActive = "false";
-      delete cleaned.status;
-    }
-    if (cleaned.type) {
+    if (cleaned.type && !cleaned.discountType) {
       cleaned.discountType = cleaned.type;
       delete cleaned.type;
     }

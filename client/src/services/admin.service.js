@@ -441,8 +441,13 @@ const adminService = {
 
   // ==================== 8. Coupon Management (/api/v1/admin/coupons*) ====================
   getCoupons: async (params = {}) => {
+    const cleaned = cleanParams(params);
+    if (cleaned.type && !cleaned.discountType) {
+      cleaned.discountType = cleaned.type;
+      delete cleaned.type;
+    }
     const response = await api.get("/admin/coupons", {
-      params: cleanParams(params),
+      params: cleaned,
     });
     return response.data;
   },

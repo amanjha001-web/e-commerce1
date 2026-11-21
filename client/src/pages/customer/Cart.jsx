@@ -9,6 +9,7 @@ import CartEmpty from "../../components/cart/CartEmpty";
 import CartActions from "../../components/cart/CartActions";
 import CouponBox from "../../components/cart/CouponBox";
 import Loader from "../../components/common/Loader";
+import couponService from "../../services/coupon.service";
 
 import {
   fetchCart,
@@ -36,9 +37,19 @@ const Cart = () => {
   const [updating, setUpdating] = useState(false);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
   useEffect(() => {
     dispatch(fetchCart());
+    couponService
+      .getPublicCoupons({ limit: 6 })
+      .then((res) => {
+        const list = res?.data?.coupons || res?.coupons || [];
+        if (Array.isArray(list)) {
+          setAvailableCoupons(list);
+        }
+      })
+      .catch(() => {});
   }, [dispatch]);
 
   // Clear cart
@@ -245,6 +256,7 @@ const Cart = () => {
               appliedCoupon={coupon}
               coupon={coupon}
               discount={activeDiscount}
+              availableCoupons={availableCoupons}
               loading={applyingCoupon}
               error={actionError}
               onApply={handleApplyCoupon}

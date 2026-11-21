@@ -11,6 +11,8 @@ import {
   updateCoupon,
   deleteCoupon,
   toggleCouponStatus,
+  clearAdminCouponsError,
+  clearSelectedCoupon,
 } from "../../store/slices/Admin/adminCouponsSlice";
 
 const CouponsContainer = () => {
@@ -18,6 +20,7 @@ const CouponsContainer = () => {
 
   const {
     coupons = [],
+    summary = {},
     selectedCoupon,
     couponUsage,
     loading,
@@ -30,6 +33,7 @@ const CouponsContainer = () => {
     search: "",
     status: "all",
     type: "all",
+    visibility: "all",
     page: 1,
     limit: 10,
   });
@@ -42,7 +46,7 @@ const CouponsContainer = () => {
     setFilters((prev) => ({
       ...prev,
       ...newFilters,
-      page: newFilters.page || 1,
+      page: newFilters.page !== undefined ? newFilters.page : 1,
     }));
   }, []);
 
@@ -51,6 +55,8 @@ const CouponsContainer = () => {
       if (couponId) {
         dispatch(fetchCouponById(couponId));
         dispatch(fetchCouponUsage(couponId));
+      } else {
+        dispatch(clearSelectedCoupon());
       }
     },
     [dispatch],
@@ -95,12 +101,30 @@ const CouponsContainer = () => {
     [dispatch, filters],
   );
 
+  const handleToggleCouponVisibility = useCallback(
+    async (coupon, nextPublic) => {
+      await dispatch(
+        updateCoupon({
+          couponId: coupon._id,
+          couponData: { isPublic: Boolean(nextPublic) },
+        }),
+      ).unwrap();
+      dispatch(fetchCoupons(filters));
+    },
+    [dispatch, filters],
+  );
+
+  const handleClearError = useCallback(() => {
+    dispatch(clearAdminCouponsError());
+  }, [dispatch]);
+
   return (
     <Coupons
       coupons={coupons}
+      summary={summary}
       selectedCoupon={selectedCoupon}
       couponUsage={couponUsage}
-      totalCoupons={pagination?.total || coupons.length}
+      totalCoupons={pagination?.total ?? coupons.length}
       loading={loading}
       saving={saving}
       error={error}
@@ -111,6 +135,8 @@ const CouponsContainer = () => {
       onEditCoupon={handleEditCoupon}
       onDeleteCoupon={handleDeleteCoupon}
       onToggleCouponStatus={handleToggleCouponStatus}
+      onToggleCouponVisibility={handleToggleCouponVisibility}
+      onClearError={handleClearError}
       pagination={pagination}
     />
   );

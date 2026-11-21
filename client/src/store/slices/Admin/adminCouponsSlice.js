@@ -20,6 +20,7 @@ export const fetchCoupons = createAsyncThunk(
           : Array.isArray(data)
             ? data
             : [],
+        summary: data?.summary || null,
         pagination: data?.pagination || {},
         message: response?.message || "",
       };
@@ -148,13 +149,21 @@ export const fetchCouponUsage = createAsyncThunk(
 
 const initialState = {
   coupons: [],
+  summary: {
+    total: 0,
+    active: 0,
+    scheduled: 0,
+    expired: 0,
+    inactive: 0,
+    publicCount: 0,
+  },
   selectedCoupon: null,
   couponUsage: null,
   pagination: {
     total: 0,
     page: 1,
     limit: 10,
-    totalPages: 0,
+    totalPages: 1,
   },
   loading: false,
   saving: false,
@@ -185,7 +194,16 @@ const adminCouponsSlice = createSlice({
       .addCase(fetchCoupons.fulfilled, (state, action) => {
         state.loading = false;
         state.coupons = action.payload?.coupons || [];
-        state.pagination = action.payload?.pagination || {};
+        if (action.payload?.summary) {
+          state.summary = {
+            ...initialState.summary,
+            ...action.payload.summary,
+          };
+        }
+        state.pagination = {
+          ...initialState.pagination,
+          ...(action.payload?.pagination || {}),
+        };
       })
       .addCase(fetchCoupons.rejected, (state, action) => {
         state.loading = false;

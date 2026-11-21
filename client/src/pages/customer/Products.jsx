@@ -12,6 +12,7 @@ import Pagination from "../../components/common/Pagination";
 import useAuth from "../../hooks/useAuth";
 import categoryService from "../../services/category.service";
 import brandService from "../../services/brand.service";
+import couponService from "../../services/coupon.service";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
@@ -47,6 +48,26 @@ const Products = ({
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const isDealsView = searchParams.get("deals") === "true";
+  const [dealCoupons, setDealCoupons] = useState([]);
+
+  useEffect(() => {
+    if (!isDealsView) return undefined;
+    let mounted = true;
+    couponService
+      .getPublicCoupons({ limit: 8 })
+      .then((res) => {
+        const list = res?.data?.coupons || res?.coupons || [];
+        if (mounted && Array.isArray(list)) {
+          setDealCoupons(list);
+        }
+      })
+      .catch(() => {
+        if (mounted) setDealCoupons([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isDealsView]);
 
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -483,29 +504,83 @@ const Products = ({
     <main className="page">
       {/* Deals Hero (when ?deals=true, matching deals() in reference) */}
       {isDealsView ? (
-        <section className="hero mb-6">
-          <div>
-            <div className="eyebrow">Limited-time offers</div>
-            <h1>
-              Little luxuries.
-              <br />
-              Better prices.
-            </h1>
-            <p>Discover special prices on customer favourites.</p>
-            <button
-              type="button"
-              onClick={() => {
-                const next = new URLSearchParams(searchParams);
-                next.delete("deals");
-                setSearchParams(next);
-              }}
-              className="primarybtn goldbtn mt-2"
-            >
-              Shop offers
-            </button>
-          </div>
-          <div className="heroart">🏷️</div>
-        </section>
+        <>
+          <section className="hero mb-6">
+            <div>
+              <div className="eyebrow">Limited-time offers</div>
+              <h1>
+                Little luxuries.
+                <br />
+                Better prices.
+              </h1>
+              <p>Discover special prices on customer favourites.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("deals");
+                  setSearchParams(next);
+                }}
+                className="primarybtn goldbtn mt-2"
+              >
+                Shop offers
+              </button>
+            </div>
+            <div className="heroart">🏷️</div>
+          </section>
+
+          {dealCoupons.length > 0 && (
+            <section className="panel mb-6">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="eyebrow">Storefront coupon offers</div>
+                  <h2 className="m-0 text-base font-extrabold text-[var(--text)]">
+                    Active promo codes
+                  </h2>
+                </div>
+                <span className="pill">{dealCoupons.length} live offers</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {dealCoupons.map((cp) => (
+                  <div
+                    key={cp._id || cp.id || cp.code}
+                    className="flex flex-col justify-between gap-2 rounded-xl border border-[var(--line)] bg-[#fcf9fa] p-3.5"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-black tracking-wide text-[var(--primary)]">
+                          {cp.code}
+                        </span>
+                        <span className="status green">{cp.discountLabel}</span>
+                      </div>
+                      {cp.description && (
+                        <p className="mt-1.5 text-xs text-[var(--muted)]">
+                          {cp.description}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[11px] text-[var(--muted)]">
+                        {cp.minPurchaseAmount > 0
+                          ? `Min order ₹${cp.minPurchaseAmount}`
+                          : "No minimum spend"}
+                        {cp.vendorName ? ` · ${cp.vendorName}` : " · All products"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(cp.code);
+                        toast.success(`Coupon ${cp.code} copied!`);
+                      }}
+                      className="outlinebtn !py-1.5 !text-xs"
+                    >
+                      Copy code
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       ) : (
         <>
           {/* Breadcrumbs */}
