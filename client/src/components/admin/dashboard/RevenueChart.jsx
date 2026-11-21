@@ -8,6 +8,7 @@ const RevenueChart = ({
   growth,
   averageOrderValue,
   grossSales,
+  lifetimeRevenue = 0,
 }) => {
   const collectedTotal = data.reduce(
     (sum, item) => sum + (Number(item.value) || 0),
@@ -21,6 +22,10 @@ const RevenueChart = ({
   if (collectedTotal === 0 && grossOrderTotal > 0) {
     parts.push(
       `Order value: ₹${grossOrderTotal.toLocaleString("en-IN")} (pending payment/delivery)`,
+    );
+  } else if (collectedTotal === 0 && Number(lifetimeRevenue) > 0 && period !== "all") {
+    parts.push(
+      `All-time revenue: ₹${Number(lifetimeRevenue).toLocaleString("en-IN")}`,
     );
   } else {
     if (typeof growth === "number") {

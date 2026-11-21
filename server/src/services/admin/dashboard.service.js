@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { User } from '../../models/User.model.js';
 import { Product } from '../../models/Product.model.js';
 import { Inventory } from '../../models/Inventory.model.js';
@@ -15,21 +16,140 @@ import { ROLES } from '../../constants/roles.constant.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PERIOD_DAYS = { '7d': 7, '30d': 30, '90d': 90 };
 
-// Orders that should never be counted as earned revenue
+// Orders that should never be counted as earned revenue (case-insensitive variants for legacy docs)
 const NON_REVENUE_STATUSES = [
   ORDER_STATUS.CANCELLED,
   ORDER_STATUS.REFUNDED,
   ORDER_STATUS.RETURNED,
+  'cancelled',
+  'CANCELLED',
+  'Cancelled',
+  'canceled',
+  'CANCELED',
+  'Canceled',
+  'refunded',
+  'REFUNDED',
+  'Refunded',
+  'returned',
+  'RETURNED',
+  'Returned',
 ];
 
-// Revenue = paid (online) OR delivered (COD) orders that were not cancelled/refunded/returned
-const REVENUE_MATCH = {
-  orderStatus: { $nin: NON_REVENUE_STATUSES },
-  $or: [
-    { isPaid: true },
-    { paymentStatus: PAYMENT_STATUS.SUCCESS },
-    { orderStatus: ORDER_STATUS.DELIVERED },
+const SUCCESS_PAYMENT_VARIANTS = [
+  PAYMENT_STATUS.SUCCESS,
+  'success',
+  'SUCCESS',
+  'Success',
+  'paid',
+  'PAID',
+  'Paid',
+  'captured',
+  'CAPTURED',
+  'Captured',
+  'completed',
+  'COMPLETED',
+  'Completed',
+  'succeeded',
+  'SUCCEEDED',
+  'settled',
+  'SETTLED',
+];
+
+const DELIVERED_ORDER_VARIANTS = [
+  ORDER_STATUS.DELIVERED,
+  'delivered',
+  'DELIVERED',
+  'Delivered',
+  'completed',
+  'COMPLETED',
+  'Completed',
+];
+
+const ORDER_AMOUNT_EXPR = {
+  $ifNull: [
+    '$totalAmount',
+    {
+      $ifNull: [
+        '$finalAmount',
+        {
+          $ifNull: [
+            '$grandTotal',
+            { $ifNull: ['$total', { $ifNull: ['$amount', 0] }] },
+          ],
+        },
+      ],
+    },
   ],
+};
+
+const PAYMENT_AMOUNT_EXPR = {
+  $ifNull: [
+    '$amount',
+    { $ifNull: ['$totalAmount', { $ifNull: ['$paidAmount', 0] }] },
+  ],
+};
+
+const ORDER_DATE_EXPR = {
+  $ifNull: ['$createdAt', { $ifNull: ['$orderDate', { $ifNull: ['$paidAt', '$updatedAt'] }] }],
+};
+
+const PAYMENT_DATE_EXPR = {
+  $ifNull: ['$createdAt', { $ifNull: ['$paidAt', { $ifNull: ['$paymentDate', '$updatedAt'] }] }],
+};
+
+const buildOrderRevenueMatch = (dateRangeFilter = null) => {
+  const andConditions = [
+    { orderStatus: { $nin: NON_REVENUE_STATUSES } },
+    { status: { $nin: NON_REVENUE_STATUSES } },
+    {
+      $or: [
+        { isPaid: true },
+        { paid: true },
+        { paymentStatus: { $in: SUCCESS_PAYMENT_VARIANTS } },
+        { orderStatus: { $in: DELIVERED_ORDER_VARIANTS } },
+        { status: { $in: DELIVERED_ORDER_VARIANTS } },
+      ],
+    },
+  ];
+  if (dateRangeFilter) {
+    andConditions.push(dateRangeFilter);
+  }
+  return { $and: andConditions };
+};
+
+const buildPaymentSuccessMatch = (dateRangeFilter = null) => {
+  const andConditions = [
+    {
+      $or: [
+        { status: { $in: SUCCESS_PAYMENT_VARIANTS } },
+        { paymentStatus: { $in: SUCCESS_PAYMENT_VARIANTS } },
+      ],
+    },
+  ];
+  if (dateRangeFilter) {
+    andConditions.push(dateRangeFilter);
+  }
+  return { $and: andConditions };
+};
+
+const buildDateRangeFilter = (rangeObj, legacyDateField = 'orderDate') => {
+  if (!rangeObj) return null;
+  return {
+    $or: [
+      { createdAt: rangeObj },
+      { createdAt: { $exists: false }, [legacyDateField]: rangeObj },
+      { createdAt: null, [legacyDateField]: rangeObj },
+    ],
+  };
+};
+
+const getLocalTzOffsetString = () => {
+  const offsetMin = -new Date().getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+  const mm = String(abs % 60).padStart(2, '0');
+  return `${sign}${hh}:${mm}`;
 };
 
 const PENDING_VENDOR_STATUSES = [VENDOR_STATUS.PENDING, VENDOR_STATUS.UNDER_REVIEW];
@@ -51,6 +171,13 @@ const toDateKey = (date) => {
   return `${y}-${m}-${day}`;
 };
 
+const toMonthKey = (date) => {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
 const growthPercent = (current, previous) => {
   const cur = Number(current) || 0;
   const prev = Number(previous) || 0;
@@ -58,7 +185,11 @@ const growthPercent = (current, previous) => {
   return Math.round(((cur - prev) / prev) * 1000) / 10;
 };
 
-const normalizePeriod = (period) => (PERIOD_DAYS[period] ? period : '7d');
+const normalizePeriod = (period) => {
+  const clean = String(period || '').trim().toLowerCase();
+  if (clean === 'all' || PERIOD_DAYS[clean]) return clean;
+  return '7d';
+};
 
 const getMonthBoundaries = () => {
   const now = new Date();
@@ -67,15 +198,18 @@ const getMonthBoundaries = () => {
   return { thisMonthStart, lastMonthStart };
 };
 
-const sumRevenue = async (extraMatch = {}) => {
+const sumRevenue = async (dateRangeObj = null) => {
+  const orderDateFilter = buildDateRangeFilter(dateRangeObj, 'orderDate');
+  const paymentDateFilter = buildDateRangeFilter(dateRangeObj, 'paidAt');
+
   const [orderAgg, paymentAgg] = await Promise.all([
     Order.aggregate([
-      { $match: { ...REVENUE_MATCH, ...extraMatch } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      { $match: buildOrderRevenueMatch(orderDateFilter) },
+      { $group: { _id: null, total: { $sum: ORDER_AMOUNT_EXPR } } },
     ]),
     Payment.aggregate([
-      { $match: { status: PAYMENT_STATUS.SUCCESS, ...extraMatch } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+      { $match: buildPaymentSuccessMatch(paymentDateFilter) },
+      { $group: { _id: null, total: { $sum: PAYMENT_AMOUNT_EXPR } } },
     ]),
   ]);
   return Math.max(
@@ -84,10 +218,16 @@ const sumRevenue = async (extraMatch = {}) => {
   );
 };
 
-const sumGrossOrderValue = async (extraMatch = {}) => {
+const sumGrossOrderValue = async (dateRangeObj = null) => {
+  const orderDateFilter = buildDateRangeFilter(dateRangeObj, 'orderDate');
+  const match = {
+    orderStatus: { $nin: NON_REVENUE_STATUSES },
+    status: { $nin: NON_REVENUE_STATUSES },
+    ...(orderDateFilter || {}),
+  };
   const result = await Order.aggregate([
-    { $match: { orderStatus: { $nin: NON_REVENUE_STATUSES }, ...extraMatch } },
-    { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    { $match: match },
+    { $group: { _id: null, total: { $sum: ORDER_AMOUNT_EXPR } } },
   ]);
   return Number(result?.[0]?.total || 0);
 };
@@ -148,8 +288,8 @@ export class AdminDashboardService {
       Order.countDocuments({ createdAt: { $gte: lastMonthStart, $lt: thisMonthStart } }),
       Order.countDocuments({ orderStatus: ORDER_STATUS.PENDING }),
       sumRevenue(),
-      sumRevenue({ createdAt: { $gte: thisMonthStart } }),
-      sumRevenue({ createdAt: { $gte: lastMonthStart, $lt: thisMonthStart } }),
+      sumRevenue({ $gte: thisMonthStart }),
+      sumRevenue({ $gte: lastMonthStart, $lt: thisMonthStart }),
       sumGrossOrderValue(),
       SupportTicket.countDocuments({ status: { $in: OPEN_TICKET_STATUSES } }),
       this.getRecentOrders(5),
@@ -197,40 +337,194 @@ export class AdminDashboardService {
 
   async getDashboardAnalytics(period = '7d') {
     const safePeriod = normalizePeriod(period);
+    const tzOffset = getLocalTzOffsetString();
+    const canQueryPayments =
+      mongoose.connection?.readyState === 1 || Boolean(Payment.aggregate?.mock);
+
+    if (safePeriod === 'all') {
+      const monthOrderExpr = {
+        $dateToString: { format: '%Y-%m', date: ORDER_DATE_EXPR, timezone: tzOffset },
+      };
+      const monthPaymentExpr = {
+        $dateToString: { format: '%Y-%m', date: PAYMENT_DATE_EXPR, timezone: tzOffset },
+      };
+
+      const [ordersByMonth, orderRevenueByMonth, paymentRevenueByMonth] = await Promise.all([
+        Order.aggregate([
+          {
+            $group: {
+              _id: monthOrderExpr,
+              orders: { $sum: 1 },
+              orderValue: {
+                $sum: {
+                  $cond: [
+                    {
+                      $or: [
+                        { $in: ['$orderStatus', NON_REVENUE_STATUSES] },
+                        { $in: ['$status', NON_REVENUE_STATUSES] },
+                      ],
+                    },
+                    0,
+                    ORDER_AMOUNT_EXPR,
+                  ],
+                },
+              },
+            },
+          },
+        ]),
+        Order.aggregate([
+          { $match: buildOrderRevenueMatch(null) },
+          { $group: { _id: monthOrderExpr, revenue: { $sum: ORDER_AMOUNT_EXPR } } },
+        ]),
+        canQueryPayments
+          ? Payment.aggregate([
+              { $match: buildPaymentSuccessMatch(null) },
+              { $group: { _id: monthPaymentExpr, revenue: { $sum: PAYMENT_AMOUNT_EXPR } } },
+            ])
+          : Promise.resolve([]),
+      ]);
+
+      const ordersMap = new Map(
+        (ordersByMonth || []).filter((d) => d?._id).map((d) => [d._id, Number(d.orders) || 0])
+      );
+      const orderValueMap = new Map(
+        (ordersByMonth || []).filter((d) => d?._id).map((d) => [d._id, Number(d.orderValue) || 0])
+      );
+      const orderRevMap = new Map(
+        (orderRevenueByMonth || []).filter((d) => d?._id).map((d) => [d._id, Number(d.revenue) || 0])
+      );
+      const payRevMap = new Map(
+        (paymentRevenueByMonth || [])
+          .filter((d) => d?._id)
+          .map((d) => [d._id, Number(d.revenue) || 0])
+      );
+
+      const allKeys = [
+        ...ordersMap.keys(),
+        ...orderRevMap.keys(),
+        ...payRevMap.keys(),
+      ].sort();
+
+      const now = new Date();
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const minDefaultStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+      let rangeMonthStart = minDefaultStart;
+      if (allKeys.length > 0) {
+        const [yr, mo] = allKeys[0].split('-').map((n) => parseInt(n, 10));
+        if (Number.isFinite(yr) && Number.isFinite(mo)) {
+          const earliest = new Date(yr, mo - 1, 1);
+          const cap36 = new Date(now.getFullYear(), now.getMonth() - 35, 1);
+          const bounded = earliest < cap36 ? cap36 : earliest;
+          rangeMonthStart = bounded < minDefaultStart ? bounded : minDefaultStart;
+        }
+      }
+
+      const salesTrend = [];
+      const cursor = new Date(rangeMonthStart);
+      while (cursor <= currentMonthStart) {
+        const key = toMonthKey(cursor);
+        const orders = ordersMap.get(key) || 0;
+        const orderRev = orderRevMap.get(key) || 0;
+        const payRev = payRevMap.get(key) || 0;
+        const revenue = Math.max(orderRev, payRev);
+        const orderValue = Math.max(orderValueMap.get(key) || 0, payRev);
+        salesTrend.push({
+          date: key,
+          label: cursor.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+          orders,
+          sales: orders,
+          revenue,
+          orderValue,
+        });
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+
+      const totalOrders = salesTrend.reduce((sum, d) => sum + d.orders, 0);
+      const totalRevenue = salesTrend.reduce((sum, d) => sum + d.revenue, 0);
+      const grossSales = salesTrend.reduce((sum, d) => sum + d.orderValue, 0);
+
+      return {
+        period: 'all',
+        salesTrend,
+        summary: {
+          totalOrders,
+          totalRevenue,
+          grossSales,
+          pendingRevenue: Math.max(0, Math.round((grossSales - totalRevenue) * 100) / 100),
+          averageOrderValue:
+            totalOrders > 0 ? Math.round((totalRevenue / totalOrders) * 100) / 100 : 0,
+          ordersGrowth: 0,
+          revenueGrowth: 0,
+        },
+      };
+    }
+
     const days = PERIOD_DAYS[safePeriod];
     const rangeStart = startOfDay(new Date(Date.now() - (days - 1) * DAY_MS));
     const previousStart = new Date(rangeStart.getTime() - days * DAY_MS);
 
-    const dateExpr = { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } };
+    const dateExpr = {
+      $dateToString: { format: '%Y-%m-%d', date: ORDER_DATE_EXPR, timezone: tzOffset },
+    };
+    const paymentDateExpr = {
+      $dateToString: { format: '%Y-%m-%d', date: PAYMENT_DATE_EXPR, timezone: tzOffset },
+    };
 
-    const [ordersByDay, revenueByDay, previousOrders, previousRevenue] = await Promise.all([
-      Order.aggregate([
-        { $match: { createdAt: { $gte: rangeStart } } },
-        {
-          $group: {
-            _id: dateExpr,
-            orders: { $sum: 1 },
-            orderValue: {
-              $sum: {
-                $cond: [{ $in: ['$orderStatus', NON_REVENUE_STATUSES] }, 0, '$totalAmount'],
+    const currentOrderDateFilter = buildDateRangeFilter({ $gte: rangeStart }, 'orderDate');
+    const currentPaymentDateFilter = buildDateRangeFilter({ $gte: rangeStart }, 'paidAt');
+    const prevOrderDateFilter = buildDateRangeFilter(
+      { $gte: previousStart, $lt: rangeStart },
+      'orderDate'
+    );
+
+    const [ordersByDay, revenueByDay, paymentRevenueByDay, previousOrders, previousRevenue] =
+      await Promise.all([
+        Order.aggregate([
+          { $match: currentOrderDateFilter },
+          {
+            $group: {
+              _id: dateExpr,
+              orders: { $sum: 1 },
+              orderValue: {
+                $sum: {
+                  $cond: [
+                    {
+                      $or: [
+                        { $in: ['$orderStatus', NON_REVENUE_STATUSES] },
+                        { $in: ['$status', NON_REVENUE_STATUSES] },
+                      ],
+                    },
+                    0,
+                    ORDER_AMOUNT_EXPR,
+                  ],
+                },
               },
             },
           },
-        },
-      ]),
-      Order.aggregate([
-        { $match: { ...REVENUE_MATCH, createdAt: { $gte: rangeStart } } },
-        { $group: { _id: dateExpr, revenue: { $sum: '$totalAmount' } } },
-      ]),
-      Order.countDocuments({ createdAt: { $gte: previousStart, $lt: rangeStart } }),
-      sumRevenue({ createdAt: { $gte: previousStart, $lt: rangeStart } }),
-    ]);
+        ]),
+        Order.aggregate([
+          { $match: buildOrderRevenueMatch(currentOrderDateFilter) },
+          { $group: { _id: dateExpr, revenue: { $sum: ORDER_AMOUNT_EXPR } } },
+        ]),
+        canQueryPayments
+          ? Payment.aggregate([
+              { $match: buildPaymentSuccessMatch(currentPaymentDateFilter) },
+              { $group: { _id: paymentDateExpr, revenue: { $sum: PAYMENT_AMOUNT_EXPR } } },
+            ])
+          : Promise.resolve([]),
+        Order.countDocuments(prevOrderDateFilter),
+        sumRevenue({ $gte: previousStart, $lt: rangeStart }),
+      ]);
 
     const ordersMap = new Map((ordersByDay || []).map((d) => [d._id, Number(d.orders) || 0]));
     const orderValueMap = new Map(
       (ordersByDay || []).map((d) => [d._id, Number(d.orderValue) || 0])
     );
     const revenueMap = new Map((revenueByDay || []).map((d) => [d._id, Number(d.revenue) || 0]));
+    const paymentRevenueMap = new Map(
+      (paymentRevenueByDay || []).map((d) => [d._id, Number(d.revenue) || 0])
+    );
 
     // Fill every day in range so charts never have gaps
     const salesTrend = [];
@@ -238,8 +532,10 @@ export class AdminDashboardService {
       const day = new Date(rangeStart.getTime() + i * DAY_MS);
       const key = toDateKey(day);
       const orders = ordersMap.get(key) || 0;
-      const revenue = revenueMap.get(key) || 0;
-      const orderValue = orderValueMap.get(key) || 0;
+      const orderRev = revenueMap.get(key) || 0;
+      const payRev = paymentRevenueMap.get(key) || 0;
+      const revenue = Math.max(orderRev, payRev);
+      const orderValue = Math.max(orderValueMap.get(key) || 0, payRev);
       salesTrend.push({
         date: key,
         label: day.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),

@@ -4,6 +4,7 @@ const PERIOD_LABELS = {
   "7d": "Last 7 Days",
   "30d": "Last 30 Days",
   "90d": "Last 90 Days",
+  all: "All Time",
 };
 
 const AnalyticsAreaChart = ({
@@ -39,7 +40,7 @@ const AnalyticsAreaChart = ({
 
   const maxValue = Math.max(
     ...chartData.map((item) => Number(item.value) || 0),
-    1,
+    isCurrency ? 100 : 4,
   );
   const totalValue = chartData.reduce(
     (sum, item) => sum + (Number(item.value) || 0),

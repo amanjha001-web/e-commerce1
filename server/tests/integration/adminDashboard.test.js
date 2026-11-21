@@ -303,4 +303,63 @@ describe('Admin Dashboard Service & Routes Integration Tests', () => {
     expect(secondCall).toBe(false);
     expect(earningsSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('getDashboardAnalytics merges successful Payment revenue when Order revenue is 0 and includes legacy status variants', async () => {
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+      now.getDate()
+    ).padStart(2, '0')}`;
+
+    vi.spyOn(Order, 'aggregate')
+      .mockResolvedValueOnce([{ _id: todayKey, orders: 1, orderValue: 552 }]) // ordersByDay
+      .mockResolvedValueOnce([]) // order revenueByDay empty (e.g., pending/legacy order fields)
+      .mockResolvedValueOnce([{ total: 0 }]); // sumRevenue previous Order
+    const paymentAggSpy = vi
+      .spyOn(Payment, 'aggregate')
+      .mockResolvedValueOnce([{ _id: todayKey, revenue: 552 }]) // paymentRevenueByDay
+      .mockResolvedValueOnce([{ total: 0 }]); // sumRevenue previous Payment
+    vi.spyOn(Order, 'countDocuments').mockResolvedValueOnce(0);
+
+    const analytics = await adminDashboardService.getDashboardAnalytics('7d');
+    expect(analytics.period).toBe('7d');
+    expect(analytics.salesTrend).toHaveLength(7);
+    const todayPoint = analytics.salesTrend.find((d) => d.date === todayKey);
+    expect(todayPoint.revenue).toBe(552);
+    expect(analytics.summary.totalRevenue).toBe(552);
+
+    const firstPaymentPipeline = paymentAggSpy.mock.calls[0][0];
+    const matchJson = JSON.stringify(firstPaymentPipeline[0].$match);
+    expect(matchJson).toContain('SUCCESS');
+    expect(matchJson).toContain('paid');
+    expect(matchJson).toContain('captured');
+    expect(firstPaymentPipeline[1].$group._id.$dateToString.timezone).toMatch(/^[+-]\d{2}:\d{2}$/);
+  });
+
+  it('GET /api/v1/admin/dashboard/analytics?period=all should return gap-filled monthly buckets across all history', async () => {
+    mockAuthUser(ROLES.ADMIN);
+    vi.spyOn(Order, 'aggregate')
+      .mockResolvedValueOnce([{ _id: '2026-08', orders: 2, orderValue: 1104 }]) // ordersByMonth
+      .mockResolvedValueOnce([{ _id: '2026-08', revenue: 552 }]); // orderRevenueByMonth
+    vi.spyOn(Payment, 'aggregate').mockResolvedValueOnce([
+      { _id: '2026-08', revenue: 552 },
+      { _id: '2026-09', revenue: 1200 },
+    ]);
+
+    const res = await request(app)
+      .get('/api/v1/admin/dashboard/analytics?period=all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.period).toBe('all');
+    expect(res.body.data.salesTrend.length).toBeGreaterThanOrEqual(6);
+
+    const augPoint = res.body.data.salesTrend.find((d) => d.date === '2026-08');
+    const sepPoint = res.body.data.salesTrend.find((d) => d.date === '2026-09');
+    expect(augPoint).toBeDefined();
+    expect(augPoint.revenue).toBe(552);
+    expect(sepPoint).toBeDefined();
+    expect(sepPoint.revenue).toBe(1200);
+    expect(res.body.data.summary.totalRevenue).toBe(1752);
+    expect(res.body.data.summary.totalOrders).toBe(2);
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +24,7 @@ const PERIODS = [
   { label: "7 Days", value: "7d" },
   { label: "30 Days", value: "30d" },
   { label: "90 Days", value: "90d" },
+  { label: "All Time", value: "all" },
 ];
 
 const ADMIN_ROUTES = {
@@ -57,6 +58,7 @@ const AdminDashboard = () => {
     recentUsers: dashboardRecentUsers = [],
     topProducts: dashboardTopProducts = [],
     lowStockProducts = [],
+    period: analyticsPeriod = "7d",
     analyticsLoading,
   } = useSelector((state) => state.adminDashboard || {});
 
@@ -68,8 +70,10 @@ const AdminDashboard = () => {
   );
 
   const [catalogProducts, setCatalogProducts] = useState([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState("7d");
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [manualPeriod, setManualPeriod] = useState(null);
+  const autoAllFallbackRef = useRef(false);
+  const selectedPeriod = manualPeriod || analyticsPeriod || "7d";
   const isAnalyticsLoading = loading || analyticsLoading;
 
   const refreshDashboard = useCallback(
@@ -81,7 +85,6 @@ const AdminDashboard = () => {
       dispatch(fetchAdminUsers({ limit: 5, sortBy: "latest" }));
       dispatch(fetchAdminOrders({ limit: 5 }));
 
-      setCatalogLoading(true);
       adminService
         .getProducts({ limit: 15, sortBy: "latest" })
         .then((res) => {
@@ -103,13 +106,45 @@ const AdminDashboard = () => {
     refreshDashboard("7d");
   }, [refreshDashboard]);
 
+  // If Last 7 Days has ₹0 earned revenue while the DB has historical paid orders/payments, automatically show All Time once
+  useEffect(() => {
+    if (
+      autoAllFallbackRef.current ||
+      manualPeriod !== null ||
+      loading ||
+      analyticsLoading ||
+      analyticsPeriod !== "7d" ||
+      !(revenueData || []).length
+    ) {
+      return;
+    }
+    const periodRevenue = (revenueData || []).reduce(
+      (sum, item) => sum + (Number(item?.value) || 0),
+      0,
+    );
+    if (periodRevenue === 0 && Number(stats?.totalRevenue || 0) > 0) {
+      autoAllFallbackRef.current = true;
+      dispatch(fetchAdminDashboardAnalytics("all"));
+    }
+  }, [
+    dispatch,
+    manualPeriod,
+    loading,
+    analyticsLoading,
+    analyticsPeriod,
+    revenueData,
+    stats?.totalRevenue,
+  ]);
+
   const handlePeriodChange = (newPeriod) => {
     if (newPeriod === selectedPeriod && !analyticsLoading) return;
-    setSelectedPeriod(newPeriod);
+    autoAllFallbackRef.current = true;
+    setManualPeriod(newPeriod);
     dispatch(fetchAdminDashboardAnalytics(newPeriod));
   };
 
   const handleRetry = () => {
+    setCatalogLoading(true);
     refreshDashboard(selectedPeriod);
   };
 
@@ -226,6 +261,7 @@ const AdminDashboard = () => {
             growth={summary.revenueGrowth}
             averageOrderValue={summary.averageOrderValue}
             grossSales={summary.grossSales}
+            lifetimeRevenue={stats?.totalRevenue}
           />
         </div>
 
