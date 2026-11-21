@@ -7,6 +7,23 @@ const taxSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    code: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: '',
+    },
+    type: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      default: 'GST',
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     rate: {
       type: Number,
       required: true,

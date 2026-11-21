@@ -9,6 +9,7 @@ router.use(authenticate, requireSuperAdmin);
 
 router.get('/', settingController.getSettings);
 router.patch('/', settingController.updateSettings);
+router.get('/history', settingController.getSettingsHistory);
 router.get('/:key', settingController.getSettingByKey);
 router.patch('/:key', settingController.updateSetting);
 

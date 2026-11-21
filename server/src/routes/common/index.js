@@ -11,6 +11,7 @@ import notificationRoutes from './notifications.routes.js';
 import webhookRoutes from './webhook.routes.js';
 import healthRoutes from './health.routes.js';
 import bannerRoutes from './banners.routes.js';
+import publicSettingsRoutes from './settings.routes.js';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/health', healthRoutes);
 router.use('/banners', bannerRoutes);
+router.use('/settings', publicSettingsRoutes);
 
 export default router;

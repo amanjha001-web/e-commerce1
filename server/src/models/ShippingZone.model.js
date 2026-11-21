@@ -32,6 +32,10 @@ const shippingZoneSchema = new mongoose.Schema(
       type: Number,
       default: 0, // 0 means no free shipping
     },
+    estimatedDays: {
+      min: { type: Number, default: 2, min: 1 },
+      max: { type: Number, default: 5, min: 1 },
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import { Order } from '../../models/Order.model.js';
+import { settingService } from '../superAdmin/setting.service.js';
 import { Cart } from '../../models/Cart.model.js';
 import { Product } from '../../models/Product.model.js';
 import { Address } from '../../models/Address.model.js';
@@ -86,9 +88,30 @@ export class CustomerOrderService {
       });
     }
 
+    let shippingThreshold = 999;
+    let defaultShippingFee = 50;
+    let defaultTaxRate = 18;
+
+    if (mongoose.connection?.readyState === 1) {
+      try {
+        const cfg = await settingService.getSettings();
+        if (Number.isFinite(Number(cfg?.SHIPPING_THRESHOLD))) {
+          shippingThreshold = Math.max(0, Number(cfg.SHIPPING_THRESHOLD));
+        }
+        if (Number.isFinite(Number(cfg?.DEFAULT_SHIPPING_FEE))) {
+          defaultShippingFee = Math.max(0, Number(cfg.DEFAULT_SHIPPING_FEE));
+        }
+        if (Number.isFinite(Number(cfg?.DEFAULT_TAX_RATE))) {
+          defaultTaxRate = Math.min(100, Math.max(0, Number(cfg.DEFAULT_TAX_RATE)));
+        }
+      } catch {
+        // Fallback to platform defaults
+      }
+    }
+
     const discountAmount = cart.discountAmount || 0;
-    const shippingPrice = subtotal >= 999 ? 0 : 50; // free shipping on orders ₹999 and above
-    const taxPrice = roundToTwoDecimals((subtotal - discountAmount) * 0.18); // 18% standard GST
+    const shippingPrice = subtotal >= shippingThreshold ? 0 : defaultShippingFee;
+    const taxPrice = roundToTwoDecimals((subtotal - discountAmount) * (defaultTaxRate / 100));
     const totalAmount = roundToTwoDecimals(subtotal - discountAmount + shippingPrice + taxPrice);
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;

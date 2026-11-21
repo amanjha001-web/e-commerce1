@@ -19,6 +19,7 @@ import chatRoutes from './common/chat.routes.js';
 import notificationRoutes from './common/notifications.routes.js';
 import webhookRoutes from './common/webhook.routes.js';
 import healthRoutes from './common/health.routes.js';
+import publicSettingsRoutes from './common/settings.routes.js';
 
 import profileRoutes from './customer/profile.routes.js';
 import addressRoutes from './customer/addresses.routes.js';
@@ -75,6 +76,7 @@ router.use('/support', supportRoutes);
 router.use('/activity', activityRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/health', healthRoutes);
+router.use('/settings', publicSettingsRoutes);
 router.use('/vendor-requests', vendorRequestRoutes);
 
 // Public /vendors listing for frontend storefront

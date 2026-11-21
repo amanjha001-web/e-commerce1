@@ -62,6 +62,7 @@ const settingsRouter = Router();
 settingsRouter.use(authenticate, requireAdmin);
 settingsRouter.get('/', settingsController.getSettings);
 settingsRouter.patch('/', settingsController.updateSettings);
+settingsRouter.get('/history', settingsController.getSettingsHistory);
 settingsRouter.get('/:key', settingsController.getSettingByKey);
 settingsRouter.patch('/:key', settingsController.updateSetting);
 router.use('/settings', settingsRouter);
