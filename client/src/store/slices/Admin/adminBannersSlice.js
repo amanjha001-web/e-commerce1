@@ -101,25 +101,23 @@ export const deleteBanner = createAsyncThunk(
   },
 );
 
-// Toggle banner status (PATCH /banners/:bannerId with status: ACTIVE | INACTIVE)
+// Toggle banner status (PATCH /admin/banners/:bannerId/status)
 export const toggleBannerStatus = createAsyncThunk(
   "adminBanners/toggleBannerStatus",
   async (arg, { getState, rejectWithValue }) => {
     try {
       const bannerId = typeof arg === "object" ? arg.bannerId : arg;
-      let nextStatus = typeof arg === "object" ? arg.status : undefined;
+      let nextActive = typeof arg === "object" ? arg.isActive : undefined;
 
-      if (!nextStatus) {
+      if (typeof nextActive !== "boolean") {
         const existing = getState()?.adminBanners?.banners?.find(
           (b) => (b._id || b.id) === bannerId,
         );
-        const current = String(existing?.status || "ACTIVE").toUpperCase();
-        nextStatus = current === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+        const currentlyActive = existing ? existing.isActive !== false : true;
+        nextActive = !currentlyActive;
       }
 
-      const response = await bannersService.update(bannerId, {
-        status: nextStatus,
-      });
+      const response = await bannersService.toggleStatus(bannerId, nextActive);
       if (response?.success === false) {
         return rejectWithValue(
           response.message || "Failed to toggle banner status",
@@ -138,8 +136,20 @@ export const toggleBannerStatus = createAsyncThunk(
 
 const initialState = {
   banners: [],
+  summary: {
+    total: 0,
+    active: 0,
+    scheduled: 0,
+    expired: 0,
+    inactive: 0,
+  },
   selectedBanner: null,
-  pagination: {},
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  },
   stats: null,
   loading: false,
   actionLoading: false,
@@ -171,7 +181,16 @@ const adminBannersSlice = createSlice({
             : Array.isArray(payload)
               ? payload
               : [];
-        state.pagination = payload?.pagination || {};
+        if (payload?.summary) {
+          state.summary = {
+            ...initialState.summary,
+            ...payload.summary,
+          };
+        }
+        state.pagination = {
+          ...initialState.pagination,
+          ...(payload?.pagination || {}),
+        };
       })
       .addCase(fetchBanners.rejected, (state, action) => {
         state.loading = false;

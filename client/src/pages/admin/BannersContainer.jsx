@@ -9,6 +9,7 @@ import {
   updateBanner,
   deleteBanner,
   toggleBannerStatus,
+  clearBannersError,
 } from "../../store/slices/Admin/adminBannersSlice";
 
 const BannersContainer = () => {
@@ -16,6 +17,7 @@ const BannersContainer = () => {
 
   const {
     banners = [],
+    summary = {},
     pagination = {},
     loading,
     error,
@@ -24,70 +26,75 @@ const BannersContainer = () => {
 
   const [filters, setFilters] = useState({
     search: "",
+    status: "all",
+    position: "all",
     page: 1,
     limit: 10,
   });
 
-  // Fetch banners
   useEffect(() => {
     dispatch(fetchBanners(filters));
   }, [dispatch, filters]);
 
-  // Handle filter changes
   const handleFilterChange = useCallback((newFilters) => {
     setFilters((prev) => ({
       ...prev,
       ...newFilters,
-      page: newFilters.page || 1,
+      page: newFilters.page !== undefined ? newFilters.page : 1,
     }));
   }, []);
 
-  // Create banner
   const handleCreateBanner = useCallback(
     async (payload) => {
-      dispatch(createBanner(payload));
+      await dispatch(createBanner(payload)).unwrap();
+      dispatch(fetchBanners(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
-  // Edit banner
   const handleEditBanner = useCallback(
     async (banner, data) => {
-      dispatch(updateBanner({ bannerId: banner._id || banner.id, bannerData: data }));
+      await dispatch(
+        updateBanner({
+          bannerId: banner._id || banner.id,
+          bannerData: data,
+        }),
+      ).unwrap();
+      dispatch(fetchBanners(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
-  // Delete banner - requires confirmation
   const handleDeleteBanner = useCallback(
     async (banner) => {
-      if (
-        !window.confirm(
-          `Are you sure you want to delete the banner "${
-            banner?.title || banner?.name || "this banner"
-          }"? This action cannot be undone.`
-        )
-      ) {
-        return;
-      }
-
-      await dispatch(deleteBanner(banner._id || banner.id));
+      await dispatch(deleteBanner(banner._id || banner.id)).unwrap();
+      dispatch(fetchBanners(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
 
-  // Toggle banner status
   const handleToggleBannerStatus = useCallback(
-    async (banner) => {
-      await dispatch(toggleBannerStatus(banner._id || banner.id));
+    async (banner, nextActive) => {
+      await dispatch(
+        toggleBannerStatus({
+          bannerId: banner._id || banner.id,
+          isActive: nextActive,
+        }),
+      ).unwrap();
+      dispatch(fetchBanners(filters));
     },
-    [dispatch]
+    [dispatch, filters],
   );
+
+  const handleClearError = useCallback(() => {
+    dispatch(clearBannersError());
+  }, [dispatch]);
 
   return (
     <Banners
       banners={banners}
-      totalBanners={pagination?.total || banners.length}
+      summary={summary}
+      totalBanners={pagination?.total ?? banners.length}
       pagination={pagination}
       loading={loading}
       saving={actionLoading}
@@ -98,6 +105,7 @@ const BannersContainer = () => {
       onEditBanner={handleEditBanner}
       onDeleteBanner={handleDeleteBanner}
       onToggleBannerStatus={handleToggleBannerStatus}
+      onClearError={handleClearError}
     />
   );
 };

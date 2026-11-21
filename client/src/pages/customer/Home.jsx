@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
 import productService from "../../services/product.service";
 import categoryService from "../../services/category.service";
 import couponService from "../../services/coupon.service";
+import bannersService from "../../services/banners.service";
 
 const DEFAULT_CATEGORIES = [
   { name: "Fashion", icon: "👗", slug: "fashion" },
@@ -103,6 +104,9 @@ const Home = ({
 
   const [categoriesList, setCategoriesList] = useState([]);
   const [featuredCoupon, setFeaturedCoupon] = useState(null);
+  const [liveBanners, setLiveBanners] = useState([]);
+  const [heroIndex, setHeroIndex] = useState(0);
+  const trackedImpressionsRef = useRef(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -137,12 +141,26 @@ const Home = ({
       }
     };
 
+    const fetchBanners = async () => {
+      if (banners && banners.length > 0) return;
+      try {
+        const res = await bannersService.getActive();
+        const list = res?.data?.banners || (Array.isArray(res?.data) ? res.data : []) || (Array.isArray(res) ? res : []);
+        if (isMounted && Array.isArray(list)) {
+          setLiveBanners(list);
+        }
+      } catch {
+        // Hero falls back to curated copy when no banners are loaded
+      }
+    };
+
     fetchCategories();
     fetchFeaturedCoupon();
+    fetchBanners();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [banners]);
 
   // =========================
   // Add Product To Cart
@@ -350,6 +368,60 @@ const Home = ({
   // Navigation Handlers
   // =========================
 
+  const resolvedBanners = useMemo(
+    () => (banners && banners.length > 0 ? banners : liveBanners),
+    [banners, liveBanners],
+  );
+
+  const heroBanners = useMemo(
+    () =>
+      resolvedBanners.filter(
+        (b) => !b.position || String(b.position).toLowerCase() === "home_hero",
+      ),
+    [resolvedBanners],
+  );
+  const middleBanners = useMemo(
+    () =>
+      resolvedBanners.filter(
+        (b) => String(b.position || "").toLowerCase() === "home_middle",
+      ),
+    [resolvedBanners],
+  );
+  const bottomBanners = useMemo(
+    () =>
+      resolvedBanners.filter(
+        (b) => String(b.position || "").toLowerCase() === "home_bottom",
+      ),
+    [resolvedBanners],
+  );
+
+  const safeHeroIndex = heroBanners.length > 0 ? heroIndex % heroBanners.length : 0;
+  const activeBanner = heroBanners[safeHeroIndex] || null;
+
+  useEffect(() => {
+    const id = activeBanner?._id || activeBanner?.id;
+    if (!id || trackedImpressionsRef.current.has(id)) return;
+    trackedImpressionsRef.current.add(id);
+    bannersService.incrementImpression(id).catch(() => {});
+  }, [activeBanner?._id, activeBanner?.id]);
+
+  const handleBannerAction = (banner) => {
+    const id = banner?._id || banner?.id;
+    if (id) {
+      bannersService.incrementClick(id).catch(() => {});
+    }
+    const targetLink = String(banner?.link || "").trim();
+    if (targetLink) {
+      if (/^https?:\/\//i.test(targetLink)) {
+        window.open(targetLink, "_blank", "noopener,noreferrer");
+      } else {
+        navigate(targetLink);
+      }
+      return;
+    }
+    handleShopNow();
+  };
+
   const handleShopNow = () => {
     if (onShopNow) {
       onShopNow();
@@ -371,8 +443,6 @@ const Home = ({
     navigator.clipboard?.writeText(activePromoCode);
     toast.success(`Coupon code ${activePromoCode} copied!`);
   };
-
-  const activeBanner = banners?.[0] || null;
 
   const categoryIconMap = {
     fashion: "👗",
@@ -476,7 +546,7 @@ const Home = ({
           <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
               type="button"
-              onClick={handleShopNow}
+              onClick={() => handleBannerAction(activeBanner)}
               className="primarybtn goldbtn text-xs sm:text-sm !py-2 !px-3.5 sm:!py-2.5 sm:!px-4"
             >
               {activeBanner?.buttonText || "Explore collection →"}
@@ -494,6 +564,24 @@ const Home = ({
             >
               View offers
             </button>
+
+            {heroBanners.length > 1 && (
+              <div className="ml-1 flex items-center gap-1.5">
+                {heroBanners.map((hb, idx) => (
+                  <button
+                    key={hb._id || idx}
+                    type="button"
+                    aria-label={`Hero slide ${idx + 1}`}
+                    onClick={() => setHeroIndex(idx)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      idx === safeHeroIndex
+                        ? "w-6 bg-white"
+                        : "w-2 bg-white/45 hover:bg-white/75"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -616,6 +704,79 @@ const Home = ({
           </section>
         );
       })}
+
+      {/* =========================
+          Middle Promotional Banners (position: home_middle)
+      ========================= */}
+      {middleBanners.length > 0 && (
+        <section className="my-7 grid gap-4 md:grid-cols-2">
+          {middleBanners.slice(0, 2).map((mb) => {
+            const imgUrl = typeof mb.image === "string" ? mb.image : mb.image?.url;
+            return (
+              <div
+                key={mb._id || mb.id || mb.title}
+                onClick={() => handleBannerAction(mb)}
+                className="panel flex cursor-pointer items-center justify-between gap-4 overflow-hidden transition hover:border-[var(--primary)]/50"
+              >
+                <div className="min-w-0">
+                  {mb.subtitle && <div className="eyebrow">{mb.subtitle}</div>}
+                  <h3 className="m-0 text-lg font-extrabold text-[var(--text)]">
+                    {mb.title}
+                  </h3>
+                  {mb.description && (
+                    <p className="muted mt-1 text-xs">{mb.description}</p>
+                  )}
+                  <span className="mt-2 inline-block text-xs font-bold text-[var(--primary)]">
+                    {mb.buttonText || "Shop now →"}
+                  </span>
+                </div>
+                {imgUrl && (
+                  <img
+                    src={imgUrl}
+                    alt={mb.title}
+                    className="h-24 w-32 shrink-0 rounded-xl object-cover"
+                  />
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {/* =========================
+          Bottom Promotional Banners (position: home_bottom)
+      ========================= */}
+      {bottomBanners.length > 0 && (
+        <section className="my-7 space-y-4">
+          {bottomBanners.slice(0, 1).map((bb) => {
+            const imgUrl = typeof bb.image === "string" ? bb.image : bb.image?.url;
+            return (
+              <div
+                key={bb._id || bb.id || bb.title}
+                onClick={() => handleBannerAction(bb)}
+                className="panel flex cursor-pointer flex-wrap items-center justify-between gap-4 transition hover:border-[var(--primary)]/50"
+              >
+                <div className="min-w-0 flex-1">
+                  {bb.subtitle && <div className="eyebrow">{bb.subtitle}</div>}
+                  <h3 className="m-0 text-xl font-extrabold text-[var(--text)]">
+                    {bb.title}
+                  </h3>
+                  {bb.description && (
+                    <p className="muted mt-1 text-sm">{bb.description}</p>
+                  )}
+                </div>
+                {imgUrl && (
+                  <img
+                    src={imgUrl}
+                    alt={bb.title}
+                    className="h-24 w-44 shrink-0 rounded-xl object-cover"
+                  />
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {/* =========================
           Promo Offer Panel

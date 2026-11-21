@@ -8,15 +8,31 @@ export class BannerRepository extends BaseRepository {
 
   async findActiveBanners(position = null) {
     const now = new Date();
-    const query = {
-      isActive: true,
-      startDate: { $lte: now },
-      $or: [{ endDate: null }, { endDate: { $gte: now } }],
-    };
+    const andConditions = [
+      { isActive: { $ne: false } },
+      {
+        $or: [
+          { startDate: { $exists: false } },
+          { startDate: null },
+          { startDate: { $lte: now } },
+        ],
+      },
+      {
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: { $gte: now } },
+        ],
+      },
+    ];
+
     if (position) {
-      query.position = position;
+      andConditions.push({ position: String(position).trim().toLowerCase() });
     }
-    return this.model.find(query).sort({ sortOrder: 1, createdAt: -1 });
+
+    return this.model
+      .find({ $and: andConditions })
+      .sort({ sortOrder: 1, createdAt: -1 });
   }
 
   async incrementImpression(bannerId) {

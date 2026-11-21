@@ -12,6 +12,7 @@ import Pagination from "../../components/common/Pagination";
 import Breadcrumb from "../../components/common/Breadcrumb";
 
 import categoryService from "../../services/category.service";
+import bannersService from "../../services/banners.service";
 
 import { fetchProducts } from "../../store/slices/productThunk.js";
 import { addCartProduct } from "../../store/slices/cartThunk.js";
@@ -53,11 +54,12 @@ const Categories = () => {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoriesError, setCategoriesError] = useState("");
+  const [topBanner, setTopBanner] = useState(null);
 
   const [search, setSearch] = useState(filters.search || "");
   const [sort, setSort] = useState(filters.sort || "latest");
 
-  // Fetch categories from API
+  // Fetch categories & active category_top banner from API
   useEffect(() => {
     let isMounted = true;
 
@@ -90,6 +92,16 @@ const Categories = () => {
         }
       }
     };
+
+    bannersService
+      .getActive({ position: "category_top" })
+      .then((res) => {
+        const list = res?.data?.banners || (Array.isArray(res?.data) ? res.data : []) || [];
+        if (isMounted && Array.isArray(list) && list.length > 0) {
+          setTopBanner(list[0]);
+        }
+      })
+      .catch(() => {});
 
     loadCategories();
 
@@ -271,6 +283,48 @@ const Categories = () => {
           Browse our collections and find exactly what you're looking for.
         </p>
       </header>
+
+      {topBanner && (
+        <section
+          onClick={() => {
+            if (topBanner._id) {
+              bannersService.incrementClick(topBanner._id).catch(() => {});
+            }
+            if (topBanner.link) {
+              if (/^https?:\/\//i.test(topBanner.link)) {
+                window.open(topBanner.link, "_blank", "noopener,noreferrer");
+              } else {
+                navigate(topBanner.link);
+              }
+            }
+          }}
+          className="panel mb-7 flex cursor-pointer flex-wrap items-center justify-between gap-4 transition hover:border-[var(--primary)]/50"
+          style={{ background: "var(--soft)" }}
+        >
+          <div className="min-w-0 flex-1">
+            {topBanner.subtitle && (
+              <div className="eyebrow">{topBanner.subtitle}</div>
+            )}
+            <h2 className="my-1 text-xl font-extrabold text-[var(--text)]">
+              {topBanner.title}
+            </h2>
+            {topBanner.description && (
+              <p className="muted m-0 text-sm">{topBanner.description}</p>
+            )}
+          </div>
+          {topBanner.image && (
+            <img
+              src={
+                typeof topBanner.image === "string"
+                  ? topBanner.image
+                  : topBanner.image?.url
+              }
+              alt={topBanner.title}
+              className="h-24 w-44 shrink-0 rounded-xl object-cover"
+            />
+          )}
+        </section>
+      )}
 
       {/* Categories Grid (matching categories() in reference) */}
       <section className="mb-10">

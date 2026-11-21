@@ -18,6 +18,14 @@ const bannerSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    description: {
+      type: String,
+      default: '',
+    },
+    buttonText: {
+      type: String,
+      default: '',
+    },
     image: {
       url: { type: String, required: true },
       publicId: { type: String, default: '' },
@@ -28,7 +36,7 @@ const bannerSchema = new mongoose.Schema(
     },
     position: {
       type: String,
-      enum: ['home_hero', 'home_middle', 'home_bottom', 'category_top', 'sidebar'],
+      enum: ['home_hero', 'home_middle', 'home_bottom', 'category_top', 'sidebar', 'product_page'],
       default: 'home_hero',
     },
     sortOrder: {
@@ -62,6 +70,7 @@ const bannerSchema = new mongoose.Schema(
 );
 
 bannerSchema.index({ isActive: 1, position: 1 });
+bannerSchema.index({ isActive: 1, startDate: 1, endDate: 1, sortOrder: 1 });
 
 export const Banner = mongoose.model('Banner', bannerSchema);
 export default Banner;

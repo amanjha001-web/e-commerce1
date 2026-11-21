@@ -41,13 +41,28 @@ const bannersService = {
 
   // Create banner (Admin: POST /admin/banners)
   create: async (bannerData) => {
-    const response = await api.post("/admin/banners", bannerData);
+    const config =
+      bannerData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : undefined;
+    const response = await api.post("/admin/banners", bannerData, config);
     return response.data;
   },
 
   // Update banner (Admin: PATCH /admin/banners/:bannerId)
   update: async (bannerId, bannerData) => {
-    const response = await api.patch(`/admin/banners/${bannerId}`, bannerData);
+    const config =
+      bannerData instanceof FormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : undefined;
+    const response = await api.patch(`/admin/banners/${bannerId}`, bannerData, config);
+    return response.data;
+  },
+
+  // Toggle banner active status (Admin: PATCH /admin/banners/:bannerId/status)
+  toggleStatus: async (bannerId, isActive) => {
+    const body = typeof isActive === "boolean" ? { isActive } : {};
+    const response = await api.patch(`/admin/banners/${bannerId}/status`, body);
     return response.data;
   },
 

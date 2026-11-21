@@ -22,6 +22,11 @@ export const updateBanner = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, banner, 'Banner updated');
 });
 
+export const toggleBannerStatus = asyncHandler(async (req, res) => {
+  const banner = await adminBannerService.toggleStatus(req.params.bannerId, req.body?.isActive);
+  return ApiResponse.success(res, banner, 'Banner status updated');
+});
+
 export const deleteBanner = asyncHandler(async (req, res) => {
   const result = await adminBannerService.delete(req.params.bannerId);
   return ApiResponse.success(res, result, result.message);
