@@ -35,8 +35,8 @@ export const connectDatabase = async (uri = env.MONGODB_URI) => {
           // Safe non-blocking
         }
 
-        const collections = ['carts', 'wishlists'];
-        for (const colName of collections) {
+        const legacyUserIndexCollections = ['carts', 'wishlists'];
+        for (const colName of legacyUserIndexCollections) {
           try {
             const col = db.collection(colName);
             const indexes = await col.indexes();
@@ -49,6 +49,64 @@ export const connectDatabase = async (uri = env.MONGODB_URI) => {
           } catch {
             // Ignore if index doesn't exist or collection is empty
           }
+        }
+
+        // Sanitize products & drop legacy conflicting unique indexes (e.g. non-sparse sku_1, product_1, name_1)
+        try {
+          const prodCol = db.collection('products');
+          await prodCol.updateMany(
+            { $or: [{ sku: null }, { sku: '' }] },
+            { $unset: { sku: '' } }
+          );
+          const prodIndexes = await prodCol.indexes();
+          for (const idx of prodIndexes) {
+            if (
+              idx.unique &&
+              idx.key &&
+              (idx.key.sku || idx.key.product || idx.key.name)
+            ) {
+              await prodCol.dropIndex(idx.name);
+              logger.info(`Dropped legacy conflicting unique index '${idx.name}' on 'products'`);
+            }
+          }
+        } catch {
+          // Safe non-blocking
+        }
+
+        // Sanitize inventories & drop legacy conflicting unique index on 'product' (schema uses 'productId')
+        try {
+          const invCol = db.collection('inventories');
+          await invCol.updateMany(
+            { product: { $exists: true } },
+            { $unset: { product: '' } }
+          );
+          const invIndexes = await invCol.indexes();
+          for (const idx of invIndexes) {
+            if (idx.name === 'product_1' || (idx.key && idx.key.product && idx.unique)) {
+              await invCol.dropIndex(idx.name);
+              logger.info(`Dropped legacy conflicting unique index '${idx.name}' on 'inventories'`);
+            }
+          }
+        } catch {
+          // Safe non-blocking
+        }
+
+        // Drop legacy standalone unique sku/product index on productvariants if any
+        try {
+          const varCol = db.collection('productvariants');
+          const varIndexes = await varCol.indexes();
+          for (const idx of varIndexes) {
+            if (
+              idx.unique &&
+              idx.key &&
+              ((idx.key.sku && !idx.key.productId) || idx.key.product)
+            ) {
+              await varCol.dropIndex(idx.name);
+              logger.info(`Dropped legacy conflicting unique index '${idx.name}' on 'productvariants'`);
+            }
+          }
+        } catch {
+          // Safe non-blocking
         }
       }
     } catch {

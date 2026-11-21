@@ -168,7 +168,7 @@ describe('Vendor My Products Service & Routes Integration Tests', () => {
       stock: 15,
       status: 'draft',
     });
-    const invSpy = vi.spyOn(Inventory, 'create').mockResolvedValueOnce({});
+    const invSpy = vi.spyOn(Inventory, 'findOneAndUpdate').mockResolvedValueOnce({});
     const movSpy = vi.spyOn(StockMovement, 'create').mockResolvedValueOnce({});
 
     const res = await request(app)
@@ -196,6 +196,68 @@ describe('Vendor My Products Service & Routes Integration Tests', () => {
     expect(createSpy.mock.calls[0][0].brand).toBeUndefined();
     expect(invSpy).toHaveBeenCalledTimes(1);
     expect(movSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /api/v1/vendor/products self-heals legacy sku and inventory product unique indexes on E11000', async () => {
+    mockAuthUser(ROLES.VENDOR);
+    vi.spyOn(Vendor, 'findOne').mockResolvedValueOnce({
+      _id: vendorStoreId,
+      userId: vendorUserId,
+    });
+    vi.spyOn(Product, 'findOne').mockResolvedValueOnce(null);
+
+    const skuDupErr = Object.assign(new Error('E11000 duplicate key error index: sku_1'), {
+      code: 11000,
+      keyValue: { sku: null },
+    });
+    const createdProduct = {
+      _id: productId,
+      name: 'Cotton Kurta',
+      price: 999,
+      stock: 10,
+      status: 'pending_approval',
+    };
+    const createSpy = vi
+      .spyOn(Product, 'create')
+      .mockRejectedValueOnce(skuDupErr)
+      .mockResolvedValueOnce(createdProduct);
+
+    vi.spyOn(Product.collection, 'indexes').mockResolvedValueOnce([
+      { name: 'sku_1', key: { sku: 1 }, unique: true },
+    ]);
+    const dropProdIdxSpy = vi.spyOn(Product.collection, 'dropIndex').mockResolvedValueOnce({});
+
+    const prodDupErr = Object.assign(new Error('E11000 duplicate key error index: product_1'), {
+      code: 11000,
+      keyValue: { product: null },
+    });
+    const invSpy = vi
+      .spyOn(Inventory, 'findOneAndUpdate')
+      .mockRejectedValueOnce(prodDupErr)
+      .mockResolvedValueOnce({});
+
+    vi.spyOn(Inventory.collection, 'indexes').mockResolvedValueOnce([
+      { name: 'product_1', key: { product: 1 }, unique: true },
+    ]);
+    const dropInvIdxSpy = vi.spyOn(Inventory.collection, 'dropIndex').mockResolvedValueOnce({});
+    vi.spyOn(StockMovement, 'create').mockResolvedValueOnce({});
+
+    const res = await request(app)
+      .post('/api/v1/vendor/products')
+      .set('Authorization', `Bearer ${vendorToken}`)
+      .send({
+        name: 'Cotton Kurta',
+        description: 'Breathable handloom cotton kurta.',
+        category: categoryId,
+        price: 999,
+        stock: 10,
+      });
+
+    expect(res.status).toBe(201);
+    expect(createSpy).toHaveBeenCalledTimes(2);
+    expect(dropProdIdxSpy).toHaveBeenCalledWith('sku_1');
+    expect(invSpy).toHaveBeenCalledTimes(2);
+    expect(dropInvIdxSpy).toHaveBeenCalledWith('product_1');
   });
 
   it('PATCH /stock and DELETE /api/v1/vendor/products/:productId synchronize inventory and cleanup variants', async () => {

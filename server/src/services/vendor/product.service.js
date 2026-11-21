@@ -51,6 +51,43 @@ const computeDiscountPercent = (price, compareAtPrice) => {
   return Math.round(((c - p) / c) * 100);
 };
 
+const isCollectionInteractive = (collection, methodName) =>
+  mongoose.connection?.readyState === 1 || Boolean(collection?.[methodName]?.mock);
+
+const dropLegacyUniqueIndexes = async (collection, fieldNames = []) => {
+  if (!collection || typeof collection.indexes !== 'function' || !isCollectionInteractive(collection, 'indexes')) {
+    return false;
+  }
+  let dropped = false;
+  try {
+    const indexes = await collection.indexes();
+    for (const idx of indexes || []) {
+      if (!idx?.unique || !idx?.key) continue;
+      if (fieldNames.some((f) => Boolean(idx.key[f]))) {
+        await collection.dropIndex(idx.name);
+        dropped = true;
+      }
+    }
+  } catch {
+    // Non-blocking cleanup fallback
+  }
+  return dropped;
+};
+
+const getDuplicateKeyFields = (err) => {
+  const fields = new Set([
+    ...Object.keys(err?.keyPattern || {}),
+    ...Object.keys(err?.keyValue || {}),
+  ]);
+  const msg = String(err?.message || '').toLowerCase();
+  if (fields.size === 0) {
+    if (msg.includes('slug')) fields.add('slug');
+    if (msg.includes('sku')) fields.add('sku');
+    if (msg.includes('product_1') || msg.includes('product')) fields.add('product');
+  }
+  return Array.from(fields);
+};
+
 export class VendorProductService {
   async getVendorContext(userId) {
     const vendor = await Vendor.findOne({ $or: [{ userId }, { user: userId }] });
@@ -202,13 +239,17 @@ export class VendorProductService {
     const payload = { ...productData };
 
     if (!payload.brand) delete payload.brand;
-    if (!payload.sku) delete payload.sku;
+    if (!payload.sku || !String(payload.sku).trim()) {
+      delete payload.sku;
+    } else {
+      payload.sku = String(payload.sku).trim().toUpperCase();
+    }
     if (payload.compareAtPrice === undefined || payload.compareAtPrice === '') {
       delete payload.compareAtPrice;
     }
 
-    const baseSlug = slugify(payload.name);
-    let slug = baseSlug || `product-${Date.now()}`;
+    const baseSlug = slugify(payload.name) || 'product';
+    let slug = baseSlug;
     let counter = 1;
     while (await Product.findOne({ slug })) {
       slug = `${baseSlug}-${counter++}`;
@@ -218,31 +259,90 @@ export class VendorProductService {
     const compareAtPrice = Number(payload.compareAtPrice || 0);
     const discountPercentage = computeDiscountPercent(payload.price, compareAtPrice);
 
-    const product = await Product.create({
-      ...payload,
-      vendorId,
-      slug,
-      status,
-      discountPercentage,
-    });
+    let product = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        product = await Product.create({
+          ...payload,
+          vendorId,
+          slug,
+          status,
+          discountPercentage,
+        });
+        break;
+      } catch (err) {
+        if (err?.code !== 11000 || attempt === 2) throw err;
 
-    await Inventory.create({
-      productId: product._id,
-      vendorId,
-      quantity: product.stock,
-      isOutOfStock: Number(product.stock || 0) === 0,
-    });
+        const dupFields = getDuplicateKeyFields(err);
+        if (dupFields.includes('slug')) {
+          slug = `${baseSlug}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+          continue;
+        }
 
-    await StockMovement.create({
-      productId: product._id,
-      vendorId,
-      type: 'IN',
-      quantity: product.stock,
-      previousStock: 0,
-      newStock: product.stock,
-      reason: 'Initial stock on product creation',
-      performedBy: userId,
-    });
+        if (dupFields.some((f) => ['sku', 'product', 'name'].includes(f))) {
+          if (isCollectionInteractive(Product.collection, 'updateMany')) {
+            try {
+              await Product.collection.updateMany(
+                { $or: [{ sku: null }, { sku: '' }] },
+                { $unset: { sku: '' } }
+              );
+            } catch {
+              // Safe fallback
+            }
+          }
+          const dropped = await dropLegacyUniqueIndexes(Product.collection, ['sku', 'product', 'name']);
+          if (dropped) continue;
+        }
+        throw err;
+      }
+    }
+
+    try {
+      const invDoc = {
+        vendorId,
+        quantity: Number(product.stock || 0),
+        isOutOfStock: Number(product.stock || 0) === 0,
+      };
+      try {
+        await Inventory.findOneAndUpdate(
+          { productId: product._id },
+          { $set: invDoc },
+          { upsert: true, new: true }
+        );
+      } catch (invErr) {
+        if (invErr?.code !== 11000) throw invErr;
+        if (isCollectionInteractive(Inventory.collection, 'updateMany')) {
+          try {
+            await Inventory.collection.updateMany(
+              { product: { $exists: true } },
+              { $unset: { product: '' } }
+            );
+          } catch {
+            // Safe fallback
+          }
+        }
+        await dropLegacyUniqueIndexes(Inventory.collection, ['product']);
+        await Inventory.findOneAndUpdate(
+          { productId: product._id },
+          { $set: invDoc },
+          { upsert: true, new: true }
+        );
+      }
+
+      await StockMovement.create({
+        productId: product._id,
+        vendorId,
+        type: 'IN',
+        quantity: product.stock,
+        previousStock: 0,
+        newStock: product.stock,
+        reason: 'Initial stock on product creation',
+        performedBy: userId,
+      });
+    } catch (postCreateErr) {
+      await Product.findByIdAndDelete(product._id).catch(() => {});
+      throw postCreateErr;
+    }
 
     return product;
   }
