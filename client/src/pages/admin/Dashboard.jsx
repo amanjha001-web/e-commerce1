@@ -251,13 +251,19 @@ const AdminDashboard = () => {
           <SalesChart
             data={salesData || []}
             period={selectedPeriod}
-            loading={isAnalyticsLoading && !(salesData || []).length}
+            loading={
+              isAnalyticsLoading &&
+              (!(salesData || []).length || selectedPeriod !== analyticsPeriod)
+            }
             growth={summary.ordersGrowth}
           />
           <RevenueChart
             data={revenueData || []}
             period={selectedPeriod}
-            loading={isAnalyticsLoading && !(revenueData || []).length}
+            loading={
+              isAnalyticsLoading &&
+              (!(revenueData || []).length || selectedPeriod !== analyticsPeriod)
+            }
             growth={summary.revenueGrowth}
             averageOrderValue={summary.averageOrderValue}
             grossSales={summary.grossSales}

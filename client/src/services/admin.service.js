@@ -1,13 +1,13 @@
 import api from "./api";
 
-const cleanParams = (params = {}) =>
+const cleanParams = (params = {}, preserveAllKeys = []) =>
   Object.fromEntries(
     Object.entries(params).filter(
-      ([, v]) =>
+      ([key, v]) =>
         v !== undefined &&
         v !== null &&
         v !== "" &&
-        String(v).toLowerCase() !== "all",
+        (preserveAllKeys.includes(key) || String(v).toLowerCase() !== "all"),
     ),
   );
 
@@ -22,7 +22,7 @@ const adminService = {
 
   getDashboardAnalytics: async (params = {}) => {
     const response = await api.get("/admin/dashboard/analytics", {
-      params: cleanParams(params),
+      params: cleanParams(params, ["period"]),
     });
     return response.data;
   },

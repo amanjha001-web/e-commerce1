@@ -89,13 +89,23 @@ const PAYMENT_AMOUNT_EXPR = {
   ],
 };
 
-const ORDER_DATE_EXPR = {
-  $ifNull: ['$createdAt', { $ifNull: ['$orderDate', { $ifNull: ['$paidAt', '$updatedAt'] }] }],
-};
+const toSafeDateExpr = (expr) => ({
+  $convert: { input: expr, to: 'date', onError: null, onNull: null },
+});
 
-const PAYMENT_DATE_EXPR = {
-  $ifNull: ['$createdAt', { $ifNull: ['$paidAt', { $ifNull: ['$paymentDate', '$updatedAt'] }] }],
-};
+const ORDER_DATE_EXPR = toSafeDateExpr({
+  $ifNull: [
+    '$createdAt',
+    { $ifNull: ['$orderDate', { $ifNull: ['$paidAt', { $ifNull: ['$updatedAt', '$_id'] }] }] },
+  ],
+});
+
+const PAYMENT_DATE_EXPR = toSafeDateExpr({
+  $ifNull: [
+    '$createdAt',
+    { $ifNull: ['$paidAt', { $ifNull: ['$paymentDate', { $ifNull: ['$updatedAt', '$_id'] }] }] },
+  ],
+});
 
 const buildOrderRevenueMatch = (dateRangeFilter = null) => {
   const andConditions = [
